@@ -1,5 +1,5 @@
 /**
- * Discriminator values for every LoopLink control-plane message.
+ * Discriminator values for every LoopLink protocol message.
  *
  * String enums are used so the wire format stays human-readable JSON and does
  * not depend on TypeScript's numeric enum numbering.
@@ -17,6 +17,21 @@ export enum MessageType {
   Ping = "ping",
   /** Either direction: keepalive reply to a matching {@link PingMessage}. */
   Pong = "pong",
+
+  /** Server → client: begin an HTTP request to forward to localhost. */
+  HttpRequestStart = "http_request_start",
+  /** Server → client: request body chunk (streaming / binary). */
+  HttpRequestChunk = "http_request_chunk",
+  /** Server → client: request body stream is complete. */
+  HttpRequestEnd = "http_request_end",
+  /** Client → server: begin the HTTP response for a forwarded request. */
+  HttpResponseStart = "http_response_start",
+  /** Client → server: response body chunk (streaming / binary). */
+  HttpResponseChunk = "http_response_chunk",
+  /** Client → server: response body stream is complete. */
+  HttpResponseEnd = "http_response_end",
+  /** Either direction: cancel an in-flight HTTP forward. */
+  HttpCancel = "http_cancel",
 }
 
 /**
@@ -88,7 +103,7 @@ export interface ErrorMessage extends BaseMessage {
  */
 export interface PingMessage extends BaseMessage {
   readonly type: MessageType.Ping;
-  /** Correlation id echoed by the matching {@link PongMessage}. */
+  /** Correlation id echoed by the matching {@link PingMessage}. */
   readonly requestId: string;
 }
 
@@ -102,9 +117,9 @@ export interface PongMessage extends BaseMessage {
 }
 
 /**
- * Discriminated union of every LoopLink control-plane message.
+ * Discriminated union of tunnel/session control-plane messages.
  */
-export type ProtocolMessage =
+export type ControlPlaneMessage =
   | ConnectedMessage
   | CreateTunnelMessage
   | TunnelCreatedMessage
