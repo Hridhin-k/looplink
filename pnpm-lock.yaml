@@ -38,6 +38,9 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      undici:
+        specifier: ^8.9.0
+        version: 8.9.0
       ws:
         specifier: ^8.21.1
         version: 8.21.1
@@ -48,6 +51,9 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.1)(vite@8.1.5(@types/node@26.1.1))
 
   apps/server:
     dependencies:
@@ -1100,6 +1106,10 @@ packages:
 
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
+
+  undici@8.9.0:
+    resolution: {integrity: sha512-aWZpUj7XoGonMClx4gdDRfgBjqeA+F473aDmROQQbM9n6PRfK/u1q/a0X4wMTgcHfT8H6fpbt98PFuDUwFg2YA==}
+    engines: {node: '>=22.19.0'}
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
@@ -2190,6 +2200,8 @@ snapshots:
   uint8array-extras@1.5.0: {}
 
   undici-types@8.3.0: {}
+
+  undici@8.9.0: {}
 
   uri-js@4.4.1:
     dependencies:
