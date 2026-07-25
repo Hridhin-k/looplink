@@ -469,12 +469,13 @@ export class LoopLinkWebSocketClient implements ServerConnection {
     this.setState(ConnectionState.Reconnecting);
     this.options.onConnectionLost?.(error);
 
+    // Deliberately referenced: while a retry is pending the socket is gone, so
+    // this timer is the only thing keeping the CLI alive. `disconnect` clears
+    // it, which is what lets an intentional stop exit promptly.
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
       void this.attemptReconnect();
     }, this.reconnectIntervalMs);
-
-    this.reconnectTimer.unref();
   }
 
   private async attemptReconnect(): Promise<void> {

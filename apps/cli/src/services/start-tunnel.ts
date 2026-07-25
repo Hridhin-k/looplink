@@ -1,8 +1,9 @@
-import { APP_DISPLAY_NAME, MessageType } from "@looplink/shared";
+import { MessageType } from "@looplink/shared";
 
-import type { Writer } from "../utils/output.js";
+import type { ShutdownRegistry } from "./shutdown.js";
 import type { ServerConnection, WebSocketClientOptions } from "./websocket-client.js";
 import { LoopLinkWebSocketClient } from "./websocket-client.js";
+import type { SessionPresenter } from "../ui/session-presenter.js";
 
 /**
  * Creates a {@link ServerConnection} for a given server WebSocket URL.
@@ -21,12 +22,14 @@ export type ServerConnectionFactory = (
  */
 export class StartTunnelService {
   /**
-   * @param writer - Destination for progress and error messages.
+   * @param presenter - User-facing view of the session lifecycle.
    * @param createConnection - Factory that builds a server connection for a URL.
+   * @param shutdown - Registry used to close the connection on Ctrl+C.
    */
   constructor(
-    private readonly writer: Writer,
+    private readonly presenter: SessionPresenter,
     private readonly createConnection: ServerConnectionFactory,
+    private readonly shutdown: ShutdownRegistry,
   ) {}
 
   /**
@@ -40,24 +43,22 @@ export class StartTunnelService {
    * @param serverUrl - WebSocket URL of the LoopLink server.
    */
   async start(port: number, serverUrl: string): Promise<void> {
-    this.writer.writeLine(`Starting ${APP_DISPLAY_NAME} on port ${String(port)}...`);
+    this.presenter.starting(port);
 
     const connection = this.createConnection(serverUrl, {
       onConnectionLost: () => {
-        this.writer.writeError(`Connection lost. Reconnecting to ${APP_DISPLAY_NAME} server...`);
+        this.presenter.connectionLost();
       },
       onReconnectFailed: (error) => {
-        this.writer.writeError(`Reconnect failed: ${error.message}`);
+        this.presenter.reconnectFailed(error);
       },
       onReconnected: (tunnel, restored) => {
-        if (restored) {
-          this.writer.writeLine("Reconnected. Tunnel restored.");
-        } else {
-          this.writer.writeLine("Reconnected. Tunnel Created");
-        }
-        this.writer.writeLine("");
-        this.writer.writeLine(tunnel.publicUrl);
+        this.present(this.presenter.reconnected({ publicUrl: tunnel.publicUrl, port, restored }));
       },
+    });
+
+    this.shutdown.register(async () => {
+      await connection.disconnect();
     });
 
     try {
@@ -65,16 +66,18 @@ export class StartTunnelService {
 
       await connection.waitForMessage((message) => message.type === MessageType.Connected);
 
-      this.writer.writeLine(`Connected to ${APP_DISPLAY_NAME} server.`);
+      this.presenter.connected();
 
       const created = await connection.createTunnel(port);
 
-      this.writer.writeLine("Tunnel Created");
-      this.writer.writeLine("");
-      this.writer.writeLine(created.publicUrl);
+      await this.presenter.tunnelReady({
+        publicUrl: created.publicUrl,
+        port,
+        restored: false,
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown connection error.";
-      this.writer.writeError(`Failed to create tunnel: ${message}`);
+      this.presenter.failed(message);
       process.exitCode = 1;
 
       try {
@@ -83,6 +86,20 @@ export class StartTunnelService {
         // Best-effort cleanup after a failed session.
       }
     }
+  }
+
+  /**
+   * Consumes a presenter promise from a synchronous callback.
+   *
+   * Rendering must never surface as an unhandled rejection that tears down a
+   * healthy tunnel.
+   *
+   * @param rendering - Pending presenter work.
+   */
+  private present(rendering: Promise<void>): void {
+    void rendering.catch(() => {
+      // Presentation is best-effort; the session continues regardless.
+    });
   }
 }
 

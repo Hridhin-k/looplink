@@ -2,6 +2,7 @@ import type { Command } from "commander";
 
 import { DEFAULT_SERVER_URL, resolveServerUrl } from "../config/server.js";
 import type { StartTunnelService } from "../services/start-tunnel.js";
+import { theme } from "../ui/theme.js";
 import type { Writer } from "../utils/output.js";
 import { parsePort } from "../utils/port.js";
 
@@ -38,7 +39,7 @@ export class StartCommand {
     const parsed = parsePort(portArg);
 
     if (!parsed.ok) {
-      this.writer.writeError(parsed.error);
+      this.writer.writeError(theme.error(parsed.error));
       process.exitCode = 1;
       return;
     }
