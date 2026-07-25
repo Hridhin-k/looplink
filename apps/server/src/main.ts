@@ -13,6 +13,12 @@ import { resolveServerHost, resolveServerPort } from "./config/server.config.js"
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
+  const fastify = app.getHttpAdapter().getInstance();
+  fastify.removeAllContentTypeParsers();
+  fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, done) => {
+    done(null, body);
+  });
+
   app.useWebSocketAdapter(new WsAdapter(app));
 
   const host = resolveServerHost();

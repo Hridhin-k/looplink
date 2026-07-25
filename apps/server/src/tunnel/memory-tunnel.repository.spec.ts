@@ -60,6 +60,21 @@ describe("MemoryTunnelRepository", () => {
     expect(repository.removeByClient(createClient())).toBe(false);
   });
 
+  it("finds a tunnel by slug", () => {
+    const repository = new MemoryTunnelRepository();
+    const client = createClient();
+    const tunnel: TunnelRecord = {
+      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      client,
+      port: 3000,
+    };
+
+    repository.save(tunnel);
+
+    expect(repository.findBySlug("abcd1234")).toEqual(tunnel);
+    expect(repository.findBySlug("missing")).toBeUndefined();
+  });
+
   it("replaces a prior record when saving the same id", () => {
     const repository = new MemoryTunnelRepository();
     const firstClient = createClient();

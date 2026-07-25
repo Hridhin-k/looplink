@@ -47,4 +47,12 @@ export interface TunnelRepository {
    * @returns The matching record, or `undefined` when absent.
    */
   findByClient(client: WebSocket): TunnelRecord | undefined;
+
+  /**
+   * Looks up a tunnel by its public subdomain slug.
+   *
+   * @param slug - Public URL slug (see {@link import("./public-url.js").tunnelSlug}).
+   * @returns The matching record, or `undefined` when absent.
+   */
+  findBySlug(slug: string): TunnelRecord | undefined;
 }

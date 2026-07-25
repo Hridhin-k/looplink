@@ -96,6 +96,7 @@ describe("TunnelManager", () => {
       removeByClient: vi.fn(() => true),
       findById: vi.fn(() => tunnel),
       findByClient: vi.fn(() => tunnel),
+      findBySlug: vi.fn(() => tunnel),
     };
 
     const manager = new TunnelManager(repository);

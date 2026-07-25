@@ -3,6 +3,19 @@
  */
 export const DEFAULT_PUBLIC_BASE_DOMAIN = "looplink.dev";
 
+/** Number of hex characters used as the public subdomain slug. */
+export const TUNNEL_SLUG_LENGTH = 8;
+
+/**
+ * Derives the public subdomain slug from a tunnel id.
+ *
+ * @param tunnelId - Unique tunnel identifier.
+ * @returns An 8-character hex slug.
+ */
+export function tunnelSlug(tunnelId: string): string {
+  return tunnelId.replaceAll("-", "").slice(0, TUNNEL_SLUG_LENGTH);
+}
+
 /**
  * Builds the public HTTPS URL for a tunnel id.
  *
@@ -14,8 +27,36 @@ export function buildPublicUrl(
   tunnelId: string,
   baseDomain: string = DEFAULT_PUBLIC_BASE_DOMAIN,
 ): string {
-  const slug = tunnelId.replaceAll("-", "").slice(0, 8);
-  return `https://${slug}.${baseDomain}`;
+  return `https://${tunnelSlug(tunnelId)}.${baseDomain}`;
+}
+
+/**
+ * Extracts a tunnel slug from an HTTP `Host` header value.
+ *
+ * @param hostHeader - Raw `Host` header (may include a port).
+ * @param baseDomain - Public DNS suffix.
+ * @returns The subdomain slug, or `undefined` when the host is not a tunnel host.
+ */
+export function extractTunnelSlugFromHost(
+  hostHeader: string,
+  baseDomain: string = DEFAULT_PUBLIC_BASE_DOMAIN,
+): string | undefined {
+  const hostname = hostHeader.split(":")[0]?.toLowerCase();
+  if (hostname === undefined || hostname.length === 0) {
+    return undefined;
+  }
+
+  const suffix = `.${baseDomain.toLowerCase()}`;
+  if (!hostname.endsWith(suffix)) {
+    return undefined;
+  }
+
+  const slug = hostname.slice(0, -suffix.length);
+  if (slug.length === 0 || slug.includes(".")) {
+    return undefined;
+  }
+
+  return slug;
 }
 
 /**

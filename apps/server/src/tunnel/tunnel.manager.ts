@@ -104,4 +104,14 @@ export class TunnelManager {
   lookup(id: string): TunnelRecord | undefined {
     return this.repository.findById(id);
   }
+
+  /**
+   * Looks up a tunnel by its public subdomain slug.
+   *
+   * @param slug - Public URL slug.
+   * @returns The matching record, or `undefined` when absent.
+   */
+  lookupBySlug(slug: string): TunnelRecord | undefined {
+    return this.repository.findBySlug(slug);
+  }
 }

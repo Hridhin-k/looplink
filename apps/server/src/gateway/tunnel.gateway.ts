@@ -13,14 +13,15 @@ import {
 } from "@looplink/shared";
 import WebSocket from "ws";
 
+import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
  * WebSocket entry point for LoopLink CLI clients.
  *
- * Accepts connections, sends a {@link ConnectedMessage} handshake, and handles
- * {@link CreateTunnelMessage} requests. HTTP forwarding is not implemented yet.
+ * Accepts connections, handles tunnel creation, and delivers HTTP response
+ * frames to {@link HttpExchangeCoordinator}.
  */
 @WebSocketGateway()
 export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -28,8 +29,12 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * @param tunnelManager - Domain service that creates and tracks tunnels.
+   * @param httpExchanges - Pending HTTP forward correlation registry.
    */
-  constructor(private readonly tunnelManager: TunnelManager) {}
+  constructor(
+    private readonly tunnelManager: TunnelManager,
+    private readonly httpExchanges: HttpExchangeCoordinator,
+  ) {}
 
   /**
    * Handles a newly accepted WebSocket client.
@@ -86,15 +91,28 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    switch (parsed.value.type) {
+    const message = parsed.value;
+
+    switch (message.type) {
       case MessageType.CreateTunnel:
-        this.handleCreateTunnel(client, parsed.value);
+        this.handleCreateTunnel(client, message);
+        return;
+      case MessageType.HttpResponseStart:
+      case MessageType.HttpResponseChunk:
+      case MessageType.HttpResponseEnd:
+      case MessageType.HttpCancel:
+        this.httpExchanges.deliver(message);
+        return;
+      case MessageType.Error:
+        if (!this.httpExchanges.deliver(message)) {
+          this.logger.warn(`Unhandled error from client: ${message.message}`);
+        }
         return;
       default:
         this.sendMessage(client, {
           type: MessageType.Error,
           code: "unsupported_message",
-          message: `Unsupported message type "${parsed.value.type}".`,
+          message: `Unsupported message type "${message.type}".`,
         });
     }
   }

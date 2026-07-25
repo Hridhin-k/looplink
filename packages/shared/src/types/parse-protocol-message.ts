@@ -1,9 +1,13 @@
 import type { Result } from "./result.js";
 import { err, ok } from "../utils/result.js";
 import {
+  isHttpForwardingMessageType,
+  parseHttpForwardingMessage,
+} from "./parse-http-forwarding.js";
+import type { ProtocolMessage } from "./protocol-message.js";
+import {
   MessageType,
   type ConnectedMessage,
-  type ControlPlaneMessage,
   type CreateTunnelMessage,
   type ErrorMessage,
   type PingMessage,
@@ -12,15 +16,13 @@ import {
 } from "./protocol.js";
 
 /**
- * Parses a raw JSON string into a LoopLink {@link ControlPlaneMessage}.
- *
- * HTTP forwarding frames are intentionally not parsed here yet.
+ * Parses a raw JSON string into a LoopLink {@link ProtocolMessage}.
  *
  * @param raw - JSON text received over the wire.
  * @returns A successful result with the typed message, or a failed result with
  *   a human-readable parse error.
  */
-export function parseProtocolMessage(raw: string): Result<ControlPlaneMessage, string> {
+export function parseProtocolMessage(raw: string): Result<ProtocolMessage, string> {
   let value: unknown;
 
   try {
@@ -44,6 +46,10 @@ export function parseProtocolMessage(raw: string): Result<ControlPlaneMessage, s
     return err(`Unknown message type "${type}".`);
   }
 
+  if (isHttpForwardingMessageType(type)) {
+    return parseHttpForwardingMessage(type, record);
+  }
+
   switch (type) {
     case MessageType.Connected:
       return parseConnected(record);
@@ -58,7 +64,7 @@ export function parseProtocolMessage(raw: string): Result<ControlPlaneMessage, s
     case MessageType.Pong:
       return parsePong(record);
     default:
-      return err(`Unsupported message type "${type}" in control-plane parser.`);
+      return err(`Unsupported message type "${type}".`);
   }
 }
 
