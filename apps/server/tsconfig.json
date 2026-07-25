@@ -10,5 +10,6 @@
     "verbatimModuleSyntax": false
   },
   "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"],
   "references": [{ "path": "../../packages/shared" }]
 }

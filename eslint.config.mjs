@@ -5,7 +5,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/*.tsbuildinfo"],
+    ignores: ["**/dist/**", "**/node_modules/**", "**/*.tsbuildinfo", "**/vitest.config.ts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -25,6 +25,11 @@ export default tseslint.config(
   {
     // Config files at the repo root are not part of a TS project.
     files: ["*.mjs", "*.js"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    // Specs are executed by Vitest and excluded from the composite tsc project.
+    files: ["**/*.spec.ts"],
     ...tseslint.configs.disableTypeChecked,
   },
   prettierConfig,

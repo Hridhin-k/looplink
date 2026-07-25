@@ -19,7 +19,8 @@
     "format:check": "prettier --check .",
     "cli": "pnpm --filter @looplink/cli",
     "server:dev": "pnpm --filter @looplink/server dev",
-    "server:start": "pnpm --filter @looplink/server start"
+    "server:start": "pnpm --filter @looplink/server start",
+    "test": "pnpm --filter @looplink/server test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
