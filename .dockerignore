@@ -1,0 +1,34 @@
+# Keep the build context small and free of local secrets / tooling.
+.git
+.github
+.cursor
+.vscode
+.idea
+**/.DS_Store
+
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+**/coverage
+
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Client sources are not needed; package.json is copied for lockfile integrity.
+apps/cli/**
+!apps/cli/package.json
+**/*.spec.ts
+**/vitest.config.ts
+
+docker/README.md
+README.md
+LICENSE
+.editorconfig
+.prettierrc.json
+.prettierignore
+eslint.config.mjs

@@ -44,6 +44,23 @@ Run from the repository root:
 | `pnpm format:check` | Verify formatting                              |
 | `pnpm clean`        | Remove build output                            |
 
+## Docker (server)
+
+The tunnel server ships with a multi-stage `Dockerfile` and Compose overlays.
+**Port 8080/tcp** carries HTTP (`/health`, public tunnel traffic) and the CLI
+WebSocket on the same listener — there is no separate WS port.
+
+```bash
+# Development
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Production
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Full port table, environment variables, and image stages:
+[docker/README.md](docker/README.md). Host-side overrides: [.env.example](.env.example).
+
 ## Tooling
 
 - **TypeScript** in strict mode (plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,

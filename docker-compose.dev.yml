@@ -1,0 +1,35 @@
+# Development overlay.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Mounts server + shared sources so you can rebuild inside the container without
+# rebuilding the image for every TypeScript change.
+
+services:
+  server:
+    build:
+      target: development
+    image: looplink-server:dev
+    env_file:
+      - docker/development.env
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/server/src:/app/apps/server/src:ro
+      - ./packages/shared/src:/app/packages/shared/src:ro
+      - ./apps/server/tsconfig.json:/app/apps/server/tsconfig.json:ro
+      - ./packages/shared/tsconfig.json:/app/packages/shared/tsconfig.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+    # Rebuild from mounted sources, then start. Exit if the build fails.
+    command:
+      [
+        "sh",
+        "-c",
+        "pnpm --filter @looplink/shared build && pnpm --filter @looplink/server build && exec node apps/server/dist/main.js",
+      ]
+    healthcheck:
+      interval: 15s
+      start_period: 25s
+    restart: "no"
