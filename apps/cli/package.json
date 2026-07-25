@@ -19,9 +19,11 @@
   },
   "dependencies": {
     "@looplink/shared": "workspace:*",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1"
+    "@types/node": "^26.1.1",
+    "@types/ws": "^8.18.1"
   }
 }

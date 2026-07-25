@@ -1,26 +1,52 @@
 import { APP_DISPLAY_NAME } from "@looplink/shared";
 
 import type { Writer } from "../utils/output.js";
+import type { ServerConnection } from "./websocket-client.js";
 
 /**
- * Application service that starts a LoopLink tunnel for a local port.
+ * Creates a {@link ServerConnection} for a given server WebSocket URL.
+ */
+export type ServerConnectionFactory = (serverUrl: string) => ServerConnection;
+
+/**
+ * Application service that starts a LoopLink session for a local port.
  *
- * Networking is intentionally omitted for now: the service only announces that
- * a tunnel is about to start, so the CLI surface can be validated end-to-end
- * before a real transport is wired in.
+ * Connects to the server over WebSocket. Tunnel creation is intentionally
+ * omitted for now.
  */
 export class StartTunnelService {
   /**
-   * @param writer - Destination for progress messages.
+   * @param writer - Destination for progress and error messages.
+   * @param createConnection - Factory that builds a server connection for a URL.
    */
-  constructor(private readonly writer: Writer) {}
+  constructor(
+    private readonly writer: Writer,
+    private readonly createConnection: ServerConnectionFactory,
+  ) {}
 
   /**
-   * Begins a tunnel session for the given local TCP port.
+   * Begins a session for the given local TCP port.
    *
-   * @param port - Already-validated local port to expose.
+   * Prints the start banner, opens a WebSocket to the LoopLink server, then
+   * confirms the connection. Does not request a tunnel.
+   *
+   * @param port - Already-validated local port to expose later.
+   * @param serverUrl - WebSocket URL of the LoopLink server.
    */
-  start(port: number): void {
+  async start(port: number, serverUrl: string): Promise<void> {
     this.writer.writeLine(`Starting ${APP_DISPLAY_NAME} on port ${String(port)}...`);
+
+    const connection = this.createConnection(serverUrl);
+
+    try {
+      await connection.connect();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown connection error.";
+      this.writer.writeError(`Failed to connect to ${APP_DISPLAY_NAME} server: ${message}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    this.writer.writeLine(`Connected to ${APP_DISPLAY_NAME} server.`);
   }
 }

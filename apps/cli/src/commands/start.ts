@@ -1,8 +1,17 @@
 import type { Command } from "commander";
 
+import { DEFAULT_SERVER_URL, resolveServerUrl } from "../config/server.js";
 import type { StartTunnelService } from "../services/start-tunnel.js";
 import type { Writer } from "../utils/output.js";
 import { parsePort } from "../utils/port.js";
+
+/**
+ * Options accepted by the start command after Commander parsing.
+ */
+export interface StartCommandOptions {
+  /** Optional WebSocket URL override from `--server`. */
+  readonly server?: string;
+}
 
 /**
  * Commander adapter for `looplink <port>`.
@@ -11,7 +20,7 @@ import { parsePort } from "../utils/port.js";
  */
 export class StartCommand {
   /**
-   * @param startTunnel - Application service that starts a tunnel.
+   * @param startTunnel - Application service that starts a session.
    * @param writer - Destination for validation errors.
    */
   constructor(
@@ -23,8 +32,9 @@ export class StartCommand {
    * Handles a single `looplink <port>` invocation.
    *
    * @param portArg - Raw port argument from the command line.
+   * @param options - Parsed Commander options, including an optional server URL.
    */
-  execute(portArg: string): void {
+  async execute(portArg: string, options: StartCommandOptions = {}): Promise<void> {
     const parsed = parsePort(portArg);
 
     if (!parsed.ok) {
@@ -33,7 +43,8 @@ export class StartCommand {
       return;
     }
 
-    this.startTunnel.start(parsed.value);
+    const serverUrl = resolveServerUrl(options.server);
+    await this.startTunnel.start(parsed.value, serverUrl);
   }
 }
 
@@ -44,7 +55,10 @@ export class StartCommand {
  * @param startCommand - Command handler to invoke for the port argument.
  */
 export function registerStartCommand(program: Command, startCommand: StartCommand): void {
-  program.argument("<port>", "Local TCP port to expose").action((portArg: string) => {
-    startCommand.execute(portArg);
-  });
+  program
+    .argument("<port>", "Local TCP port to expose")
+    .option("-s, --server <url>", `LoopLink server WebSocket URL (default: ${DEFAULT_SERVER_URL})`)
+    .action((portArg: string, options: StartCommandOptions) => {
+      void startCommand.execute(portArg, options);
+    });
 }
