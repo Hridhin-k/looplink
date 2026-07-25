@@ -1,0 +1,21 @@
+{
+  "name": "@looplink/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LoopLink command-line client for exposing localhost through secure public URLs.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "looplink": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@looplink/shared": "workspace:*"
+  }
+}

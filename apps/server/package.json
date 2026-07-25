@@ -1,0 +1,18 @@
+{
+  "name": "@looplink/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LoopLink tunnel server that relays public traffic to local clients.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@looplink/shared": "workspace:*"
+  }
+}
