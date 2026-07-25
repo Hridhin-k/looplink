@@ -33,11 +33,11 @@ curl -s http://127.0.0.1:8080/health
 LoopLink listens on **one TCP port**. HTTP, WebSocket upgrades, and public
 tunnel forwarding all share the Fastify server.
 
-| Port | Published by default | Protocol | Who connects | Purpose |
-| ---- | -------------------- | -------- | ------------ | ------- |
-| **8080** | host `8080` → container `8080` | HTTP | browsers, `curl`, load balancers | `GET /health` |
-| **8080** | same mapping | HTTP | public clients | Tunnel traffic routed by `Host: {slug}.{domain}` |
-| **8080** | same mapping | WebSocket (`ws` / `wss`) | `@looplink/cli` | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
+| Port     | Published by default           | Protocol                 | Who connects                     | Purpose                                                               |
+| -------- | ------------------------------ | ------------------------ | -------------------------------- | --------------------------------------------------------------------- |
+| **8080** | host `8080` → container `8080` | HTTP                     | browsers, `curl`, load balancers | `GET /health`                                                         |
+| **8080** | same mapping                   | HTTP                     | public clients                   | Tunnel traffic routed by `Host: {slug}.{domain}`                      |
+| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@looplink/cli`                  | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
 
 There is **no separate WebSocket port**. Do not map 8080 and a second port for
 WS — the upgrade happens on the same listener.
@@ -65,31 +65,31 @@ ws://server:8080
 
 ## Environment variables
 
-| Variable | Default | Used by | Description |
-| -------- | ------- | ------- | ----------- |
-| `PORT` | `8080` | server process / compose host mapping | Process listen port inside the container (compose fixes this at `8080`). Also selects the **host** publish port when set in `.env`. |
-| `HOST` | `0.0.0.0` | server process | Bind address. Must be `0.0.0.0` in Docker. |
-| `LOOPLINK_PUBLIC_BASE_DOMAIN` | `looplink.dev` | URL minting + `Host` parsing | DNS suffix for `https://{slug}.{domain}`. Use `localhost` (or a local domain) in development. |
-| `LOOPLINK_HTTP_FORWARD_TIMEOUT_MS` | `30000` | HTTP forwarding | Max wait for the CLI to answer a forwarded request. |
-| `NODE_ENV` | `production` / `development` | runtime | Set by the compose overlays. |
-| `LOOPLINK_IMAGE_TAG` | `latest` | compose prod | Tag for `looplink-server` image. |
+| Variable                           | Default                      | Used by                               | Description                                                                                                                         |
+| ---------------------------------- | ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                             | `8080`                       | server process / compose host mapping | Process listen port inside the container (compose fixes this at `8080`). Also selects the **host** publish port when set in `.env`. |
+| `HOST`                             | `0.0.0.0`                    | server process                        | Bind address. Must be `0.0.0.0` in Docker.                                                                                          |
+| `LOOPLINK_PUBLIC_BASE_DOMAIN`      | `looplink.dev`               | URL minting + `Host` parsing          | DNS suffix for `https://{slug}.{domain}`. Use `localhost` (or a local domain) in development.                                       |
+| `LOOPLINK_HTTP_FORWARD_TIMEOUT_MS` | `30000`                      | HTTP forwarding                       | Max wait for the CLI to answer a forwarded request.                                                                                 |
+| `NODE_ENV`                         | `production` / `development` | runtime                               | Set by the compose overlays.                                                                                                        |
+| `LOOPLINK_IMAGE_TAG`               | `latest`                     | compose prod                          | Tag for `looplink-server` image.                                                                                                    |
 
 Files:
 
-| File | Role |
-| ---- | ---- |
-| `.env.example` | Documented template for host-side overrides |
-| `docker/development.env` | Defaults loaded by `docker-compose.dev.yml` |
-| `docker/production.env` | Defaults loaded by `docker-compose.prod.yml` |
+| File                     | Role                                         |
+| ------------------------ | -------------------------------------------- |
+| `.env.example`           | Documented template for host-side overrides  |
+| `docker/development.env` | Defaults loaded by `docker-compose.dev.yml`  |
+| `docker/production.env`  | Defaults loaded by `docker-compose.prod.yml` |
 
 ## Images & stages
 
 `Dockerfile` targets:
 
-| Target | Purpose |
-| ------ | ------- |
-| `development` | Full workspace + TypeScript build tooling |
-| `production` | `pnpm deploy` output, non-root user, Alpine |
+| Target        | Purpose                                     |
+| ------------- | ------------------------------------------- |
+| `development` | Full workspace + TypeScript build tooling   |
+| `production`  | `pnpm deploy` output, non-root user, Alpine |
 
 Healthchecks (image `HEALTHCHECK` and Compose `healthcheck`) call
 `GET /health` on `127.0.0.1:$PORT` and expect HTTP 200.
@@ -100,9 +100,9 @@ Healthchecks (image `HEALTHCHECK` and Compose `healthcheck`) call
 and `*.looplink.dev`, proxies HTTP + WebSocket to the LoopLink upstream, and
 exposes an ACME webroot for Let's Encrypt.
 
-| Port | Role |
-| ---- | ---- |
-| **80** | ACME HTTP-01 + redirect to HTTPS |
+| Port    | Role                                                          |
+| ------- | ------------------------------------------------------------- |
+| **80**  | ACME HTTP-01 + redirect to HTTPS                              |
 | **443** | TLS → upstream `127.0.0.1:8080` (or `server:8080` in Compose) |
 
 Wildcard certificates need **DNS-01** (`certbot` + DNS plugin). Apex-only can

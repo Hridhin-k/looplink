@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { TUNNEL_RECLAIM_WINDOW_MS } from "@looplink/shared";
+import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@looplink/shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl, resolvePublicBaseDomain } from "./public-url.js";
@@ -41,12 +41,15 @@ export class TunnelManager {
   ) {}
 
   /**
-   * Generates a unique tunnel identifier.
+   * Generates a cryptographically secure tunnel identifier.
    *
-   * @returns A new UUID string suitable for use as a tunnel id.
+   * Uses {@link randomBytes} (not `Math.random`) so public URL slugs derived
+   * from the id are not predictable.
+   *
+   * @returns A hex string of length `TUNNEL_ID_BYTES * 2`.
    */
   generateTunnelId(): string {
-    return randomUUID();
+    return randomBytes(TUNNEL_ID_BYTES).toString("hex");
   }
 
   /**

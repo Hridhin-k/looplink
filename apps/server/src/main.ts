@@ -6,18 +6,34 @@ import { WsAdapter } from "@nestjs/platform-ws";
 
 import { AppModule } from "./app.module.js";
 import { resolveServerHost, resolveServerPort } from "./config/server.config.js";
+import { registerHttpRateLimit } from "./security/register-http-rate-limit.js";
+import { resolveSecurityConfig } from "./security/security.config.js";
 
 /**
  * Boots the NestJS application on Fastify with native WebSocket support.
  */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  const security = resolveSecurityConfig();
+
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      // Reject oversized public request bodies before they hit the forwarder.
+      bodyLimit: security.maxHttpBodyBytes,
+      // Abort slow clients that stall during headers/body upload.
+      requestTimeout: security.httpRequestTimeoutMs,
+      // Bound how long we wait for the request line / headers.
+      connectionTimeout: security.httpRequestTimeoutMs,
+    }),
+  );
 
   const fastify = app.getHttpAdapter().getInstance();
   fastify.removeAllContentTypeParsers();
   fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
+
+  await registerHttpRateLimit(fastify, security);
 
   app.useWebSocketAdapter(new WsAdapter(app));
 

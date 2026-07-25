@@ -1,15 +1,16 @@
 import { Module } from "@nestjs/common";
 
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
-import { HttpForwardModule } from "../http-forward/http-forward.module.js";
-import { TunnelModule } from "../tunnel/tunnel.module.js";
 import { TunnelGateway } from "./tunnel.gateway.js";
+import { HttpForwardModule } from "../http-forward/http-forward.module.js";
+import { SecurityModule } from "../security/security.module.js";
+import { TunnelModule } from "../tunnel/tunnel.module.js";
 
 /**
  * Owns the WebSocket gateway that LoopLink clients connect to.
  */
 @Module({
-  imports: [TunnelModule, HttpForwardModule],
+  imports: [TunnelModule, HttpForwardModule, SecurityModule],
   providers: [
     TunnelGateway,
     {

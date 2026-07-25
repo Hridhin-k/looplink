@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
+  MAX_EXCHANGE_BUFFER_BYTES,
+  MAX_PENDING_HTTP_EXCHANGES,
   MessageType,
   type ErrorMessage,
   type HttpCancelMessage,
@@ -29,26 +31,49 @@ interface InternalPending {
   startPromise: Promise<HttpResponseStartMessage>;
   readonly chunkWaiters: ((result: IteratorResult<Uint8Array>) => void)[];
   readonly chunkBuffer: Uint8Array[];
+  bufferedBytes: number;
   bodyEnded: boolean;
   failed: Error | undefined;
 }
 
 /**
  * Correlates in-flight HTTP forwards with WebSocket response frames from the CLI.
+ *
+ * Caps concurrent exchanges and per-exchange buffered body bytes so a slow
+ * public consumer or hostile CLI cannot exhaust memory.
  */
 @Injectable()
 export class HttpExchangeCoordinator {
   private readonly pending = new Map<string, InternalPending>();
+  private readonly maxPending: number;
+  private readonly maxBufferBytes: number;
+
+  /**
+   * @param maxPending - Ceiling on concurrent in-flight exchanges.
+   * @param maxBufferBytes - Ceiling on buffered response bytes per exchange.
+   */
+  constructor(
+    maxPending: number = MAX_PENDING_HTTP_EXCHANGES,
+    maxBufferBytes: number = MAX_EXCHANGE_BUFFER_BYTES,
+  ) {
+    this.maxPending = maxPending;
+    this.maxBufferBytes = maxBufferBytes;
+  }
 
   /**
    * Registers a new exchange that will receive response frames for `requestId`.
    *
    * @param requestId - Correlation id shared with the CLI.
    * @returns Handles used by the forwarding service to await the response.
+   * @throws Error When the concurrent exchange limit is reached.
    */
   begin(requestId: string): PendingHttpExchange {
     if (this.pending.has(requestId)) {
       throw new Error(`HTTP exchange already pending for requestId ${requestId}`);
+    }
+
+    if (this.pending.size >= this.maxPending) {
+      throw new Error(`Too many in-flight HTTP exchanges (limit ${String(this.maxPending)}).`);
     }
 
     let startResolve: ((message: HttpResponseStartMessage) => void) | undefined;
@@ -66,6 +91,7 @@ export class HttpExchangeCoordinator {
       startPromise,
       chunkWaiters: [],
       chunkBuffer: [],
+      bufferedBytes: 0,
       bodyEnded: false,
       failed: undefined,
     };
@@ -205,7 +231,16 @@ export class HttpExchangeCoordinator {
       return;
     }
 
+    if (entry.bufferedBytes + chunk.byteLength > this.maxBufferBytes) {
+      this.failExchange(
+        entry,
+        new Error(`HTTP exchange buffer exceeded ${String(this.maxBufferBytes)} bytes.`),
+      );
+      return;
+    }
+
     entry.chunkBuffer.push(chunk);
+    entry.bufferedBytes += chunk.byteLength;
   }
 
   private async *iterateBody(entry: InternalPending): AsyncIterable<Uint8Array> {
@@ -217,6 +252,7 @@ export class HttpExchangeCoordinator {
 
       const buffered = entry.chunkBuffer.shift();
       if (buffered !== undefined) {
+        entry.bufferedBytes = Math.max(0, entry.bufferedBytes - buffered.byteLength);
         yield buffered;
         continue;
       }

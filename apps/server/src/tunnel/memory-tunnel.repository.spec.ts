@@ -64,14 +64,14 @@ describe("MemoryTunnelRepository", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
     const tunnel: TunnelRecord = {
-      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      id: "abcd1234567890abcdef1234567890ab",
       client,
       port: 3000,
     };
 
     repository.save(tunnel);
 
-    expect(repository.findBySlug("abcd1234")).toEqual(tunnel);
+    expect(repository.findBySlug("abcd1234567890ab")).toEqual(tunnel);
     expect(repository.findBySlug("missing")).toBeUndefined();
   });
 
@@ -94,7 +94,7 @@ describe("MemoryTunnelRepository", () => {
     const firstClient = createClient();
     const secondClient = createClient();
     const tunnel: TunnelRecord = {
-      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      id: "abcd1234567890abcdef1234567890ab",
       client: firstClient,
       port: 3000,
     };
@@ -108,7 +108,7 @@ describe("MemoryTunnelRepository", () => {
       disconnectedAt: 1_000,
     });
     expect(repository.findById(tunnel.id)).toBeUndefined();
-    expect(repository.findBySlug("abcd1234")).toBeUndefined();
+    expect(repository.findBySlug("abcd1234567890ab")).toBeUndefined();
 
     const restored = repository.reclaim(tunnel.id, secondClient, 3000, 2_000, 60_000);
     expect(restored).toEqual({
@@ -116,7 +116,7 @@ describe("MemoryTunnelRepository", () => {
       client: secondClient,
       port: 3000,
     });
-    expect(repository.findBySlug("abcd1234")).toEqual(restored);
+    expect(repository.findBySlug("abcd1234567890ab")).toEqual(restored);
   });
 
   it("does not reclaim an expired orphan", () => {
@@ -141,7 +141,7 @@ describe("MemoryTunnelRepository", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
     const tunnel: TunnelRecord = {
-      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      id: "abcd1234567890abcdef1234567890ab",
       client,
       port: 3000,
     };

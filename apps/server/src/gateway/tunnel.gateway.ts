@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
+import type { IncomingMessage } from "node:http";
 
 import { Logger } from "@nestjs/common";
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from "@nestjs/websockets";
 import {
+  MAX_WS_MESSAGE_BYTES,
   MessageType,
   parseProtocolMessage,
   type ConnectedMessage,
   type CreateTunnelMessage,
   type ErrorMessage,
+  type HttpForwardingMessage,
   type PingMessage,
   type PongMessage,
   type ProtocolMessage,
@@ -17,16 +20,21 @@ import WebSocket from "ws";
 
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
+import { GatewaySecurityPolicy } from "../security/gateway-security.policy.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
  * WebSocket entry point for LoopLink CLI clients.
  *
- * Accepts connections, handles tunnel creation, and delivers HTTP response
- * frames to {@link HttpExchangeCoordinator}.
+ * Accepts connections under connection/origin limits, enforces per-IP message
+ * rate limits and frame size caps, handles tunnel creation, and delivers HTTP
+ * response frames only when the sender owns the tunnel.
  */
-@WebSocketGateway()
+@WebSocketGateway({
+  // Bound every inbound frame before JSON parsing (DoS control).
+  maxPayload: MAX_WS_MESSAGE_BYTES,
+})
 export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TunnelGateway.name);
 
@@ -34,19 +42,29 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param tunnelManager - Domain service that creates and tracks tunnels.
    * @param httpExchanges - Pending HTTP forward correlation registry.
    * @param heartbeats - Liveness tracker that drops silent clients.
+   * @param security - Connection, origin, and message-rate policy.
    */
   constructor(
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
     private readonly heartbeats: HeartbeatMonitor,
+    private readonly security: GatewaySecurityPolicy,
   ) {}
 
   /**
    * Handles a newly accepted WebSocket client.
    *
    * @param client - The connected `ws` client socket.
+   * @param request - HTTP upgrade request (origin / IP).
    */
-  handleConnection(client: WebSocket): void {
+  handleConnection(client: WebSocket, request: IncomingMessage): void {
+    const rejected = this.security.admit(client, request);
+    if (rejected !== undefined) {
+      this.logger.warn(`Rejected WebSocket connection: ${rejected}`);
+      client.close(1008, rejected);
+      return;
+    }
+
     const connectionId = randomUUID();
 
     this.logger.log(`Client connected (${connectionId})`);
@@ -62,6 +80,10 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.on("message", (data: WebSocket.RawData) => {
       this.handleClientMessage(client, data);
     });
+
+    client.on("error", (error) => {
+      this.logger.warn(`WebSocket error: ${error.message}`);
+    });
   }
 
   /**
@@ -71,6 +93,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   handleDisconnect(client: WebSocket): void {
     this.heartbeats.unregister(client);
+    this.security.release(client);
 
     const detached = this.tunnelManager.detachClient(client);
 
@@ -88,6 +111,15 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param data - Raw WebSocket payload.
    */
   private handleClientMessage(client: WebSocket, data: WebSocket.RawData): void {
+    if (!this.security.allowMessage(client)) {
+      this.sendMessage(client, {
+        type: MessageType.Error,
+        code: "rate_limited",
+        message: "WebSocket message rate limit exceeded.",
+      });
+      return;
+    }
+
     const parsed = parseProtocolMessage(rawDataToString(data));
 
     if (!parsed.ok) {
@@ -112,7 +144,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
       case MessageType.HttpResponseChunk:
       case MessageType.HttpResponseEnd:
       case MessageType.HttpCancel:
-        this.httpExchanges.deliver(message);
+        this.deliverOwnedHttpFrame(client, message);
         return;
       case MessageType.Error:
         if (!this.httpExchanges.deliver(message)) {
@@ -126,6 +158,27 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
           message: `Unsupported message type "${message.type}".`,
         });
     }
+  }
+
+  /**
+   * Delivers an HTTP response frame only when the sender owns the tunnel.
+   *
+   * @param client - Sending socket.
+   * @param message - HTTP forwarding frame.
+   */
+  private deliverOwnedHttpFrame(client: WebSocket, message: HttpForwardingMessage): void {
+    const tunnel = this.tunnelManager.lookup(message.tunnelId);
+    if (tunnel?.client !== client) {
+      this.sendMessage(client, {
+        type: MessageType.Error,
+        requestId: message.requestId,
+        code: "unauthorized_tunnel",
+        message: "HTTP frame tunnelId does not belong to this connection.",
+      });
+      return;
+    }
+
+    this.httpExchanges.deliver(message);
   }
 
   /**

@@ -1,4 +1,10 @@
-import { HttpMethod, type HttpCookies, type HttpHeaders, type HttpQuery } from "@looplink/shared";
+import {
+  HttpMethod,
+  MAX_PROTOCOL_STRING_LENGTH,
+  type HttpCookies,
+  type HttpHeaders,
+  type HttpQuery,
+} from "@looplink/shared";
 import type { FastifyRequest } from "fastify";
 
 /**
@@ -33,6 +39,13 @@ const STRIP_REQUEST_HEADERS = new Set([
   "host",
   "content-length",
   "cookie",
+  // Client-supplied forwarding headers are spoofable on the public edge.
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-forwarded-port",
+  "x-real-ip",
+  "forwarded",
 ]);
 
 /**
@@ -40,11 +53,13 @@ const STRIP_REQUEST_HEADERS = new Set([
  *
  * @param request - Inbound Fastify request (body parsed as Buffer when present).
  * @returns Normalized request fields.
- * @throws Error When the HTTP method is unsupported.
+ * @throws Error When the HTTP method is unsupported or fields fail validation.
  */
 export function mapFastifyRequest(request: FastifyRequest): MappedHttpRequest {
   const method = parseMethod(request.method);
   const path = request.url.split("?")[0] ?? "/";
+  assertBoundedString("path", path);
+
   const query = mapQuery(request.query);
   const cookies = parseCookieHeader(headerValue(request.headers.cookie));
   const headers = mapHeaders(request.headers);
@@ -83,9 +98,14 @@ function mapQuery(query: unknown): HttpQuery {
   const result: Record<string, string | readonly string[]> = {};
 
   for (const [key, value] of Object.entries(query as Record<string, unknown>)) {
+    assertBoundedString("query key", key);
     if (typeof value === "string") {
+      assertBoundedString("query value", value);
       result[key] = value;
     } else if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
+      for (const entry of value) {
+        assertBoundedString("query value", entry);
+      }
       result[key] = value;
     }
   }
@@ -101,7 +121,16 @@ function mapHeaders(headers: FastifyRequest["headers"]): HttpHeaders {
       continue;
     }
 
-    result[name] = value;
+    assertBoundedString("header name", name);
+    if (typeof value === "string") {
+      assertBoundedString("header value", value);
+      result[name] = value;
+    } else {
+      for (const entry of value) {
+        assertBoundedString("header value", entry);
+      }
+      result[name] = value;
+    }
   }
 
   return result;
@@ -125,8 +154,17 @@ function parseCookieHeader(header: string | undefined): HttpCookies {
       continue;
     }
 
-    const name = decodeURIComponent(trimmed.slice(0, separator).trim());
-    const value = decodeURIComponent(trimmed.slice(separator + 1).trim());
+    let name: string;
+    let value: string;
+    try {
+      name = decodeURIComponent(trimmed.slice(0, separator).trim());
+      value = decodeURIComponent(trimmed.slice(separator + 1).trim());
+    } catch {
+      throw new Error("Malformed Cookie header encoding.");
+    }
+
+    assertBoundedString("cookie name", name);
+    assertBoundedString("cookie value", value);
     result[name] = value;
   }
 
@@ -159,4 +197,18 @@ function mapBody(body: unknown): Uint8Array | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Rejects protocol strings that exceed the shared length ceiling.
+ *
+ * @param label - Field name for the error message.
+ * @param value - Candidate string.
+ */
+function assertBoundedString(label: string, value: string): void {
+  if (value.length > MAX_PROTOCOL_STRING_LENGTH) {
+    throw new Error(
+      `${label} exceeds maximum length of ${String(MAX_PROTOCOL_STRING_LENGTH)} characters.`,
+    );
+  }
 }

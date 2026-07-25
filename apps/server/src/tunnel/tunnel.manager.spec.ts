@@ -16,16 +16,15 @@ function createClient(): WebSocket {
 }
 
 describe("TunnelManager", () => {
-  it("generates unique tunnel ids", () => {
+  it("generates unique cryptographically random tunnel ids", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
 
     const first = manager.generateTunnelId();
     const second = manager.generateTunnelId();
 
     expect(first).not.toBe(second);
-    expect(first).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
+    expect(first).toMatch(/^[0-9a-f]{32}$/);
+    expect(second).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it("registers a websocket client and returns a persisted tunnel", () => {
@@ -43,19 +42,19 @@ describe("TunnelManager", () => {
 
   it("creates a tunnel with a public URL", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
-    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234-5678-4abc-8def-0123456789ab");
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
     const created = manager.create(createClient(), 3000);
 
     expect(created.tunnel.port).toBe(3000);
-    expect(created.tunnel.id).toBe("abcd1234-5678-4abc-8def-0123456789ab");
-    expect(created.publicUrl).toBe("https://abcd1234.looplink.dev");
+    expect(created.tunnel.id).toBe("abcd1234567890abcdef1234567890ab");
+    expect(created.publicUrl).toBe("https://abcd1234567890ab.looplink.dev");
     expect(created.restored).toBe(false);
   });
 
   it("reclaims an orphaned tunnel when a preferred id is provided", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
-    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234-5678-4abc-8def-0123456789ab");
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
     const firstClient = createClient();
     const created = manager.create(firstClient, 3000);
@@ -75,14 +74,14 @@ describe("TunnelManager", () => {
 
   it("creates a new tunnel when the preferred id cannot be reclaimed", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
-    vi.spyOn(manager, "generateTunnelId").mockReturnValue("ffff9999-5678-4abc-8def-0123456789ab");
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("ffff9999567890abcdef1234567890ab");
 
     const created = manager.create(createClient(), 3000, {
       preferredTunnelId: "missing-id",
     });
 
     expect(created.restored).toBe(false);
-    expect(created.tunnel.id).toBe("ffff9999-5678-4abc-8def-0123456789ab");
+    expect(created.tunnel.id).toBe("ffff9999567890abcdef1234567890ab");
   });
 
   it("rejects invalid ports when creating a tunnel", () => {

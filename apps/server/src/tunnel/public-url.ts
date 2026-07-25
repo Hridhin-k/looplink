@@ -1,19 +1,20 @@
+import { TUNNEL_SLUG_LENGTH } from "@looplink/shared";
+
 /**
  * Default public DNS suffix used when building tunnel URLs.
  */
 export const DEFAULT_PUBLIC_BASE_DOMAIN = "looplink.dev";
 
-/** Number of hex characters used as the public subdomain slug. */
-export const TUNNEL_SLUG_LENGTH = 8;
+export { TUNNEL_SLUG_LENGTH };
 
 /**
  * Derives the public subdomain slug from a tunnel id.
  *
- * @param tunnelId - Unique tunnel identifier.
- * @returns An 8-character hex slug.
+ * @param tunnelId - Unique tunnel identifier (hex string).
+ * @returns A {@link TUNNEL_SLUG_LENGTH}-character hex slug.
  */
 export function tunnelSlug(tunnelId: string): string {
-  return tunnelId.replaceAll("-", "").slice(0, TUNNEL_SLUG_LENGTH);
+  return tunnelId.replaceAll("-", "").slice(0, TUNNEL_SLUG_LENGTH).toLowerCase();
 }
 
 /**

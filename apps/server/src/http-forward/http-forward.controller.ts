@@ -62,7 +62,8 @@ export class HttpForwardController {
       mapped = mapFastifyRequest(request);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Invalid request.";
-      await reply.status(405).send({ statusCode: 405, message });
+      const statusCode = message.startsWith("Unsupported HTTP method") ? 405 : 400;
+      await reply.status(statusCode).send({ statusCode, message });
       return;
     }
 
