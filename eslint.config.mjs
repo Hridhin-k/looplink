@@ -17,6 +17,10 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      // NestJS modules and gateways are decorator-driven empty classes.
+      "@typescript-eslint/no-extraneous-class": ["error", { allowWithDecorator: true }],
+    },
   },
   {
     // Config files at the repo root are not part of a TS project.

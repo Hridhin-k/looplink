@@ -17,7 +17,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "cli": "pnpm --filter @looplink/cli"
+    "cli": "pnpm --filter @looplink/cli",
+    "server:dev": "pnpm --filter @looplink/server dev",
+    "server:start": "pnpm --filter @looplink/server start"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
