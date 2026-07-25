@@ -59,6 +59,10 @@ export interface ConnectedMessage extends BaseMessage {
 
 /**
  * Asks the server to expose a local TCP port through a public URL.
+ *
+ * After a reconnect, clients may include the previous `tunnelId` so the server
+ * can reclaim the same public URL when the orphaned tunnel is still within the
+ * reclaim window.
  */
 export interface CreateTunnelMessage extends BaseMessage {
   readonly type: MessageType.CreateTunnel;
@@ -66,6 +70,13 @@ export interface CreateTunnelMessage extends BaseMessage {
   readonly requestId: string;
   /** Local TCP port on the client machine to expose. */
   readonly port: number;
+  /**
+   * Preferred tunnel id to restore after a reconnect.
+   *
+   * Omitted on the first create. When present, the server reclaims that tunnel
+   * if it is still orphaned; otherwise it creates a new tunnel.
+   */
+  readonly tunnelId?: string;
 }
 
 /**

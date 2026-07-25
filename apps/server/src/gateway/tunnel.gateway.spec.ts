@@ -31,6 +31,7 @@ function createGateway(): {
 } {
   const tunnelManager = {
     unregisterClient: vi.fn().mockReturnValue(false),
+    detachClient: vi.fn().mockReturnValue(false),
   } as unknown as TunnelManager;
 
   // Long sweep cadence: these tests never advance timers, they only assert
@@ -91,12 +92,13 @@ describe("TunnelGateway heartbeat", () => {
   });
 
   it("stops tracking a client on disconnect", () => {
-    const { gateway, heartbeats } = createGateway();
+    const { gateway, heartbeats, tunnelManager } = createGateway();
     const socket = new FakeSocket();
 
     gateway.handleConnection(asClient(socket));
     gateway.handleDisconnect(asClient(socket));
 
     expect(heartbeats.trackedClientCount()).toBe(0);
+    expect(tunnelManager.detachClient).toHaveBeenCalledWith(asClient(socket));
   });
 });

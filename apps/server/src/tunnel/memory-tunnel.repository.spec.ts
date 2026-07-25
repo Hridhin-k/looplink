@@ -88,4 +88,68 @@ describe("MemoryTunnelRepository", () => {
     expect(repository.findByClient(firstClient)).toBeUndefined();
     expect(repository.findByClient(secondClient)?.id).toBe("tunnel-5");
   });
+
+  it("orphans a tunnel on disconnect and reclaims it for a new client", () => {
+    const repository = new MemoryTunnelRepository();
+    const firstClient = createClient();
+    const secondClient = createClient();
+    const tunnel: TunnelRecord = {
+      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      client: firstClient,
+      port: 3000,
+    };
+
+    repository.save(tunnel);
+
+    const orphan = repository.orphanByClient(firstClient, 1_000);
+    expect(orphan).toEqual({
+      id: tunnel.id,
+      port: 3000,
+      disconnectedAt: 1_000,
+    });
+    expect(repository.findById(tunnel.id)).toBeUndefined();
+    expect(repository.findBySlug("abcd1234")).toBeUndefined();
+
+    const restored = repository.reclaim(tunnel.id, secondClient, 3000, 2_000, 60_000);
+    expect(restored).toEqual({
+      id: tunnel.id,
+      client: secondClient,
+      port: 3000,
+    });
+    expect(repository.findBySlug("abcd1234")).toEqual(restored);
+  });
+
+  it("does not reclaim an expired orphan", () => {
+    const repository = new MemoryTunnelRepository();
+    const client = createClient();
+    repository.save({ id: "tunnel-6", client, port: 3000 });
+    repository.orphanByClient(client, 1_000);
+
+    expect(repository.reclaim("tunnel-6", createClient(), 3000, 70_000, 60_000)).toBeUndefined();
+  });
+
+  it("does not reclaim when the port does not match", () => {
+    const repository = new MemoryTunnelRepository();
+    const client = createClient();
+    repository.save({ id: "tunnel-7", client, port: 3000 });
+    repository.orphanByClient(client, 1_000);
+
+    expect(repository.reclaim("tunnel-7", createClient(), 4000, 2_000, 60_000)).toBeUndefined();
+  });
+
+  it("purges expired orphans and frees their slugs", () => {
+    const repository = new MemoryTunnelRepository();
+    const client = createClient();
+    const tunnel: TunnelRecord = {
+      id: "abcd1234-5678-4abc-8def-0123456789ab",
+      client,
+      port: 3000,
+    };
+
+    repository.save(tunnel);
+    repository.orphanByClient(client, 1_000);
+
+    expect(repository.purgeExpiredOrphans(70_000, 60_000)).toBe(1);
+    expect(repository.reclaim(tunnel.id, createClient(), 3000, 71_000, 60_000)).toBeUndefined();
+  });
 });

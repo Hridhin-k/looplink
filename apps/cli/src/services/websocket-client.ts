@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import {
   MessageType,
+  RECONNECT_INTERVAL_MS,
   parseProtocolMessage,
   type CreateTunnelMessage,
   type ProtocolMessage,
@@ -20,16 +21,48 @@ export interface WebSocketClientOptions {
   readonly url: string;
   /**
    * When `true`, the client retries after an unexpected disconnect.
-   *
-   * Kept `false` for now; the close-path is structured so a retry policy can be
-   * dropped in later without reshaping the client.
    */
   readonly reconnect: boolean;
+  /**
+   * Delay between reconnect attempts. Defaults to the shared protocol interval.
+   */
+  readonly reconnectIntervalMs?: number;
   /**
    * Delay between keepalive `PING` messages. Defaults to the shared protocol
    * interval; override only in tests.
    */
   readonly heartbeatIntervalMs?: number;
+  /**
+   * Invoked when the live connection drops unexpectedly and reconnect is armed.
+   *
+   * @param error - Reason the previous socket closed.
+   */
+  readonly onConnectionLost?: (error: Error) => void;
+  /**
+   * Invoked after a successful reconnect that restored or replaced the tunnel.
+   *
+   * @param tunnel - Tunnel session active on the new connection.
+   * @param restored - `true` when the previous tunnel id was reclaimed.
+   */
+  readonly onReconnected?: (tunnel: TunnelCreatedMessage, restored: boolean) => void;
+  /**
+   * Invoked when a reconnect attempt fails; another attempt will be scheduled.
+   *
+   * @param error - Failure from the latest attempt.
+   */
+  readonly onReconnectFailed?: (error: Error) => void;
+}
+
+/**
+ * Tunnel session remembered across reconnects.
+ */
+export interface ActiveTunnelSession {
+  /** Local TCP port being exposed. */
+  readonly port: number;
+  /** Server-assigned tunnel id. */
+  readonly tunnelId: string;
+  /** Public URL for the tunnel. */
+  readonly publicUrl: string;
 }
 
 /**
@@ -42,7 +75,7 @@ export interface ServerConnection {
   connect(): Promise<void>;
 
   /**
-   * Closes the connection if one is open.
+   * Closes the connection if one is open and cancels automatic reconnect.
    */
   disconnect(): Promise<void>;
 
@@ -50,6 +83,11 @@ export interface ServerConnection {
    * Returns the current connection lifecycle state.
    */
   getState(): ConnectionState;
+
+  /**
+   * Returns the last known tunnel session, if any.
+   */
+  getActiveTunnel(): ActiveTunnelSession | undefined;
 
   /**
    * Sends a protocol message to the server.
@@ -75,8 +113,9 @@ export interface ServerConnection {
    * Requests a tunnel for a local port and resolves with the server response.
    *
    * @param port - Local TCP port to expose.
+   * @param preferredTunnelId - Prior tunnel id to reclaim after a reconnect.
    */
-  createTunnel(port: number): Promise<TunnelCreatedMessage>;
+  createTunnel(port: number, preferredTunnelId?: string): Promise<TunnelCreatedMessage>;
 }
 
 interface MessageWaiter {
@@ -91,6 +130,9 @@ const DEFAULT_WAIT_TIMEOUT_MS = 10_000;
 
 /**
  * WebSocket client that maintains a single connection to the LoopLink server.
+ *
+ * When `reconnect` is enabled, unexpected closes schedule a retry every
+ * {@link RECONNECT_INTERVAL_MS} and attempt to reclaim the previous tunnel.
  */
 export class LoopLinkWebSocketClient implements ServerConnection {
   private state: ConnectionState = ConnectionState.Disconnected;
@@ -98,11 +140,18 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   private readonly inbox: ProtocolMessage[] = [];
   private waiter: MessageWaiter | undefined;
   private heartbeat: Heartbeat | undefined;
+  private intentionalClose = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectInFlight = false;
+  private activeTunnel: ActiveTunnelSession | undefined;
+  private readonly reconnectIntervalMs: number;
 
   /**
    * @param options - Connection URL and reconnect policy.
    */
-  constructor(private readonly options: WebSocketClientOptions) {}
+  constructor(private readonly options: WebSocketClientOptions) {
+    this.reconnectIntervalMs = options.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS;
+  }
 
   /**
    * Returns the current connection lifecycle state.
@@ -111,6 +160,15 @@ export class LoopLinkWebSocketClient implements ServerConnection {
    */
   getState(): ConnectionState {
     return this.state;
+  }
+
+  /**
+   * Returns the last known tunnel session, if any.
+   *
+   * @returns The active tunnel metadata remembered for reconnect restoration.
+   */
+  getActiveTunnel(): ActiveTunnelSession | undefined {
+    return this.activeTunnel;
   }
 
   /**
@@ -128,6 +186,7 @@ export class LoopLinkWebSocketClient implements ServerConnection {
       return Promise.reject(new Error("A connection attempt is already in progress."));
     }
 
+    this.intentionalClose = false;
     this.setState(ConnectionState.Connecting);
 
     return new Promise<void>((resolve, reject) => {
@@ -175,14 +234,23 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   }
 
   /**
-   * Closes the active WebSocket, if any.
+   * Closes the active WebSocket, if any, and cancels automatic reconnect.
    *
    * @returns A promise that resolves once the socket has closed.
    */
   disconnect(): Promise<void> {
+    this.intentionalClose = true;
+    this.clearReconnectTimer();
+    this.reconnectInFlight = false;
+
     const socket = this.socket;
 
     if (socket === undefined || this.state === ConnectionState.Disconnected) {
+      this.setState(ConnectionState.Disconnected);
+      return Promise.resolve();
+    }
+
+    if (this.state === ConnectionState.Reconnecting) {
       this.setState(ConnectionState.Disconnected);
       return Promise.resolve();
     }
@@ -271,14 +339,16 @@ export class LoopLinkWebSocketClient implements ServerConnection {
    * Requests a tunnel for a local port and resolves with the server response.
    *
    * @param port - Local TCP port to expose.
+   * @param preferredTunnelId - Prior tunnel id to reclaim after a reconnect.
    * @returns The server's {@link TunnelCreatedMessage}.
    */
-  async createTunnel(port: number): Promise<TunnelCreatedMessage> {
+  async createTunnel(port: number, preferredTunnelId?: string): Promise<TunnelCreatedMessage> {
     const requestId = randomUUID();
     const request: CreateTunnelMessage = {
       type: MessageType.CreateTunnel,
       requestId,
       port,
+      ...(preferredTunnelId === undefined ? {} : { tunnelId: preferredTunnelId }),
     };
 
     const responsePromise = this.waitForMessage((message) => {
@@ -305,6 +375,12 @@ export class LoopLinkWebSocketClient implements ServerConnection {
       throw new Error(`Unexpected response type "${response.type}".`);
     }
 
+    this.activeTunnel = {
+      port,
+      tunnelId: response.tunnelId,
+      publicUrl: response.publicUrl,
+    };
+
     return response;
   }
 
@@ -315,10 +391,14 @@ export class LoopLinkWebSocketClient implements ServerConnection {
     this.heartbeat.start();
 
     socket.on("close", () => {
+      const wasIntentional = this.intentionalClose;
       this.failWaiter(new Error("Connection closed while waiting for a protocol message."));
       this.disposeSocket();
       this.setState(ConnectionState.Disconnected);
-      this.maybeReconnect();
+
+      if (!wasIntentional) {
+        this.scheduleReconnect(new Error("Connection to the LoopLink server was lost."));
+      }
     });
 
     socket.on("error", () => {
@@ -377,12 +457,67 @@ export class LoopLinkWebSocketClient implements ServerConnection {
     this.waiter.reject(error);
   }
 
-  private maybeReconnect(): void {
-    if (!this.options.reconnect) {
+  private scheduleReconnect(error: Error): void {
+    if (!this.options.reconnect || this.intentionalClose) {
       return;
     }
 
-    // Automatic reconnect is intentionally disabled for now.
+    if (this.reconnectTimer !== undefined || this.reconnectInFlight) {
+      return;
+    }
+
+    this.setState(ConnectionState.Reconnecting);
+    this.options.onConnectionLost?.(error);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      void this.attemptReconnect();
+    }, this.reconnectIntervalMs);
+
+    this.reconnectTimer.unref();
+  }
+
+  private async attemptReconnect(): Promise<void> {
+    if (this.intentionalClose || !this.options.reconnect) {
+      this.setState(ConnectionState.Disconnected);
+      return;
+    }
+
+    this.reconnectInFlight = true;
+    this.setState(ConnectionState.Reconnecting);
+
+    try {
+      await this.connect();
+      await this.waitForMessage((message) => message.type === MessageType.Connected);
+
+      const session = this.activeTunnel;
+      if (session === undefined) {
+        this.reconnectInFlight = false;
+        return;
+      }
+
+      const previousTunnelId = session.tunnelId;
+      const tunnel = await this.createTunnel(session.port, previousTunnelId);
+      const restored = tunnel.tunnelId === previousTunnelId;
+
+      this.reconnectInFlight = false;
+      this.options.onReconnected?.(tunnel, restored);
+    } catch (error: unknown) {
+      this.reconnectInFlight = false;
+      this.disposeSocket();
+      this.setState(ConnectionState.Disconnected);
+
+      const failure = error instanceof Error ? error : new Error("Reconnect attempt failed.");
+      this.options.onReconnectFailed?.(failure);
+      this.scheduleReconnect(failure);
+    }
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== undefined) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
   }
 
   private disposeSocket(): void {

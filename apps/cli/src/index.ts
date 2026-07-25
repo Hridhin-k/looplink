@@ -4,20 +4,12 @@ import { Command } from "commander";
 
 import { registerStartCommand, StartCommand } from "./commands/start.js";
 import { loadCliConfig } from "./config/cli.js";
-import { StartTunnelService } from "./services/start-tunnel.js";
-import { LoopLinkWebSocketClient } from "./services/websocket-client.js";
+import { createDefaultServerConnection, StartTunnelService } from "./services/start-tunnel.js";
 import { ConsoleWriter } from "./utils/output.js";
 
 const config = loadCliConfig();
 const writer = new ConsoleWriter();
-const startTunnel = new StartTunnelService(
-  writer,
-  (serverUrl) =>
-    new LoopLinkWebSocketClient({
-      url: serverUrl,
-      reconnect: false,
-    }),
-);
+const startTunnel = new StartTunnelService(writer, createDefaultServerConnection);
 const startCommand = new StartCommand(startTunnel, writer);
 
 const program = new Command();

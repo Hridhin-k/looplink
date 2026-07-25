@@ -72,10 +72,10 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: WebSocket): void {
     this.heartbeats.unregister(client);
 
-    const removed = this.tunnelManager.unregisterClient(client);
+    const detached = this.tunnelManager.detachClient(client);
 
-    if (removed) {
-      this.logger.log("Client disconnected; tunnel unregistered");
+    if (detached) {
+      this.logger.log("Client disconnected; tunnel parked for reclaim");
     } else {
       this.logger.log("Client disconnected");
     }
@@ -153,7 +153,11 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   private handleCreateTunnel(client: WebSocket, request: CreateTunnelMessage): void {
     try {
-      const created = this.tunnelManager.create(client, request.port);
+      const created = this.tunnelManager.create(
+        client,
+        request.port,
+        request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId },
+      );
 
       const response: TunnelCreatedMessage = {
         type: MessageType.TunnelCreated,
@@ -162,8 +166,9 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
         publicUrl: created.publicUrl,
       };
 
+      const action = created.restored ? "restored" : "created";
       this.logger.log(
-        `Tunnel created (${created.tunnel.id}) for port ${String(request.port)} → ${created.publicUrl}`,
+        `Tunnel ${action} (${created.tunnel.id}) for port ${String(request.port)} → ${created.publicUrl}`,
       );
       this.sendMessage(client, response);
     } catch (error: unknown) {

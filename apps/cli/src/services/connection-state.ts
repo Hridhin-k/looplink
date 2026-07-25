@@ -10,4 +10,6 @@ export enum ConnectionState {
   Connected = "connected",
   /** An intentional close is in flight. */
   Disconnecting = "disconnecting",
+  /** Waiting to retry after an unexpected disconnect. */
+  Reconnecting = "reconnecting",
 }

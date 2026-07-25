@@ -6,3 +6,4 @@ export {
   LOG_LEVELS,
   SILENT_THRESHOLD,
 } from "./logging.js";
+export { RECONNECT_INTERVAL_MS, TUNNEL_RECLAIM_WINDOW_MS } from "./reconnect.js";

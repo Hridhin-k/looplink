@@ -93,6 +93,7 @@ function parseConnected(record: Record<string, unknown>): Result<ConnectedMessag
 function parseCreateTunnel(record: Record<string, unknown>): Result<CreateTunnelMessage, string> {
   const requestId = record["requestId"];
   const port = record["port"];
+  const tunnelId = record["tunnelId"];
 
   if (typeof requestId !== "string" || requestId.length === 0) {
     return err("CreateTunnel message requires a non-empty requestId.");
@@ -102,11 +103,21 @@ function parseCreateTunnel(record: Record<string, unknown>): Result<CreateTunnel
     return err("CreateTunnel message requires an integer port between 1 and 65535.");
   }
 
-  return ok({
+  if (tunnelId !== undefined && (typeof tunnelId !== "string" || tunnelId.length === 0)) {
+    return err("CreateTunnel message tunnelId must be a non-empty string when present.");
+  }
+
+  const message: CreateTunnelMessage = {
     type: MessageType.CreateTunnel,
     requestId,
     port,
-  });
+  };
+
+  if (typeof tunnelId === "string") {
+    return ok({ ...message, tunnelId });
+  }
+
+  return ok(message);
 }
 
 function parseTunnelCreated(record: Record<string, unknown>): Result<TunnelCreatedMessage, string> {

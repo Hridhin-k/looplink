@@ -50,6 +50,39 @@ describe("TunnelManager", () => {
     expect(created.tunnel.port).toBe(3000);
     expect(created.tunnel.id).toBe("abcd1234-5678-4abc-8def-0123456789ab");
     expect(created.publicUrl).toBe("https://abcd1234.looplink.dev");
+    expect(created.restored).toBe(false);
+  });
+
+  it("reclaims an orphaned tunnel when a preferred id is provided", () => {
+    const manager = new TunnelManager(new MemoryTunnelRepository());
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234-5678-4abc-8def-0123456789ab");
+
+    const firstClient = createClient();
+    const created = manager.create(firstClient, 3000);
+    expect(manager.detachClient(firstClient)).toBe(true);
+    expect(manager.lookup(created.tunnel.id)).toBeUndefined();
+
+    const secondClient = createClient();
+    const restored = manager.create(secondClient, 3000, {
+      preferredTunnelId: created.tunnel.id,
+    });
+
+    expect(restored.restored).toBe(true);
+    expect(restored.tunnel.id).toBe(created.tunnel.id);
+    expect(restored.publicUrl).toBe(created.publicUrl);
+    expect(restored.tunnel.client).toBe(secondClient);
+  });
+
+  it("creates a new tunnel when the preferred id cannot be reclaimed", () => {
+    const manager = new TunnelManager(new MemoryTunnelRepository());
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("ffff9999-5678-4abc-8def-0123456789ab");
+
+    const created = manager.create(createClient(), 3000, {
+      preferredTunnelId: "missing-id",
+    });
+
+    expect(created.restored).toBe(false);
+    expect(created.tunnel.id).toBe("ffff9999-5678-4abc-8def-0123456789ab");
   });
 
   it("rejects invalid ports when creating a tunnel", () => {
@@ -86,6 +119,16 @@ describe("TunnelManager", () => {
     expect(manager.unregisterClient(client)).toBe(false);
   });
 
+  it("detaches a client without deleting the reclaimable orphan", () => {
+    const manager = new TunnelManager(new MemoryTunnelRepository());
+    const client = createClient();
+    const tunnel = manager.register(client, 3000);
+
+    expect(manager.detachClient(client)).toBe(true);
+    expect(manager.lookup(tunnel.id)).toBeUndefined();
+    expect(manager.detachClient(client)).toBe(false);
+  });
+
   it("delegates persistence to the injected repository", () => {
     const client = createClient();
     const tunnel: TunnelRecord = { id: "fixed-id", client, port: 3000 };
@@ -94,6 +137,13 @@ describe("TunnelManager", () => {
       save: vi.fn(),
       remove: vi.fn(() => true),
       removeByClient: vi.fn(() => true),
+      orphanByClient: vi.fn(() => ({
+        id: "fixed-id",
+        port: 3000,
+        disconnectedAt: 0,
+      })),
+      reclaim: vi.fn(() => undefined),
+      purgeExpiredOrphans: vi.fn(() => 0),
       findById: vi.fn(() => tunnel),
       findByClient: vi.fn(() => tunnel),
       findBySlug: vi.fn(() => tunnel),
@@ -113,5 +163,8 @@ describe("TunnelManager", () => {
 
     expect(manager.unregisterClient(client)).toBe(true);
     expect(repository.removeByClient).toHaveBeenCalledWith(client);
+
+    expect(manager.detachClient(client)).toBe(true);
+    expect(repository.orphanByClient).toHaveBeenCalled();
   });
 });

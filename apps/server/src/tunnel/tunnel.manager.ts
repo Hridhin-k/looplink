@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
+import { TUNNEL_RECLAIM_WINDOW_MS } from "@looplink/shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl, resolvePublicBaseDomain } from "./public-url.js";
@@ -13,6 +14,18 @@ const MIN_PORT = 1;
 
 /** Inclusive upper bound of a valid TCP port. */
 const MAX_PORT = 65_535;
+
+/**
+ * Options for {@link TunnelManager.create}.
+ */
+export interface CreateTunnelOptions {
+  /** Preferred tunnel id to reclaim after a reconnect. */
+  readonly preferredTunnelId?: string;
+  /** Epoch ms used for reclaim expiry checks. Defaults to `Date.now()`. */
+  readonly now?: number;
+  /** Override for the shared reclaim window. Intended for tests. */
+  readonly reclaimWindowMs?: number;
+}
 
 /**
  * Application service that manages active tunnel sessions and their WebSocket clients.
@@ -39,22 +52,45 @@ export class TunnelManager {
   /**
    * Creates a tunnel for a connected client and local port.
    *
+   * When `preferredTunnelId` is provided, the manager first tries to reclaim an
+   * orphaned tunnel so the public URL survives a brief network interruption.
+   *
    * @param client - Connected LoopLink client socket.
    * @param port - Local TCP port on the client to expose.
+   * @param options - Optional reclaim preference and clock overrides.
    * @returns The persisted tunnel and its public URL.
    * @throws Error When `port` is outside the valid TCP range.
    */
-  create(client: WebSocket, port: number): CreatedTunnel {
-    if (!Number.isInteger(port) || port < MIN_PORT || port > MAX_PORT) {
-      throw new Error(
-        `Invalid port ${String(port)}: must be an integer between ${String(MIN_PORT)} and ${String(MAX_PORT)}.`,
+  create(client: WebSocket, port: number, options: CreateTunnelOptions = {}): CreatedTunnel {
+    this.assertValidPort(port);
+
+    const now = options.now ?? Date.now();
+    const reclaimWindowMs = options.reclaimWindowMs ?? TUNNEL_RECLAIM_WINDOW_MS;
+
+    this.repository.purgeExpiredOrphans(now, reclaimWindowMs);
+
+    if (options.preferredTunnelId !== undefined) {
+      const restored = this.repository.reclaim(
+        options.preferredTunnelId,
+        client,
+        port,
+        now,
+        reclaimWindowMs,
       );
+
+      if (restored !== undefined) {
+        return {
+          tunnel: restored,
+          publicUrl: buildPublicUrl(restored.id, resolvePublicBaseDomain()),
+          restored: true,
+        };
+      }
     }
 
     const tunnel = this.register(client, port);
     const publicUrl = buildPublicUrl(tunnel.id, resolvePublicBaseDomain());
 
-    return { tunnel, publicUrl };
+    return { tunnel, publicUrl, restored: false };
   }
 
   /**
@@ -88,11 +124,24 @@ export class TunnelManager {
   /**
    * Unregisters the tunnel associated with a WebSocket client.
    *
+   * Prefer {@link detachClient} on unexpected disconnects so the tunnel can be
+   * reclaimed after a reconnect.
+   *
    * @param client - Connected client socket.
    * @returns `true` when a tunnel was removed.
    */
   unregisterClient(client: WebSocket): boolean {
     return this.repository.removeByClient(client);
+  }
+
+  /**
+   * Parks the client's tunnel as reclaimable instead of deleting it.
+   *
+   * @param client - Disconnecting client socket.
+   * @returns `true` when a tunnel was orphaned.
+   */
+  detachClient(client: WebSocket): boolean {
+    return this.repository.orphanByClient(client, Date.now()) !== undefined;
   }
 
   /**
@@ -113,5 +162,13 @@ export class TunnelManager {
    */
   lookupBySlug(slug: string): TunnelRecord | undefined {
     return this.repository.findBySlug(slug);
+  }
+
+  private assertValidPort(port: number): void {
+    if (!Number.isInteger(port) || port < MIN_PORT || port > MAX_PORT) {
+      throw new Error(
+        `Invalid port ${String(port)}: must be an integer between ${String(MIN_PORT)} and ${String(MAX_PORT)}.`,
+      );
+    }
   }
 }
