@@ -8,6 +8,7 @@ import { ShutdownController } from "./services/shutdown.js";
 import { createDefaultServerConnection, StartTunnelService } from "./services/start-tunnel.js";
 import { ConsoleSessionPresenter } from "./ui/console-session-presenter.js";
 import { createSpinner } from "./ui/spinner.js";
+import { argvForCommander } from "./utils/argv.js";
 import { copyToClipboard } from "./utils/clipboard.js";
 import { ConsoleWriter } from "./utils/output.js";
 import { renderQrCode } from "./utils/qrcode.js";
@@ -46,4 +47,5 @@ program.name(config.name).description(config.description).version(config.version
 
 registerStartCommand(program, startCommand);
 
-program.parse();
+// pnpm injects a literal `--` before script args; strip it so options parse.
+program.parse(argvForCommander(process.argv));

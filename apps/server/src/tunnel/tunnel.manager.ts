@@ -4,7 +4,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@looplink/shared";
 import type WebSocket from "ws";
 
-import { buildPublicUrl, resolvePublicBaseDomain } from "./public-url.js";
+import { buildPublicUrl } from "./public-url.js";
 import { TUNNEL_REPOSITORY } from "./tunnel.constants.js";
 import type { TunnelRepository } from "./tunnel.repository.js";
 import type { CreatedTunnel, TunnelRecord } from "./tunnel.types.js";
@@ -84,14 +84,14 @@ export class TunnelManager {
       if (restored !== undefined) {
         return {
           tunnel: restored,
-          publicUrl: buildPublicUrl(restored.id, resolvePublicBaseDomain()),
+          publicUrl: buildPublicUrl(restored.id),
           restored: true,
         };
       }
     }
 
     const tunnel = this.register(client, port);
-    const publicUrl = buildPublicUrl(tunnel.id, resolvePublicBaseDomain());
+    const publicUrl = buildPublicUrl(tunnel.id);
 
     return { tunnel, publicUrl, restored: false };
   }

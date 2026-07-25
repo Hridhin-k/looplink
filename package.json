@@ -17,7 +17,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "cli": "pnpm --filter @looplink/cli",
+    "cli": "node ./apps/cli/dist/index.js",
     "server:dev": "pnpm --filter @looplink/server dev",
     "server:start": "pnpm --filter @looplink/server start",
     "test": "pnpm --filter @looplink/server --filter @looplink/cli test",

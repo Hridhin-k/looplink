@@ -10,9 +10,15 @@ import { request } from "undici";
 /** Fake public base domain used for tunnel URLs during the suite. */
 export const E2E_BASE_DOMAIN = "looplink.test";
 
-/** Matches every tunnel URL the CLI prints for the E2E base domain. */
+/** Matches subdomain tunnel URLs printed by the CLI (`LOOPLINK_PUBLIC_URL_MODE=subdomain`). */
 export const TUNNEL_URL_PATTERN = new RegExp(
   `https://[a-z0-9]+\\.${E2E_BASE_DOMAIN.replace(".", "\\.")}`,
+  "g",
+);
+
+/** Matches path-based tunnel URLs (`LOOPLINK_PUBLIC_URL_MODE=path`). */
+export const PATH_TUNNEL_URL_PATTERN = new RegExp(
+  `https://${E2E_BASE_DOMAIN.replace(".", "\\.")}/tunnel/[a-f0-9]{32}`,
   "g",
 );
 
@@ -138,15 +144,20 @@ export class ManagedProcess {
  * forwarding rather than the security throttles (covered by unit tests).
  *
  * @param serverPort - HTTP/WebSocket port for the server to bind.
+ * @param options - Public URL mode (`subdomain` keeps Host-based E2E stable).
  * @returns Managed process handle.
  */
-export async function startServer(serverPort: number): Promise<ManagedProcess> {
+export async function startServer(
+  serverPort: number,
+  options: { readonly publicUrlMode?: "path" | "subdomain" } = {},
+): Promise<ManagedProcess> {
   const child = spawn(process.execPath, [SERVER_ENTRY], {
     env: {
       ...process.env,
       PORT: String(serverPort),
       HOST: "127.0.0.1",
       LOOPLINK_PUBLIC_BASE_DOMAIN: E2E_BASE_DOMAIN,
+      LOOPLINK_PUBLIC_URL_MODE: options.publicUrlMode ?? "subdomain",
       LOOPLINK_WS_MESSAGE_RATE_LIMIT: "100000",
       LOOPLINK_HTTP_RATE_LIMIT_MAX: "100000",
       NO_COLOR: "1",
@@ -195,16 +206,18 @@ export interface TunnelResponse {
 }
 
 /**
- * Sends an HTTP request to the server as if it arrived on the tunnel's public
- * hostname.
+ * Sends an HTTP request through a tunnel's public URL.
  *
  * DNS for the fake base domain does not resolve, so the request targets
- * 127.0.0.1 directly and carries the tunnel host in the `Host` header —
- * exactly what nginx would do in production.
+ * 127.0.0.1 directly and carries the public hostname in the `Host` header.
+ *
+ * For path-based URLs (`https://domain/tunnel/{id}`), `requestPath` is appended
+ * under that prefix so `/api/data` becomes `/tunnel/{id}/api/data`. For
+ * subdomain URLs the path is used as-is (routing is via `Host`).
  *
  * @param serverPort - LoopLink server port.
  * @param publicUrl - Tunnel URL printed by the CLI.
- * @param requestPath - Path (with optional query string) to request.
+ * @param requestPath - Application path (with optional query string).
  * @param options - Method, extra headers, and body.
  * @returns Buffered status, headers, and body.
  */
@@ -218,9 +231,11 @@ export async function tunnelRequest(
     readonly body?: string | Buffer;
   } = {},
 ): Promise<TunnelResponse> {
-  const host = new URL(publicUrl).host;
+  const parsed = new URL(publicUrl);
+  const host = parsed.host;
+  const targetPath = joinTunnelRequestPath(parsed.pathname, requestPath);
 
-  const response = await request(`http://127.0.0.1:${String(serverPort)}${requestPath}`, {
+  const response = await request(`http://127.0.0.1:${String(serverPort)}${targetPath}`, {
     method: options.method ?? "GET",
     headers: { ...options.headers, host },
     ...(options.body === undefined ? {} : { body: options.body }),
@@ -233,6 +248,30 @@ export async function tunnelRequest(
     headers: response.headers,
     body,
   };
+}
+
+/**
+ * Joins a public tunnel pathname with an application request path.
+ *
+ * @param publicPathname - Pathname from the minted public URL (`/` or `/tunnel/{id}`).
+ * @param requestPath - Application path, optionally with a query string.
+ * @returns Path (+ query) to send to the LoopLink server.
+ */
+export function joinTunnelRequestPath(publicPathname: string, requestPath: string): string {
+  const queryIndex = requestPath.indexOf("?");
+  const pathname = queryIndex === -1 ? requestPath : requestPath.slice(0, queryIndex);
+  const query = queryIndex === -1 ? "" : requestPath.slice(queryIndex);
+
+  const appPath = pathname.length === 0 || pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const normalizedApp = appPath.length === 0 ? "/" : appPath;
+
+  if (!publicPathname.startsWith("/tunnel/")) {
+    return `${normalizedApp}${query}`;
+  }
+
+  const tunnelBase = publicPathname.replace(/\/$/, "");
+  const joined = normalizedApp === "/" ? tunnelBase : `${tunnelBase}${normalizedApp}`;
+  return `${joined}${query}`;
 }
 
 /**

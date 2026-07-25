@@ -23,6 +23,7 @@ test (undici) ──HTTP──▶ server (public host) ──WebSocket──▶ 
 | Streaming     | Chunked `/stream` response arrives complete, with no `Content-Length`        |
 | Heartbeat     | A raw WebSocket `ping` receives a `pong` with the matching `requestId`       |
 | Reconnect     | Server is SIGKILLed and restarted; the CLI reconnects and forwarding resumes |
+| Path routing  | `LOOPLINK_PUBLIC_URL_MODE=path` serves `/tunnel/{id}/...` (Railway-style)    |
 
 ## Running the suite
 
@@ -50,17 +51,18 @@ pnpm --filter @looplink/e2e test:watch   # watch mode
 - **Server** — spawned with an ephemeral `PORT`,
   `LOOPLINK_PUBLIC_BASE_DOMAIN=looplink.test`, and raised rate limits so the
   tests exercise forwarding rather than the security throttles (those are
-  covered by unit tests).
+  covered by unit tests). Host-based tests force
+  `LOOPLINK_PUBLIC_URL_MODE=subdomain`; path-based tests use `path`.
 - **CLI** — spawned as `looplink <appPort> --server ws://127.0.0.1:<port>`;
   the public URL is parsed from its output.
 - **Public requests** — `*.looplink.test` does not resolve in DNS, so requests
-  target `127.0.0.1:<serverPort>` directly with the tunnel hostname in the
-  `Host` header — exactly what nginx does in front of the server in
-  production.
+  target `127.0.0.1:<serverPort>` directly with the public hostname in the
+  `Host` header. Path-mode requests hit `/tunnel/{id}/...` on the apex host;
+  subdomain-mode requests use the tunnel hostname (as nginx would).
 
-The suite runs in a single spec file with `fileParallelism` disabled: all
-tests share one server/CLI/app fixture, and the reconnect test (which kills
-the server) deliberately runs last.
+Two spec files run sequentially (`fileParallelism` disabled). The Host-based
+suite shares one server/CLI/app fixture (reconnect kills the server last). The
+path-based suite boots its own stack with `LOOPLINK_PUBLIC_URL_MODE=path`.
 
 ## Notes
 

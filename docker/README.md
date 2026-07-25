@@ -16,8 +16,10 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 Point the CLI at the published port:
 
 ```bash
-pnpm cli start -- 3000 --server ws://127.0.0.1:8080
+pnpm cli -- 3000 --server ws://127.0.0.1:8080
 # or, after building the CLI:
+node apps/cli/dist/index.js 3000 --server ws://127.0.0.1:8080
+# or, if linked globally:
 looplink 3000 --server ws://127.0.0.1:8080
 ```
 

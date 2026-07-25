@@ -1,32 +1,31 @@
-import { Readable } from "node:stream";
-
-import { All, Controller, Logger, Req, Res } from "@nestjs/common";
+import { All, Controller, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { extractTunnelSlugFromHost, resolvePublicBaseDomain } from "../tunnel/public-url.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
-import { HttpForwardingService } from "./http-forwarding.service.js";
-import { mapFastifyRequest } from "./request-mapper.js";
+import { PublicRequestForwarder } from "./public-request-forwarder.js";
 
 /**
- * Catch-all HTTP controller that forwards public tunnel traffic to CLI clients.
+ * Catch-all HTTP controller that forwards public tunnel traffic by Host header.
+ *
+ * Path-based `/tunnel/:id` traffic is handled by {@link PathTunnelController};
+ * this controller leaves those paths alone so the two schemes can coexist.
  */
 @Controller()
 export class HttpForwardController {
-  private readonly logger = new Logger(HttpForwardController.name);
   private readonly baseDomain = resolvePublicBaseDomain();
 
   /**
-   * @param tunnelManager - Tunnel lookup.
-   * @param httpForwarding - Protocol forwarding service.
+   * @param tunnelManager - Tunnel lookup by public slug.
+   * @param publicForwarder - Shared HTTP forwarding pipeline.
    */
   constructor(
     private readonly tunnelManager: TunnelManager,
-    private readonly httpForwarding: HttpForwardingService,
+    private readonly publicForwarder: PublicRequestForwarder,
   ) {}
 
   /**
-   * Forwards any HTTP request addressed to a tunnel host.
+   * Forwards any HTTP request addressed to a tunnel subdomain host.
    *
    * @param request - Inbound Fastify request.
    * @param reply - Fastify reply used for streaming the CLI response.
@@ -36,6 +35,14 @@ export class HttpForwardController {
     const path = request.url.split("?")[0] ?? "/";
     if (request.method === "GET" && path === "/health") {
       await reply.status(200).send({ status: "ok" });
+      return;
+    }
+
+    // Path-based tunnels are owned by PathTunnelController. If a request still
+    // lands here (for example `/tunnel` with no id), reject rather than treating
+    // it as Host-based traffic.
+    if (path === "/tunnel" || path.startsWith("/tunnel/")) {
+      await reply.status(404).send({ statusCode: 404, message: "Invalid tunnel path." });
       return;
     }
 
@@ -57,56 +64,6 @@ export class HttpForwardController {
       return;
     }
 
-    let mapped;
-    try {
-      mapped = mapFastifyRequest(request);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Invalid request.";
-      const statusCode = message.startsWith("Unsupported HTTP method") ? 405 : 400;
-      await reply.status(statusCode).send({ statusCode, message });
-      return;
-    }
-
-    try {
-      const forwarded = await this.httpForwarding.forward({
-        tunnel,
-        method: mapped.method,
-        path: mapped.path,
-        query: mapped.query,
-        headers: mapped.headers,
-        cookies: mapped.cookies,
-        ...(mapped.body === undefined ? {} : { body: mapped.body }),
-      });
-
-      for (const [name, value] of Object.entries(forwarded.headers)) {
-        void reply.header(name, value);
-      }
-
-      for (const cookie of forwarded.setCookies) {
-        void reply.header("set-cookie", cookie);
-      }
-
-      void reply.status(forwarded.statusCode);
-
-      const stream = Readable.from(
-        (async function* () {
-          for await (const chunk of forwarded.body) {
-            yield Buffer.from(chunk);
-          }
-        })(),
-      );
-
-      await reply.send(stream);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Upstream tunnel error.";
-      this.logger.warn(`HTTP forward failed for ${slug}: ${message}`);
-
-      if (reply.sent) {
-        return;
-      }
-
-      const status = message.includes("timed out") || message.includes("aborted") ? 504 : 502;
-      await reply.status(status).send({ statusCode: status, message });
-    }
+    await this.publicForwarder.forward(tunnel, request, reply);
   }
 }
