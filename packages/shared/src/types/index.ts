@@ -7,7 +7,9 @@ export type {
   ErrorMessage,
   PingMessage,
   PongMessage,
+  ProtocolMessage,
   TunnelCreatedMessage,
 } from "./protocol.js";
 export { MessageType } from "./protocol.js";
+export { parseProtocolMessage } from "./parse-protocol-message.js";
 export type { Failure, Result, Success } from "./result.js";

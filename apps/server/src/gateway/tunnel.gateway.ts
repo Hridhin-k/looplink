@@ -1,25 +1,38 @@
 import { randomUUID } from "node:crypto";
 
 import { Logger } from "@nestjs/common";
-import { OnGatewayConnection, WebSocketGateway } from "@nestjs/websockets";
-import { MessageType, type ConnectedMessage } from "@looplink/shared";
+import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from "@nestjs/websockets";
+import {
+  MessageType,
+  parseProtocolMessage,
+  type ConnectedMessage,
+  type CreateTunnelMessage,
+  type ErrorMessage,
+  type ProtocolMessage,
+  type TunnelCreatedMessage,
+} from "@looplink/shared";
 import WebSocket from "ws";
+
+import { TunnelManager } from "../tunnel/tunnel.manager.js";
+import { rawDataToString } from "../utils/raw-data.js";
 
 /**
  * WebSocket entry point for LoopLink CLI clients.
  *
- * Accepts connections, logs them, and sends a protocol {@link ConnectedMessage}.
- * Tunnel creation is intentionally omitted for now.
+ * Accepts connections, sends a {@link ConnectedMessage} handshake, and handles
+ * {@link CreateTunnelMessage} requests. HTTP forwarding is not implemented yet.
  */
 @WebSocketGateway()
-export class TunnelGateway implements OnGatewayConnection {
+export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TunnelGateway.name);
 
   /**
+   * @param tunnelManager - Domain service that creates and tracks tunnels.
+   */
+  constructor(private readonly tunnelManager: TunnelManager) {}
+
+  /**
    * Handles a newly accepted WebSocket client.
-   *
-   * Assigns a connection id, logs the session, and immediately sends a
-   * {@link ConnectedMessage} handshake over the socket.
    *
    * @param client - The connected `ws` client socket.
    */
@@ -34,6 +47,91 @@ export class TunnelGateway implements OnGatewayConnection {
     };
 
     this.sendMessage(client, message);
+
+    client.on("message", (data: WebSocket.RawData) => {
+      this.handleClientMessage(client, data);
+    });
+  }
+
+  /**
+   * Cleans up tunnel state when a client disconnects.
+   *
+   * @param client - The disconnected `ws` client socket.
+   */
+  handleDisconnect(client: WebSocket): void {
+    const removed = this.tunnelManager.unregisterClient(client);
+
+    if (removed) {
+      this.logger.log("Client disconnected; tunnel unregistered");
+    } else {
+      this.logger.log("Client disconnected");
+    }
+  }
+
+  /**
+   * Routes an inbound protocol message from a connected client.
+   *
+   * @param client - Sender socket.
+   * @param data - Raw WebSocket payload.
+   */
+  private handleClientMessage(client: WebSocket, data: WebSocket.RawData): void {
+    const parsed = parseProtocolMessage(rawDataToString(data));
+
+    if (!parsed.ok) {
+      this.sendMessage(client, {
+        type: MessageType.Error,
+        code: "invalid_message",
+        message: parsed.error,
+      });
+      return;
+    }
+
+    switch (parsed.value.type) {
+      case MessageType.CreateTunnel:
+        this.handleCreateTunnel(client, parsed.value);
+        return;
+      default:
+        this.sendMessage(client, {
+          type: MessageType.Error,
+          code: "unsupported_message",
+          message: `Unsupported message type "${parsed.value.type}".`,
+        });
+    }
+  }
+
+  /**
+   * Creates a tunnel for the requesting client and replies with its public URL.
+   *
+   * @param client - Requesting WebSocket client.
+   * @param request - Parsed create-tunnel request.
+   */
+  private handleCreateTunnel(client: WebSocket, request: CreateTunnelMessage): void {
+    try {
+      const created = this.tunnelManager.create(client, request.port);
+
+      const response: TunnelCreatedMessage = {
+        type: MessageType.TunnelCreated,
+        requestId: request.requestId,
+        tunnelId: created.tunnel.id,
+        publicUrl: created.publicUrl,
+      };
+
+      this.logger.log(
+        `Tunnel created (${created.tunnel.id}) for port ${String(request.port)} → ${created.publicUrl}`,
+      );
+      this.sendMessage(client, response);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create tunnel.";
+
+      const response: ErrorMessage = {
+        type: MessageType.Error,
+        requestId: request.requestId,
+        code: "tunnel_create_failed",
+        message,
+      };
+
+      this.sendMessage(client, response);
+    }
   }
 
   /**
@@ -42,11 +140,9 @@ export class TunnelGateway implements OnGatewayConnection {
    * @param client - Target WebSocket.
    * @param message - Protocol payload to send.
    */
-  private sendMessage(client: WebSocket, message: ConnectedMessage): void {
+  private sendMessage(client: WebSocket, message: ProtocolMessage): void {
     if (client.readyState !== WebSocket.OPEN) {
-      this.logger.warn(
-        `Skipped CONNECTED send; socket not open (readyState=${String(client.readyState)})`,
-      );
+      this.logger.warn(`Skipped send; socket not open (readyState=${String(client.readyState)})`);
       return;
     }
 

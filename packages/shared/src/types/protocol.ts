@@ -100,3 +100,14 @@ export interface PongMessage extends BaseMessage {
   /** Correlation id matching the originating {@link PingMessage}. */
   readonly requestId: string;
 }
+
+/**
+ * Discriminated union of every LoopLink control-plane message.
+ */
+export type ProtocolMessage =
+  | ConnectedMessage
+  | CreateTunnelMessage
+  | TunnelCreatedMessage
+  | ErrorMessage
+  | PingMessage
+  | PongMessage;

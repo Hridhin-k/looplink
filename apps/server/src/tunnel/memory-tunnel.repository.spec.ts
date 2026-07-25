@@ -17,7 +17,7 @@ describe("MemoryTunnelRepository", () => {
   it("saves and finds a tunnel by id", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
-    const tunnel: TunnelRecord = { id: "tunnel-1", client };
+    const tunnel: TunnelRecord = { id: "tunnel-1", client, port: 3000 };
 
     repository.save(tunnel);
 
@@ -27,7 +27,7 @@ describe("MemoryTunnelRepository", () => {
   it("finds a tunnel by client", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
-    const tunnel: TunnelRecord = { id: "tunnel-2", client };
+    const tunnel: TunnelRecord = { id: "tunnel-2", client, port: 3000 };
 
     repository.save(tunnel);
 
@@ -37,7 +37,7 @@ describe("MemoryTunnelRepository", () => {
   it("removes a tunnel by id and clears the client index", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
-    repository.save({ id: "tunnel-3", client });
+    repository.save({ id: "tunnel-3", client, port: 3000 });
 
     expect(repository.remove("tunnel-3")).toBe(true);
     expect(repository.findById("tunnel-3")).toBeUndefined();
@@ -47,7 +47,7 @@ describe("MemoryTunnelRepository", () => {
   it("removes a tunnel by client", () => {
     const repository = new MemoryTunnelRepository();
     const client = createClient();
-    repository.save({ id: "tunnel-4", client });
+    repository.save({ id: "tunnel-4", client, port: 3000 });
 
     expect(repository.removeByClient(client)).toBe(true);
     expect(repository.findById("tunnel-4")).toBeUndefined();
@@ -65,10 +65,11 @@ describe("MemoryTunnelRepository", () => {
     const firstClient = createClient();
     const secondClient = createClient();
 
-    repository.save({ id: "tunnel-5", client: firstClient });
-    repository.save({ id: "tunnel-5", client: secondClient });
+    repository.save({ id: "tunnel-5", client: firstClient, port: 3000 });
+    repository.save({ id: "tunnel-5", client: secondClient, port: 4000 });
 
     expect(repository.findById("tunnel-5")?.client).toBe(secondClient);
+    expect(repository.findById("tunnel-5")?.port).toBe(4000);
     expect(repository.findByClient(firstClient)).toBeUndefined();
     expect(repository.findByClient(secondClient)?.id).toBe("tunnel-5");
   });

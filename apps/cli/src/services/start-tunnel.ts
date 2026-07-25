@@ -1,4 +1,4 @@
-import { APP_DISPLAY_NAME } from "@looplink/shared";
+import { APP_DISPLAY_NAME, MessageType } from "@looplink/shared";
 
 import type { Writer } from "../utils/output.js";
 import type { ServerConnection } from "./websocket-client.js";
@@ -11,8 +11,8 @@ export type ServerConnectionFactory = (serverUrl: string) => ServerConnection;
 /**
  * Application service that starts a LoopLink session for a local port.
  *
- * Connects to the server over WebSocket. Tunnel creation is intentionally
- * omitted for now.
+ * Connects to the server, waits for the protocol handshake, requests a tunnel,
+ * and prints the assigned public URL. HTTP forwarding is not implemented yet.
  */
 export class StartTunnelService {
   /**
@@ -27,10 +27,7 @@ export class StartTunnelService {
   /**
    * Begins a session for the given local TCP port.
    *
-   * Prints the start banner, opens a WebSocket to the LoopLink server, then
-   * confirms the connection. Does not request a tunnel.
-   *
-   * @param port - Already-validated local port to expose later.
+   * @param port - Already-validated local port to expose.
    * @param serverUrl - WebSocket URL of the LoopLink server.
    */
   async start(port: number, serverUrl: string): Promise<void> {
@@ -40,13 +37,26 @@ export class StartTunnelService {
 
     try {
       await connection.connect();
+
+      await connection.waitForMessage((message) => message.type === MessageType.Connected);
+
+      this.writer.writeLine(`Connected to ${APP_DISPLAY_NAME} server.`);
+
+      const created = await connection.createTunnel(port);
+
+      this.writer.writeLine("Tunnel Created");
+      this.writer.writeLine("");
+      this.writer.writeLine(created.publicUrl);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown connection error.";
-      this.writer.writeError(`Failed to connect to ${APP_DISPLAY_NAME} server: ${message}`);
+      this.writer.writeError(`Failed to create tunnel: ${message}`);
       process.exitCode = 1;
-      return;
-    }
 
-    this.writer.writeLine(`Connected to ${APP_DISPLAY_NAME} server.`);
+      try {
+        await connection.disconnect();
+      } catch {
+        // Best-effort cleanup after a failed session.
+      }
+    }
   }
 }

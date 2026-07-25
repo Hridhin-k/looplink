@@ -33,16 +33,35 @@ describe("TunnelManager", () => {
     const manager = new TunnelManager(repository);
     const client = createClient();
 
-    const tunnel = manager.register(client);
+    const tunnel = manager.register(client, 3000);
 
     expect(tunnel.client).toBe(client);
+    expect(tunnel.port).toBe(3000);
     expect(tunnel.id.length).toBeGreaterThan(0);
     expect(manager.lookup(tunnel.id)).toEqual(tunnel);
   });
 
+  it("creates a tunnel with a public URL", () => {
+    const manager = new TunnelManager(new MemoryTunnelRepository());
+    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234-5678-4abc-8def-0123456789ab");
+
+    const created = manager.create(createClient(), 3000);
+
+    expect(created.tunnel.port).toBe(3000);
+    expect(created.tunnel.id).toBe("abcd1234-5678-4abc-8def-0123456789ab");
+    expect(created.publicUrl).toBe("https://abcd1234.looplink.dev");
+  });
+
+  it("rejects invalid ports when creating a tunnel", () => {
+    const manager = new TunnelManager(new MemoryTunnelRepository());
+
+    expect(() => manager.create(createClient(), 0)).toThrow(/Invalid port/);
+    expect(() => manager.create(createClient(), 70_000)).toThrow(/Invalid port/);
+  });
+
   it("looks up a tunnel by id", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
-    const tunnel = manager.register(createClient());
+    const tunnel = manager.register(createClient(), 3000);
 
     expect(manager.lookup(tunnel.id)).toEqual(tunnel);
     expect(manager.lookup("missing")).toBeUndefined();
@@ -50,7 +69,7 @@ describe("TunnelManager", () => {
 
   it("unregisters a tunnel by id", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
-    const tunnel = manager.register(createClient());
+    const tunnel = manager.register(createClient(), 3000);
 
     expect(manager.unregister(tunnel.id)).toBe(true);
     expect(manager.lookup(tunnel.id)).toBeUndefined();
@@ -60,7 +79,7 @@ describe("TunnelManager", () => {
   it("unregisters a tunnel by websocket client", () => {
     const manager = new TunnelManager(new MemoryTunnelRepository());
     const client = createClient();
-    const tunnel = manager.register(client);
+    const tunnel = manager.register(client, 3000);
 
     expect(manager.unregisterClient(client)).toBe(true);
     expect(manager.lookup(tunnel.id)).toBeUndefined();
@@ -69,7 +88,7 @@ describe("TunnelManager", () => {
 
   it("delegates persistence to the injected repository", () => {
     const client = createClient();
-    const tunnel: TunnelRecord = { id: "fixed-id", client };
+    const tunnel: TunnelRecord = { id: "fixed-id", client, port: 3000 };
 
     const repository: TunnelRepository = {
       save: vi.fn(),
@@ -82,7 +101,7 @@ describe("TunnelManager", () => {
     const manager = new TunnelManager(repository);
     vi.spyOn(manager, "generateTunnelId").mockReturnValue("fixed-id");
 
-    expect(manager.register(client)).toEqual(tunnel);
+    expect(manager.register(client, 3000)).toEqual(tunnel);
     expect(repository.save).toHaveBeenCalledWith(tunnel);
 
     expect(manager.lookup("fixed-id")).toEqual(tunnel);
