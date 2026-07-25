@@ -1,5 +1,7 @@
 import { MessageType } from "@looplink/shared";
 
+import { LocalProxy } from "./local-proxy.js";
+import { RequestForwarder } from "./request-forwarder.js";
 import type { ShutdownRegistry } from "./shutdown.js";
 import type { ServerConnection, WebSocketClientOptions } from "./websocket-client.js";
 import { LoopLinkWebSocketClient } from "./websocket-client.js";
@@ -55,6 +57,15 @@ export class StartTunnelService {
       onReconnected: (tunnel, restored) => {
         this.present(this.presenter.reconnected({ publicUrl: tunnel.publicUrl, port, restored }));
       },
+    });
+
+    // Registered before the tunnel exists so no request frame can race past
+    // the handler; the forwarder survives reconnects along with the client.
+    const forwarder = new RequestForwarder(port, new LocalProxy(), (message) => {
+      connection.send(message);
+    });
+    connection.setForwardingHandler((message) => {
+      forwarder.handle(message);
     });
 
     this.shutdown.register(async () => {

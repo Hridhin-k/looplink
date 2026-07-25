@@ -28,14 +28,19 @@ async function bootstrap(): Promise<void> {
   );
 
   const fastify = app.getHttpAdapter().getInstance();
+  await registerHttpRateLimit(fastify, security);
+
+  app.useWebSocketAdapter(new WsAdapter(app));
+
+  // Nest's Fastify adapter registers its own JSON/urlencoded parsers during
+  // init, so the raw-buffer catch-all must be installed afterwards. The data
+  // plane needs untouched bytes for every content type: bodies are forwarded
+  // verbatim to the tunnel client, never interpreted here.
+  await app.init();
   fastify.removeAllContentTypeParsers();
   fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
-
-  await registerHttpRateLimit(fastify, security);
-
-  app.useWebSocketAdapter(new WsAdapter(app));
 
   const host = resolveServerHost();
   const port = resolveServerPort();

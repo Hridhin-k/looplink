@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 
 import { ConnectionState } from "./connection-state.js";
 import { Heartbeat } from "./heartbeat.js";
+import type { InboundForwardingMessage } from "./request-forwarder.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
@@ -116,6 +117,16 @@ export interface ServerConnection {
    * @param preferredTunnelId - Prior tunnel id to reclaim after a reconnect.
    */
   createTunnel(port: number, preferredTunnelId?: string): Promise<TunnelCreatedMessage>;
+
+  /**
+   * Registers the consumer for inbound HTTP forwarding frames.
+   *
+   * The handler survives reconnects: frames from a restored tunnel are routed
+   * to the same consumer.
+   *
+   * @param handler - Receives `http_request_*` and `http_cancel` frames.
+   */
+  setForwardingHandler(handler: (message: InboundForwardingMessage) => void): void;
 }
 
 interface MessageWaiter {
@@ -144,6 +155,7 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   private reconnectInFlight = false;
   private activeTunnel: ActiveTunnelSession | undefined;
+  private forwardingHandler: ((message: InboundForwardingMessage) => void) | undefined;
   private readonly reconnectIntervalMs: number;
 
   /**
@@ -416,7 +428,23 @@ export class LoopLinkWebSocketClient implements ServerConnection {
     this.deliver(parsed.value);
   }
 
+  /**
+   * Registers the consumer for inbound HTTP forwarding frames.
+   *
+   * @param handler - Receives `http_request_*` and `http_cancel` frames.
+   */
+  setForwardingHandler(handler: (message: InboundForwardingMessage) => void): void {
+    this.forwardingHandler = handler;
+  }
+
   private deliver(message: ProtocolMessage): void {
+    if (isInboundForwardingMessage(message)) {
+      // Data-plane frames go straight to the forwarding consumer. Without a
+      // handler they are dropped instead of growing the inbox unboundedly.
+      this.forwardingHandler?.(message);
+      return;
+    }
+
     const waiter = this.waiter;
 
     if (waiter?.match(message) === true) {
@@ -536,4 +564,19 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   private setState(state: ConnectionState): void {
     this.state = state;
   }
+}
+
+/**
+ * Narrows a protocol message to the HTTP forwarding frames a CLI consumes.
+ *
+ * @param message - Any parsed protocol message.
+ * @returns `true` for request-plane and cancel frames.
+ */
+function isInboundForwardingMessage(message: ProtocolMessage): message is InboundForwardingMessage {
+  return (
+    message.type === MessageType.HttpRequestStart ||
+    message.type === MessageType.HttpRequestChunk ||
+    message.type === MessageType.HttpRequestEnd ||
+    message.type === MessageType.HttpCancel
+  );
 }

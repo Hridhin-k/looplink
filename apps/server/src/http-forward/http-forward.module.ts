@@ -11,7 +11,15 @@ import { HttpForwardingService } from "./http-forwarding.service.js";
 @Module({
   imports: [TunnelModule],
   controllers: [HttpForwardController],
-  providers: [HttpExchangeCoordinator, HttpForwardingService],
+  providers: [
+    {
+      // The coordinator's optional numeric limits look like injectable
+      // dependencies to Nest's reflection; a factory keeps the defaults.
+      provide: HttpExchangeCoordinator,
+      useFactory: () => new HttpExchangeCoordinator(),
+    },
+    HttpForwardingService,
+  ],
   exports: [HttpExchangeCoordinator, HttpForwardingService],
 })
 export class HttpForwardModule {}

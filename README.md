@@ -13,6 +13,7 @@ apps/
   server/     @looplink/server — public tunnel server that relays traffic
 packages/
   shared/     @looplink/shared — protocol types, schemas, and constants
+e2e/          @looplink/e2e   — black-box end-to-end tests (never published)
 ```
 
 - `apps/` contains deployable applications. They are never imported by other workspaces.
@@ -42,7 +43,22 @@ Run from the repository root:
 | `pnpm lint:fix`     | Lint and auto-fix                              |
 | `pnpm format`       | Format with Prettier                           |
 | `pnpm format:check` | Verify formatting                              |
+| `pnpm test`         | Unit tests for the server and CLI              |
+| `pnpm test:e2e`     | Build, then run the end-to-end suite           |
 | `pnpm clean`        | Remove build output                            |
+
+## Testing
+
+Unit tests live next to the code they cover (`*.spec.ts`) and run with
+`pnpm test`. The end-to-end suite boots the built server and CLI as real
+processes, tunnels traffic to a sample Express app, and verifies JSON, HTML,
+headers, cookies, binary payloads, streaming, heartbeat, and reconnect:
+
+```bash
+pnpm test:e2e
+```
+
+See [e2e/README.md](e2e/README.md) for how the harness works.
 
 ## Docker (server)
 
