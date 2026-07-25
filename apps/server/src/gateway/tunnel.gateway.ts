@@ -8,11 +8,14 @@ import {
   type ConnectedMessage,
   type CreateTunnelMessage,
   type ErrorMessage,
+  type PingMessage,
+  type PongMessage,
   type ProtocolMessage,
   type TunnelCreatedMessage,
 } from "@looplink/shared";
 import WebSocket from "ws";
 
+import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
@@ -30,10 +33,12 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * @param tunnelManager - Domain service that creates and tracks tunnels.
    * @param httpExchanges - Pending HTTP forward correlation registry.
+   * @param heartbeats - Liveness tracker that drops silent clients.
    */
   constructor(
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
+    private readonly heartbeats: HeartbeatMonitor,
   ) {}
 
   /**
@@ -45,6 +50,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const connectionId = randomUUID();
 
     this.logger.log(`Client connected (${connectionId})`);
+    this.heartbeats.register(client);
 
     const message: ConnectedMessage = {
       type: MessageType.Connected,
@@ -64,6 +70,8 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param client - The disconnected `ws` client socket.
    */
   handleDisconnect(client: WebSocket): void {
+    this.heartbeats.unregister(client);
+
     const removed = this.tunnelManager.unregisterClient(client);
 
     if (removed) {
@@ -97,6 +105,9 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
       case MessageType.CreateTunnel:
         this.handleCreateTunnel(client, message);
         return;
+      case MessageType.Ping:
+        this.handlePing(client, message);
+        return;
       case MessageType.HttpResponseStart:
       case MessageType.HttpResponseChunk:
       case MessageType.HttpResponseEnd:
@@ -115,6 +126,23 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
           message: `Unsupported message type "${message.type}".`,
         });
     }
+  }
+
+  /**
+   * Records a heartbeat and echoes the ping's `requestId` back as a `PONG`.
+   *
+   * @param client - The socket that sent the keepalive probe.
+   * @param ping - Parsed ping message.
+   */
+  private handlePing(client: WebSocket, ping: PingMessage): void {
+    this.heartbeats.beat(client);
+
+    const reply: PongMessage = {
+      type: MessageType.Pong,
+      requestId: ping.requestId,
+    };
+
+    this.sendMessage(client, reply);
   }
 
   /**

@@ -9,6 +9,7 @@ import {
 import { randomUUID } from "node:crypto";
 
 import { ConnectionState } from "./connection-state.js";
+import { Heartbeat } from "./heartbeat.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
@@ -24,6 +25,11 @@ export interface WebSocketClientOptions {
    * dropped in later without reshaping the client.
    */
   readonly reconnect: boolean;
+  /**
+   * Delay between keepalive `PING` messages. Defaults to the shared protocol
+   * interval; override only in tests.
+   */
+  readonly heartbeatIntervalMs?: number;
 }
 
 /**
@@ -91,6 +97,7 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   private socket: WebSocket | undefined;
   private readonly inbox: ProtocolMessage[] = [];
   private waiter: MessageWaiter | undefined;
+  private heartbeat: Heartbeat | undefined;
 
   /**
    * @param options - Connection URL and reconnect policy.
@@ -302,6 +309,11 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   }
 
   private bindRuntimeHandlers(socket: WebSocket): void {
+    this.heartbeat = new Heartbeat(() => {
+      this.sendHeartbeatPing();
+    }, this.options.heartbeatIntervalMs);
+    this.heartbeat.start();
+
     socket.on("close", () => {
       this.failWaiter(new Error("Connection closed while waiting for a protocol message."));
       this.disposeSocket();
@@ -332,7 +344,29 @@ export class LoopLinkWebSocketClient implements ServerConnection {
       return;
     }
 
+    if (message.type === MessageType.Pong) {
+      // Heartbeat replies carry no payload; buffering them would grow the
+      // inbox unboundedly over a long-lived session.
+      return;
+    }
+
     this.inbox.push(message);
+  }
+
+  /**
+   * Sends a keepalive `PING` if the connection is still healthy. Failures are
+   * swallowed: the `close` handler is the single owner of disconnect handling.
+   */
+  private sendHeartbeatPing(): void {
+    if (this.state !== ConnectionState.Connected) {
+      return;
+    }
+
+    try {
+      this.send({ type: MessageType.Ping, requestId: randomUUID() });
+    } catch {
+      // The socket is racing toward close; the close handler cleans up.
+    }
   }
 
   private failWaiter(error: Error): void {
@@ -352,6 +386,9 @@ export class LoopLinkWebSocketClient implements ServerConnection {
   }
 
   private disposeSocket(): void {
+    this.heartbeat?.stop();
+    this.heartbeat = undefined;
+
     if (this.socket !== undefined) {
       this.socket.removeAllListeners();
       this.socket = undefined;
