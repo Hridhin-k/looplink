@@ -61,6 +61,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 Full port table, environment variables, and image stages:
 [docker/README.md](docker/README.md). Host-side overrides: [.env.example](.env.example).
 
+TLS edge proxy (wildcard subdomains, WebSocket, Let's Encrypt):
+[docker/nginx/nginx.conf](docker/nginx/nginx.conf).
+
 ## Tooling
 
 - **TypeScript** in strict mode (plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,

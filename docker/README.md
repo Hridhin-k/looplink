@@ -94,6 +94,21 @@ Files:
 Healthchecks (image `HEALTHCHECK` and Compose `healthcheck`) call
 `GET /health` on `127.0.0.1:$PORT` and expect HTTP 200.
 
+## TLS edge (nginx)
+
+[`docker/nginx/nginx.conf`](nginx/nginx.conf) terminates HTTPS for `looplink.dev`
+and `*.looplink.dev`, proxies HTTP + WebSocket to the LoopLink upstream, and
+exposes an ACME webroot for Let's Encrypt.
+
+| Port | Role |
+| ---- | ---- |
+| **80** | ACME HTTP-01 + redirect to HTTPS |
+| **443** | TLS → upstream `127.0.0.1:8080` (or `server:8080` in Compose) |
+
+Wildcard certificates need **DNS-01** (`certbot` + DNS plugin). Apex-only can
+use HTTP-01 against `/.well-known/acme-challenge/`. Every directive in the
+file is commented in place.
+
 ## Layout
 
 ```text
@@ -103,6 +118,7 @@ docker-compose.dev.yml     Development overlay (volumes, rebuild command)
 docker-compose.prod.yml    Production overlay (restart, read-only, limits)
 docker/development.env     Development environment
 docker/production.env      Production environment
+docker/nginx/nginx.conf    Edge reverse proxy (wildcard TLS, WS, ACME)
 docker/README.md           This file
 .env.example               Host / documentation template
 .dockerignore              Build context exclusions
