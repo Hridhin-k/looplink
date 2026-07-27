@@ -42,8 +42,6 @@ class LifecyclePublisher {
       requestId: "req-1",
       method: HttpMethod.GET,
       path: "/health",
-      headers: {},
-      body: new Uint8Array(),
       occurredAt: 3,
     });
     this.eventBus.publish(BadgerEventType.RequestForwarded, {
@@ -59,9 +57,6 @@ class LifecyclePublisher {
       method: HttpMethod.GET,
       path: "/health",
       statusCode: 200,
-      responseHeaders: {},
-      responseBody: new Uint8Array(),
-      latencyMs: 2,
       occurredAt: 5,
     });
   }

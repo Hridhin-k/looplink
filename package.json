@@ -10,23 +10,19 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "build": "pnpm build:tsc && pnpm --filter @hridhin-k/badger-dashboard build",
-    "build:tsc": "tsc -b",
-    "typecheck": "tsc -b --noEmit && pnpm --filter @hridhin-k/badger-dashboard typecheck",
-    "clean": "tsc -b --clean && pnpm --filter @hridhin-k/badger-dashboard clean",
-    "lint": "eslint . && pnpm --filter @hridhin-k/badger-dashboard lint",
-    "lint:fix": "eslint . --fix && pnpm --filter @hridhin-k/badger-dashboard lint -- --fix",
+    "build": "tsc -b",
+    "typecheck": "tsc -b --noEmit",
+    "clean": "tsc -b --clean",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "cli": "node ./apps/cli/dist/index.js",
     "server:dev": "pnpm --filter @hridhin-k/badger-server dev",
     "server:start": "pnpm --filter @hridhin-k/badger-server start",
-    "dashboard:dev": "pnpm --filter @hridhin-k/badger-dashboard dev",
-    "dashboard:build": "pnpm --filter @hridhin-k/badger-dashboard build",
-    "dashboard:start": "pnpm --filter @hridhin-k/badger-dashboard start",
-    "test": "pnpm --filter @hridhin-k/badger-shared --filter @hridhin-k/badger-server --filter @hridhin-k/badger --filter @hridhin-k/badger-dashboard test",
-    "test:e2e": "pnpm build:tsc && pnpm --filter @hridhin-k/badger-e2e test",
-    "publish:cli": "pnpm build:tsc && pnpm --filter @hridhin-k/badger-shared publish && pnpm --filter @hridhin-k/badger publish"
+    "test": "pnpm --filter @hridhin-k/badger-server --filter @hridhin-k/badger test",
+    "test:e2e": "pnpm build && pnpm --filter @hridhin-k/badger-e2e test",
+    "publish:cli": "pnpm build && pnpm --filter @hridhin-k/badger-shared publish && pnpm --filter @hridhin-k/badger publish"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

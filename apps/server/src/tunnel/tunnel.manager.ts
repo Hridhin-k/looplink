@@ -1,13 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import {
-  BadgerEventType,
-  EVENT_BUS,
-  TUNNEL_ID_BYTES,
-  TUNNEL_RECLAIM_WINDOW_MS,
-  type EventBus,
-} from "@hridhin-k/badger-shared";
+import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@hridhin-k/badger-shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl } from "./public-url.js";
@@ -40,13 +34,10 @@ export interface CreateTunnelOptions {
 export class TunnelManager {
   /**
    * @param repository - Persistence port for tunnel records.
-   * @param eventBus - Lifecycle event bus (fire-and-forget; never affects control flow).
    */
   constructor(
     @Inject(TUNNEL_REPOSITORY)
     private readonly repository: TunnelRepository,
-    @Inject(EVENT_BUS)
-    private readonly eventBus: EventBus,
   ) {}
 
   /**
@@ -79,7 +70,7 @@ export class TunnelManager {
     const now = options.now ?? Date.now();
     const reclaimWindowMs = options.reclaimWindowMs ?? TUNNEL_RECLAIM_WINDOW_MS;
 
-    this.emitExpiredClosures(this.repository.purgeExpiredOrphans(now, reclaimWindowMs));
+    this.repository.purgeExpiredOrphans(now, reclaimWindowMs);
 
     if (options.preferredTunnelId !== undefined) {
       const restored = this.repository.reclaim(
@@ -91,17 +82,9 @@ export class TunnelManager {
       );
 
       if (restored !== undefined) {
-        const publicUrl = buildPublicUrl(restored.id);
-        this.eventBus.publish(BadgerEventType.TunnelCreated, {
-          tunnelId: restored.id,
-          publicUrl,
-          port: restored.port,
-          restored: true,
-          occurredAt: Date.now(),
-        });
         return {
           tunnel: restored,
-          publicUrl,
+          publicUrl: buildPublicUrl(restored.id),
           restored: true,
         };
       }
@@ -109,14 +92,6 @@ export class TunnelManager {
 
     const tunnel = this.register(client, port);
     const publicUrl = buildPublicUrl(tunnel.id);
-
-    this.eventBus.publish(BadgerEventType.TunnelCreated, {
-      tunnelId: tunnel.id,
-      publicUrl,
-      port: tunnel.port,
-      restored: false,
-      occurredAt: Date.now(),
-    });
 
     return { tunnel, publicUrl, restored: false };
   }
@@ -146,15 +121,7 @@ export class TunnelManager {
    * @returns `true` when a tunnel was removed.
    */
   unregister(id: string): boolean {
-    const removed = this.repository.remove(id);
-    if (removed) {
-      this.eventBus.publish(BadgerEventType.TunnelClosed, {
-        tunnelId: id,
-        reason: "unregistered",
-        occurredAt: Date.now(),
-      });
-    }
-    return removed;
+    return this.repository.remove(id);
   }
 
   /**
@@ -167,16 +134,7 @@ export class TunnelManager {
    * @returns `true` when a tunnel was removed.
    */
   unregisterClient(client: WebSocket): boolean {
-    const existing = this.repository.findByClient(client);
-    const removed = this.repository.removeByClient(client);
-    if (removed && existing !== undefined) {
-      this.eventBus.publish(BadgerEventType.TunnelClosed, {
-        tunnelId: existing.id,
-        reason: "unregistered",
-        occurredAt: Date.now(),
-      });
-    }
-    return removed;
+    return this.repository.removeByClient(client);
   }
 
   /**
@@ -207,27 +165,6 @@ export class TunnelManager {
    */
   lookupBySlug(slug: string): TunnelRecord | undefined {
     return this.repository.findBySlug(slug);
-  }
-
-  /**
-   * Looks up the active tunnel bound to a WebSocket client.
-   *
-   * @param client - Connected client socket.
-   * @returns The matching record, or `undefined` when absent.
-   */
-  lookupByClient(client: WebSocket): TunnelRecord | undefined {
-    return this.repository.findByClient(client);
-  }
-
-  private emitExpiredClosures(purgedIds: readonly string[]): void {
-    const occurredAt = Date.now();
-    for (const tunnelId of purgedIds) {
-      this.eventBus.publish(BadgerEventType.TunnelClosed, {
-        tunnelId,
-        reason: "expired",
-        occurredAt,
-      });
-    }
   }
 
   private assertValidPort(port: number): void {

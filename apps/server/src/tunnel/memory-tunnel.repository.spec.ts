@@ -149,7 +149,7 @@ describe("MemoryTunnelRepository", () => {
     repository.save(tunnel);
     repository.orphanByClient(client, 1_000);
 
-    expect(repository.purgeExpiredOrphans(70_000, 60_000)).toEqual([tunnel.id]);
+    expect(repository.purgeExpiredOrphans(70_000, 60_000)).toBe(1);
     expect(repository.reclaim(tunnel.id, createClient(), 3000, 71_000, 60_000)).toBeUndefined();
   });
 });

@@ -1,9 +1,4 @@
-import {
-  HttpMethod,
-  MessageType,
-  createEventBus,
-  parseProtocolMessage,
-} from "@hridhin-k/badger-shared";
+import { HttpMethod, MessageType, parseProtocolMessage } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
@@ -15,7 +10,7 @@ import { HttpForwardingService } from "./http-forwarding.service.js";
 describe("HttpForwardingService", () => {
   it("sends request frames and returns the streamed CLI response", async () => {
     const coordinator = new HttpExchangeCoordinator();
-    const service = new HttpForwardingService(coordinator, createEventBus());
+    const service = new HttpForwardingService(coordinator);
 
     const sent: string[] = [];
     const client = {
@@ -100,7 +95,7 @@ describe("HttpForwardingService", () => {
   });
 
   it("rejects when the tunnel websocket is not open", async () => {
-    const service = new HttpForwardingService(new HttpExchangeCoordinator(), createEventBus());
+    const service = new HttpForwardingService(new HttpExchangeCoordinator());
     const tunnel: TunnelRecord = {
       id: "tun-1",
       client: { readyState: WebSocket.CLOSED, send: vi.fn() } as unknown as WebSocket,

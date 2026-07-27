@@ -1,12 +1,3 @@
-/**
- * Internal EventBus module for Badger lifecycle observability.
- *
- * @packageDocumentation
- *
- * Provides a dependency-free, strongly typed publish/subscribe bus.
- * See [docs/event-bus.md](../../../../docs/event-bus.md).
- */
-
 export type {
   BadgerEventMap,
   ClientConnectedEvent,

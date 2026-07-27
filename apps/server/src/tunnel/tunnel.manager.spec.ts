@@ -1,4 +1,3 @@
-import { BadgerEventType, createEventBus, type EventBus } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import type WebSocket from "ws";
 
@@ -16,23 +15,9 @@ function createClient(): WebSocket {
   return {} as WebSocket;
 }
 
-/**
- * Builds a {@link TunnelManager} with an optional shared event bus.
- *
- * @param repository - Persistence port.
- * @param eventBus - Lifecycle bus; defaults to a fresh in-memory bus.
- * @returns Configured manager.
- */
-function createManager(
-  repository: TunnelRepository = new MemoryTunnelRepository(),
-  eventBus: EventBus = createEventBus(),
-): TunnelManager {
-  return new TunnelManager(repository, eventBus);
-}
-
 describe("TunnelManager", () => {
   it("generates unique cryptographically random tunnel ids", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
 
     const first = manager.generateTunnelId();
     const second = manager.generateTunnelId();
@@ -44,7 +29,7 @@ describe("TunnelManager", () => {
 
   it("registers a websocket client and returns a persisted tunnel", () => {
     const repository = new MemoryTunnelRepository();
-    const manager = createManager(repository);
+    const manager = new TunnelManager(repository);
     const client = createClient();
 
     const tunnel = manager.register(client, 3000);
@@ -56,7 +41,7 @@ describe("TunnelManager", () => {
   });
 
   it("creates a tunnel with a public URL", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
     const created = manager.create(createClient(), 3000);
@@ -67,31 +52,10 @@ describe("TunnelManager", () => {
     expect(created.restored).toBe(false);
   });
 
-  it("emits TunnelCreated when a tunnel is created", () => {
-    const eventBus = createEventBus();
-    const createdEvents: unknown[] = [];
-    eventBus.subscribe(BadgerEventType.TunnelCreated, (payload) => {
-      createdEvents.push(payload);
-    });
-
-    const manager = createManager(new MemoryTunnelRepository(), eventBus);
-    vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
-
-    manager.create(createClient(), 3000);
-
-    expect(createdEvents).toEqual([
-      expect.objectContaining({
-        tunnelId: "abcd1234567890abcdef1234567890ab",
-        port: 3000,
-        restored: false,
-      }),
-    ]);
-  });
-
   it("creates subdomain public URLs when BADGER_PUBLIC_URL_MODE=subdomain", () => {
     process.env["BADGER_PUBLIC_URL_MODE"] = "subdomain";
     try {
-      const manager = createManager();
+      const manager = new TunnelManager(new MemoryTunnelRepository());
       vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
       const created = manager.create(createClient(), 3000);
@@ -103,7 +67,7 @@ describe("TunnelManager", () => {
   });
 
   it("reclaims an orphaned tunnel when a preferred id is provided", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
     const firstClient = createClient();
@@ -123,7 +87,7 @@ describe("TunnelManager", () => {
   });
 
   it("creates a new tunnel when the preferred id cannot be reclaimed", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     vi.spyOn(manager, "generateTunnelId").mockReturnValue("ffff9999567890abcdef1234567890ab");
 
     const created = manager.create(createClient(), 3000, {
@@ -135,14 +99,14 @@ describe("TunnelManager", () => {
   });
 
   it("rejects invalid ports when creating a tunnel", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
 
     expect(() => manager.create(createClient(), 0)).toThrow(/Invalid port/);
     expect(() => manager.create(createClient(), 70_000)).toThrow(/Invalid port/);
   });
 
   it("looks up a tunnel by id", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     const tunnel = manager.register(createClient(), 3000);
 
     expect(manager.lookup(tunnel.id)).toEqual(tunnel);
@@ -150,7 +114,7 @@ describe("TunnelManager", () => {
   });
 
   it("unregisters a tunnel by id", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     const tunnel = manager.register(createClient(), 3000);
 
     expect(manager.unregister(tunnel.id)).toBe(true);
@@ -158,59 +122,8 @@ describe("TunnelManager", () => {
     expect(manager.unregister(tunnel.id)).toBe(false);
   });
 
-  it("emits TunnelClosed when a tunnel is unregistered", () => {
-    const eventBus = createEventBus();
-    const closed: unknown[] = [];
-    eventBus.subscribe(BadgerEventType.TunnelClosed, (payload) => {
-      closed.push(payload);
-    });
-
-    const manager = createManager(new MemoryTunnelRepository(), eventBus);
-    const tunnel = manager.register(createClient(), 3000);
-
-    manager.unregister(tunnel.id);
-
-    expect(closed).toEqual([
-      expect.objectContaining({
-        tunnelId: tunnel.id,
-        reason: "unregistered",
-      }),
-    ]);
-  });
-
-  it("emits TunnelClosed when expired orphans are purged during create", () => {
-    const eventBus = createEventBus();
-    const closed: unknown[] = [];
-    eventBus.subscribe(BadgerEventType.TunnelClosed, (payload) => {
-      closed.push(payload);
-    });
-
-    const repository = new MemoryTunnelRepository();
-    const manager = createManager(repository, eventBus);
-    vi.spyOn(manager, "generateTunnelId")
-      .mockReturnValueOnce("abcd1234567890abcdef1234567890ab")
-      .mockReturnValueOnce("ffff9999567890abcdef1234567890ab");
-
-    const firstClient = createClient();
-    const created = manager.create(firstClient, 3000);
-    expect(manager.detachClient(firstClient)).toBe(true);
-
-    const now = Date.now() + 70_000;
-    manager.create(createClient(), 3001, {
-      now,
-      reclaimWindowMs: 60_000,
-    });
-
-    expect(closed).toEqual([
-      expect.objectContaining({
-        tunnelId: created.tunnel.id,
-        reason: "expired",
-      }),
-    ]);
-  });
-
   it("unregisters a tunnel by websocket client", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     const client = createClient();
     const tunnel = manager.register(client, 3000);
 
@@ -220,7 +133,7 @@ describe("TunnelManager", () => {
   });
 
   it("detaches a client without deleting the reclaimable orphan", () => {
-    const manager = createManager();
+    const manager = new TunnelManager(new MemoryTunnelRepository());
     const client = createClient();
     const tunnel = manager.register(client, 3000);
 
@@ -243,13 +156,13 @@ describe("TunnelManager", () => {
         disconnectedAt: 0,
       })),
       reclaim: vi.fn(() => undefined),
-      purgeExpiredOrphans: vi.fn(() => []),
+      purgeExpiredOrphans: vi.fn(() => 0),
       findById: vi.fn(() => tunnel),
       findByClient: vi.fn(() => tunnel),
       findBySlug: vi.fn(() => tunnel),
     };
 
-    const manager = createManager(repository);
+    const manager = new TunnelManager(repository);
     vi.spyOn(manager, "generateTunnelId").mockReturnValue("fixed-id");
 
     expect(manager.register(client, 3000)).toEqual(tunnel);

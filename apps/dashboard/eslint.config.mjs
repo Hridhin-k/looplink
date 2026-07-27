@@ -1,19 +1,18 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import prettierConfig from "eslint-config-prettier";
 
-/**
- * Dashboard ESLint config.
- *
- * Uses `eslint-config-next` for App Router rules and disables formatting rules
- * that conflict with the monorepo Prettier setup.
- */
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  prettierConfig,
-  globalIgnores([".next/**", "out/**", "next-env.d.ts", "vitest.config.ts"]),
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
 ]);
 
 export default eslintConfig;

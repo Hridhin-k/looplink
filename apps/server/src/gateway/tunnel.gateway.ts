@@ -1,18 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 
-import { Inject, Logger } from "@nestjs/common";
+import { Logger } from "@nestjs/common";
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from "@nestjs/websockets";
 import {
-  BadgerEventType,
-  EVENT_BUS,
   MAX_WS_MESSAGE_BYTES,
   MessageType,
   parseProtocolMessage,
   type ConnectedMessage,
   type CreateTunnelMessage,
   type ErrorMessage,
-  type EventBus,
   type HttpForwardingMessage,
   type PingMessage,
   type PongMessage,
@@ -40,21 +37,18 @@ import { rawDataToString } from "../utils/raw-data.js";
 })
 export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TunnelGateway.name);
-  private readonly connectionIds = new WeakMap<WebSocket, string>();
 
   /**
    * @param tunnelManager - Domain service that creates and tracks tunnels.
    * @param httpExchanges - Pending HTTP forward correlation registry.
    * @param heartbeats - Liveness tracker that drops silent clients.
    * @param security - Connection, origin, and message-rate policy.
-   * @param eventBus - Lifecycle event bus (fire-and-forget).
    */
   constructor(
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
     private readonly heartbeats: HeartbeatMonitor,
     private readonly security: GatewaySecurityPolicy,
-    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
   ) {}
 
   /**
@@ -72,15 +66,9 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const connectionId = randomUUID();
-    this.connectionIds.set(client, connectionId);
 
     this.logger.log(`Client connected (${connectionId})`);
     this.heartbeats.register(client);
-
-    this.eventBus.publish(BadgerEventType.ClientConnected, {
-      connectionId,
-      occurredAt: Date.now(),
-    });
 
     const message: ConnectedMessage = {
       type: MessageType.Connected,
@@ -107,18 +95,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.heartbeats.unregister(client);
     this.security.release(client);
 
-    const connectionId = this.connectionIds.get(client);
-    this.connectionIds.delete(client);
-
-    const existing = this.tunnelManager.lookupByClient(client);
     const detached = this.tunnelManager.detachClient(client);
-
-    this.eventBus.publish(BadgerEventType.ClientDisconnected, {
-      connectionId,
-      tunnelId: existing?.id,
-      tunnelDetached: detached,
-      occurredAt: Date.now(),
-    });
 
     if (detached) {
       this.logger.log("Client disconnected; tunnel parked for reclaim");

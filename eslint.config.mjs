@@ -5,14 +5,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/*.tsbuildinfo",
-      "**/vitest.config.ts",
-      "**/.next/**",
-      "apps/dashboard/**",
-    ],
+    ignores: ["**/dist/**", "**/node_modules/**", "**/*.tsbuildinfo", "**/vitest.config.ts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

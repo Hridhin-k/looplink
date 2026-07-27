@@ -1,11 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import {
-  BadgerEventType,
-  EVENT_BUS,
   MessageType,
-  type EventBus,
   type HttpCookies,
   type HttpHeaders,
   type HttpMethod,
@@ -67,12 +64,8 @@ export class HttpForwardingService {
 
   /**
    * @param coordinator - Correlates CLI response frames with in-flight requests.
-   * @param eventBus - Lifecycle event bus (fire-and-forget).
    */
-  constructor(
-    private readonly coordinator: HttpExchangeCoordinator,
-    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
-  ) {
+  constructor(private readonly coordinator: HttpExchangeCoordinator) {
     this.timeoutMs = resolveHttpForwardTimeoutMs();
   }
 
@@ -84,25 +77,12 @@ export class HttpForwardingService {
    */
   async forward(request: ForwardHttpRequest): Promise<ForwardHttpResponse> {
     const { tunnel } = request;
-    const requestId = randomUUID();
-    const receivedAt = Date.now();
-    const requestBody = request.body ?? new Uint8Array();
-
-    this.eventBus.publish(BadgerEventType.RequestReceived, {
-      tunnelId: tunnel.id,
-      requestId,
-      method: request.method,
-      path: request.path,
-      headers: request.headers,
-      body: requestBody,
-      occurredAt: receivedAt,
-    });
 
     if (tunnel.client.readyState !== WebSocket.OPEN) {
-      this.publishRequestFailed(request, requestId, "Tunnel WebSocket is not open.");
       throw new Error("Tunnel WebSocket is not open.");
     }
 
+    const requestId = randomUUID();
     const exchange = this.coordinator.begin(requestId);
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal =
@@ -126,58 +106,20 @@ export class HttpForwardingService {
 
     try {
       this.sendRequestFrames(tunnel, requestId, request);
-      this.eventBus.publish(BadgerEventType.RequestForwarded, {
-        tunnelId: tunnel.id,
-        requestId,
-        method: request.method,
-        path: request.path,
-        occurredAt: Date.now(),
-      });
-
       const start = await exchange.waitForStart();
 
       return {
         statusCode: start.statusCode,
         headers: start.headers,
         setCookies: start.setCookies,
-        body: this.observeBody(exchange.body, start.hasBody, (responseBody) => {
-          const occurredAt = Date.now();
-          this.eventBus.publish(BadgerEventType.ResponseReturned, {
-            tunnelId: tunnel.id,
-            requestId,
-            method: request.method,
-            path: request.path,
-            statusCode: start.statusCode,
-            responseHeaders: start.headers,
-            responseBody,
-            latencyMs: Math.max(0, occurredAt - receivedAt),
-            occurredAt,
-          });
-        }),
+        body: this.consumeBody(exchange.body, start.hasBody),
       };
     } catch (error: unknown) {
       this.coordinator.complete(requestId);
-      const message = error instanceof Error ? error.message : "Upstream tunnel error.";
-      this.publishRequestFailed(request, requestId, message);
       throw error;
     } finally {
       signal.removeEventListener("abort", onAbort);
     }
-  }
-
-  private publishRequestFailed(
-    request: ForwardHttpRequest,
-    requestId: string,
-    error: string,
-  ): void {
-    this.eventBus.publish(BadgerEventType.RequestFailed, {
-      tunnelId: request.tunnel.id,
-      requestId,
-      method: request.method,
-      path: request.path,
-      error,
-      occurredAt: Date.now(),
-    });
   }
 
   private sendRequestFrames(
@@ -227,34 +169,14 @@ export class HttpForwardingService {
     );
   }
 
-  /**
-   * Yields response chunks unchanged while assembling a copy for EventBus observers.
-   *
-   * Forwarding behavior is unchanged: chunks still stream to the public client as
-   * they arrive. {@link onComplete} runs after the upstream body ends.
-   *
-   * @param body - Upstream response body.
-   * @param hasBody - When `false`, chunks are consumed but not yielded.
-   * @param onComplete - Invoked with the assembled body once the stream ends.
-   */
-  private async *observeBody(
+  private async *consumeBody(
     body: AsyncIterable<Uint8Array>,
     hasBody: boolean,
-    onComplete: (responseBody: Uint8Array) => void,
   ): AsyncIterable<Uint8Array> {
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-
-    try {
-      for await (const chunk of body) {
-        if (hasBody) {
-          chunks.push(chunk);
-          totalBytes += chunk.byteLength;
-          yield chunk;
-        }
+    for await (const chunk of body) {
+      if (hasBody) {
+        yield chunk;
       }
-    } finally {
-      onComplete(concatChunks(chunks, totalBytes));
     }
   }
 
@@ -265,32 +187,6 @@ export class HttpForwardingService {
 
     client.send(JSON.stringify(message));
   }
-}
-
-/**
- * Concatenates body chunks into a single buffer.
- *
- * @param chunks - Chunk list.
- * @param totalBytes - Sum of chunk lengths.
- * @returns Assembled bytes.
- */
-function concatChunks(chunks: readonly Uint8Array[], totalBytes: number): Uint8Array {
-  if (chunks.length === 0) {
-    return new Uint8Array();
-  }
-
-  if (chunks.length === 1) {
-    const only = chunks[0];
-    return only ?? new Uint8Array();
-  }
-
-  const merged = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    merged.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return merged;
 }
 
 /**

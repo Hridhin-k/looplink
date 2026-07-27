@@ -84,9 +84,6 @@ describe("InMemoryEventBus", () => {
       method: HttpMethod.GET,
       path: "/",
       statusCode: 200,
-      responseHeaders: {},
-      responseBody: new Uint8Array(),
-      latencyMs: 0,
       occurredAt: 1,
     });
 
