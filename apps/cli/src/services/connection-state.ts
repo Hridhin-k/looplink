@@ -1,5 +1,5 @@
 /**
- * Lifecycle states for the CLI's connection to the LoopLink server.
+ * Lifecycle states for the CLI's connection to the Badger server.
  */
 export enum ConnectionState {
   /** No socket exists, or the previous socket has fully closed. */

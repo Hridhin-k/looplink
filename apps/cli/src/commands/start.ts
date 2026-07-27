@@ -15,7 +15,7 @@ export interface StartCommandOptions {
 }
 
 /**
- * Commander adapter for `looplink <port>`.
+ * Commander adapter for `badger <port>`.
  *
  * Validates the port argument and delegates to {@link StartTunnelService}.
  */
@@ -30,7 +30,7 @@ export class StartCommand {
   ) {}
 
   /**
-   * Handles a single `looplink <port>` invocation.
+   * Handles a single `badger <port>` invocation.
    *
    * @param portArg - Raw port argument from the command line.
    * @param options - Parsed Commander options, including an optional server URL.
@@ -50,7 +50,7 @@ export class StartCommand {
 }
 
 /**
- * Registers the default `looplink <port>` action on a Commander program.
+ * Registers the default `badger <port>` action on a Commander program.
  *
  * @param program - Commander program to configure.
  * @param startCommand - Command handler to invoke for the port argument.
@@ -58,7 +58,7 @@ export class StartCommand {
 export function registerStartCommand(program: Command, startCommand: StartCommand): void {
   program
     .argument("<port>", "Local TCP port to expose")
-    .option("-s, --server <url>", `LoopLink server WebSocket URL (default: ${DEFAULT_SERVER_URL})`)
+    .option("-s, --server <url>", `Badger server WebSocket URL (default: ${DEFAULT_SERVER_URL})`)
     .action((portArg: string, options: StartCommandOptions) => {
       void startCommand.execute(portArg, options);
     });

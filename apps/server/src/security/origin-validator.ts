@@ -2,8 +2,8 @@
  * Decides whether an inbound `Origin` (or fallback `Host`) is allowed.
  *
  * Empty allow-list means "allow all" — appropriate for local development.
- * In production set `LOOPLINK_ALLOWED_ORIGINS` to a comma-separated list of
- * exact origins (e.g. `https://looplink.dev`) or hostnames.
+ * In production set `BADGER_ALLOWED_ORIGINS` to a comma-separated list of
+ * exact origins (e.g. `https://badger.dev`) or hostnames.
  */
 export class OriginValidator {
   private readonly allowed: ReadonlySet<string>;
@@ -27,7 +27,7 @@ export class OriginValidator {
   /**
    * Validates an HTTP `Origin` header value.
    *
-   * When `Origin` is absent (non-browser clients such as the LoopLink CLI),
+   * When `Origin` is absent (non-browser clients such as the Badger CLI),
    * the request is allowed — CLI traffic does not send Origin. Browser
    * requests that send a disallowed Origin are rejected.
    *
@@ -51,7 +51,7 @@ export class OriginValidator {
    * Validates a `Host` header for public HTTP tunnel traffic.
    *
    * @param hostHeader - Raw `Host` header (may include a port).
-   * @param baseDomain - Configured public base domain (e.g. `looplink.dev`).
+   * @param baseDomain - Configured public base domain (e.g. `badger.dev`).
    * @returns `true` when the host is the apex, a tunnel subdomain, or allow-listed.
    */
   isHostAllowed(hostHeader: string | undefined, baseDomain: string): boolean {

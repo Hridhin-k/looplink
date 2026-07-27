@@ -21,7 +21,7 @@ import {
  * Path-based public URLs (`/tunnel/{id}/...`) for hosts without wildcard TLS
  * (for example Railway's service domain).
  */
-describe("LoopLink path-based tunnel routing", () => {
+describe("Badger path-based tunnel routing", () => {
   let app: RunningSampleApp;
   let server: ManagedProcess;
   let cli: ManagedProcess;
@@ -48,7 +48,7 @@ describe("LoopLink path-based tunnel routing", () => {
   });
 
   it("mints a Railway-compatible path-based public URL", () => {
-    expect(publicUrl).toMatch(/^https:\/\/looplink\.test\/tunnel\/[a-f0-9]{32}$/);
+    expect(publicUrl).toMatch(/^https:\/\/badger\.test\/tunnel\/[a-f0-9]{32}$/);
     expect(cli.output()).toContain("Tunnel Created");
   });
 

@@ -4,9 +4,9 @@
  * Used wherever a lowercase identifier is required, such as the CLI binary
  * name, configuration directory, and outgoing user agent.
  */
-export const APP_NAME = "looplink";
+export const APP_NAME = "badger";
 
 /**
  * Human-readable project name for CLI output and documentation.
  */
-export const APP_DISPLAY_NAME = "LoopLink";
+export const APP_DISPLAY_NAME = "Badger";

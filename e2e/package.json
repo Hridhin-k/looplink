@@ -1,8 +1,8 @@
 {
-  "name": "@looplink/e2e",
+  "name": "@hridhin-k/badger-e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Black-box end-to-end tests that exercise the built LoopLink server and CLI.",
+  "description": "Black-box end-to-end tests that exercise the built Badger server and CLI.",
   "license": "MIT",
   "type": "module",
   "scripts": {

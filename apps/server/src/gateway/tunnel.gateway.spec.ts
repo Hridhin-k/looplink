@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import type { IncomingMessage } from "node:http";
 import { Socket } from "node:net";
 
-import { MessageType } from "@looplink/shared";
+import { MessageType } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
@@ -154,7 +154,7 @@ describe("TunnelGateway heartbeat", () => {
   });
 
   it("does not count HTTP response frames toward the WebSocket control-plane rate limit", () => {
-    process.env["LOOPLINK_WS_MESSAGE_RATE_LIMIT"] = "2";
+    process.env["BADGER_WS_MESSAGE_RATE_LIMIT"] = "2";
 
     try {
       const tunnelManager = {
@@ -217,7 +217,7 @@ describe("TunnelGateway heartbeat", () => {
 
       heartbeats.onModuleDestroy();
     } finally {
-      delete process.env["LOOPLINK_WS_MESSAGE_RATE_LIMIT"];
+      delete process.env["BADGER_WS_MESSAGE_RATE_LIMIT"];
     }
   });
 });

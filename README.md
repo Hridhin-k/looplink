@@ -1,19 +1,19 @@
-# LoopLink
+# Badger
 
 Expose localhost through secure public URLs.
 
-LoopLink is an open-source developer tool, similar to ngrok, that tunnels traffic from a public
+Badger is an open-source developer tool, similar to ngrok, that tunnels traffic from a public
 URL to a service running on your machine.
 
 ## Repository layout
 
 ```
 apps/
-  cli/        @looplink/cli    — command-line client run by developers
-  server/     @looplink/server — public tunnel server that relays traffic
+  cli/        @hridhin-k/badger    — command-line client run by developers
+  server/     @hridhin-k/badger-server — public tunnel server that relays traffic
 packages/
-  shared/     @looplink/shared — protocol types, schemas, and constants
-e2e/          @looplink/e2e   — black-box end-to-end tests (never published)
+  shared/     @hridhin-k/badger-shared — protocol types, schemas, and constants
+e2e/          @hridhin-k/badger-e2e   — black-box end-to-end tests (never published)
 ```
 
 - `apps/` contains deployable applications. They are never imported by other workspaces.
@@ -25,7 +25,24 @@ e2e/          @looplink/e2e   — black-box end-to-end tests (never published)
 - Node.js >= 20
 - pnpm >= 9
 
-## Getting started
+## Install the CLI (GitHub Packages)
+
+Packages publish to GitHub Packages under `@hridhin-k/*`. Auth is required even
+for public packages. Create a PAT with `read:packages`, then add to `~/.npmrc`:
+
+```ini
+@hridhin-k:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+```
+
+```bash
+npm install -g @hridhin-k/badger
+badger 3000
+```
+
+See [docs/publishing.md](docs/publishing.md) to publish new versions.
+
+## Getting started (monorepo)
 
 ```bash
 pnpm install
@@ -45,6 +62,7 @@ Run from the repository root:
 | `pnpm format:check` | Verify formatting                              |
 | `pnpm test`         | Unit tests for the server and CLI              |
 | `pnpm test:e2e`     | Build, then run the end-to-end suite           |
+| `pnpm publish:cli`  | Build and publish shared + CLI to GH Packages  |
 | `pnpm clean`        | Remove build output                            |
 
 ## Testing

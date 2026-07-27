@@ -16,7 +16,7 @@ import {
 } from "./protocol.js";
 
 /**
- * Parses a raw JSON string into a LoopLink {@link ProtocolMessage}.
+ * Parses a raw JSON string into a Badger {@link ProtocolMessage}.
  *
  * @param raw - JSON text received over the wire.
  * @returns A successful result with the typed message, or a failed result with

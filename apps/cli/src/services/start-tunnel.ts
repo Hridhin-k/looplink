@@ -1,10 +1,10 @@
-import { MessageType } from "@looplink/shared";
+import { MessageType } from "@hridhin-k/badger-shared";
 
 import { LocalProxy } from "./local-proxy.js";
 import { RequestForwarder } from "./request-forwarder.js";
 import type { ShutdownRegistry } from "./shutdown.js";
 import type { ServerConnection, WebSocketClientOptions } from "./websocket-client.js";
-import { LoopLinkWebSocketClient } from "./websocket-client.js";
+import { BadgerWebSocketClient } from "./websocket-client.js";
 import type { SessionPresenter } from "../ui/session-presenter.js";
 
 /**
@@ -16,7 +16,7 @@ export type ServerConnectionFactory = (
 ) => ServerConnection;
 
 /**
- * Application service that starts a LoopLink session for a local port.
+ * Application service that starts a Badger session for a local port.
  *
  * Connects to the server, waits for the protocol handshake, requests a tunnel,
  * and keeps the session alive. Unexpected disconnects are retried automatically
@@ -42,7 +42,7 @@ export class StartTunnelService {
    * {@link ServerConnection.disconnect} is called.
    *
    * @param port - Already-validated local port to expose.
-   * @param serverUrl - WebSocket URL of the LoopLink server.
+   * @param serverUrl - WebSocket URL of the Badger server.
    */
   async start(port: number, serverUrl: string): Promise<void> {
     this.presenter.starting(port);
@@ -117,7 +117,7 @@ export class StartTunnelService {
 /**
  * Default factory used by the CLI entrypoint.
  *
- * @param serverUrl - WebSocket URL of the LoopLink server.
+ * @param serverUrl - WebSocket URL of the Badger server.
  * @param options - Optional overrides such as reconnect callbacks.
  * @returns A reconnect-enabled WebSocket client.
  */
@@ -125,7 +125,7 @@ export function createDefaultServerConnection(
   serverUrl: string,
   options: Partial<WebSocketClientOptions> = {},
 ): ServerConnection {
-  return new LoopLinkWebSocketClient({
+  return new BadgerWebSocketClient({
     url: serverUrl,
     reconnect: true,
     ...options,

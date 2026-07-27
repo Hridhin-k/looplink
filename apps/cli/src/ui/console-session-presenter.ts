@@ -1,4 +1,4 @@
-import { APP_DISPLAY_NAME } from "@looplink/shared";
+import { APP_DISPLAY_NAME } from "@hridhin-k/badger-shared";
 
 import type { SessionPresenter, TunnelPresentation } from "./session-presenter.js";
 import type { Spinner } from "./spinner.js";
@@ -45,7 +45,7 @@ function describe(error: Error): string {
 }
 
 /**
- * Renders a LoopLink session to the terminal.
+ * Renders a Badger session to the terminal.
  *
  * Status transitions animate through a {@link Spinner} on stderr, while results
  * (URL, QR code) are written to stdout so they stay pipeable.

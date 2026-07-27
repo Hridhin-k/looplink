@@ -8,7 +8,7 @@ import {
   type HttpMethod,
   type HttpQuery,
   type ProtocolMessage,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
 import type { TunnelRecord } from "../tunnel/tunnel.types.js";
@@ -55,7 +55,7 @@ export interface ForwardHttpResponse {
 }
 
 /**
- * Forwards public HTTP requests to a tunnel client over the LoopLink protocol.
+ * Forwards public HTTP requests to a tunnel client over the Badger protocol.
  */
 @Injectable()
 export class HttpForwardingService {
@@ -195,7 +195,7 @@ export class HttpForwardingService {
  * @returns Timeout in milliseconds.
  */
 export function resolveHttpForwardTimeoutMs(): number {
-  const raw = process.env["LOOPLINK_HTTP_FORWARD_TIMEOUT_MS"];
+  const raw = process.env["BADGER_HTTP_FORWARD_TIMEOUT_MS"];
 
   if (raw === undefined || raw.trim().length === 0) {
     return DEFAULT_HTTP_FORWARD_TIMEOUT_MS;
@@ -204,7 +204,7 @@ export function resolveHttpForwardTimeoutMs(): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 1) {
     throw new Error(
-      `Invalid LOOPLINK_HTTP_FORWARD_TIMEOUT_MS "${raw}": expected a positive integer.`,
+      `Invalid BADGER_HTTP_FORWARD_TIMEOUT_MS "${raw}": expected a positive integer.`,
     );
   }
 

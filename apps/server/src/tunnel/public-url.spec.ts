@@ -18,7 +18,7 @@ describe("tunnelSlug", () => {
 describe("buildPublicUrl", () => {
   it("builds a path-based URL by default", () => {
     expect(buildPublicUrl("abcd1234567890abcdef1234567890ab")).toBe(
-      "https://looplink.dev/tunnel/abcd1234567890abcdef1234567890ab",
+      "https://badger.dev/tunnel/abcd1234567890abcdef1234567890ab",
     );
   });
 
@@ -27,7 +27,7 @@ describe("buildPublicUrl", () => {
       buildPublicUrl("abcd1234567890abcdef1234567890ab", {
         mode: "subdomain",
       }),
-    ).toBe("https://abcd1234567890ab.looplink.dev");
+    ).toBe("https://abcd1234567890ab.badger.dev");
   });
 
   it("accepts an override base domain for path mode", () => {
@@ -83,36 +83,36 @@ describe("parseTunnelPath", () => {
 
 describe("extractTunnelSlugFromHost", () => {
   it("extracts the slug from a tunnel host", () => {
-    expect(extractTunnelSlugFromHost("abcd1234567890ab.looplink.dev")).toBe("abcd1234567890ab");
-    expect(extractTunnelSlugFromHost("ABCD1234567890AB.looplink.dev:8080")).toBe(
+    expect(extractTunnelSlugFromHost("abcd1234567890ab.badger.dev")).toBe("abcd1234567890ab");
+    expect(extractTunnelSlugFromHost("ABCD1234567890AB.badger.dev:8080")).toBe(
       "abcd1234567890ab",
     );
   });
 
   it("returns undefined for non-tunnel hosts", () => {
     expect(extractTunnelSlugFromHost("localhost:8080")).toBeUndefined();
-    expect(extractTunnelSlugFromHost("looplink.dev")).toBeUndefined();
-    expect(extractTunnelSlugFromHost("a.b.looplink.dev")).toBeUndefined();
+    expect(extractTunnelSlugFromHost("badger.dev")).toBeUndefined();
+    expect(extractTunnelSlugFromHost("a.b.badger.dev")).toBeUndefined();
   });
 });
 
 describe("resolvePublicUrlMode", () => {
   afterEach(() => {
-    delete process.env["LOOPLINK_PUBLIC_URL_MODE"];
+    delete process.env["BADGER_PUBLIC_URL_MODE"];
   });
 
   it("defaults to path", () => {
-    delete process.env["LOOPLINK_PUBLIC_URL_MODE"];
+    delete process.env["BADGER_PUBLIC_URL_MODE"];
     expect(resolvePublicUrlMode()).toBe("path");
   });
 
   it("reads subdomain from the environment", () => {
-    process.env["LOOPLINK_PUBLIC_URL_MODE"] = "subdomain";
+    process.env["BADGER_PUBLIC_URL_MODE"] = "subdomain";
     expect(resolvePublicUrlMode()).toBe("subdomain");
   });
 
   it("rejects unknown values", () => {
-    process.env["LOOPLINK_PUBLIC_URL_MODE"] = "wildcard";
-    expect(() => resolvePublicUrlMode()).toThrow(/LOOPLINK_PUBLIC_URL_MODE/);
+    process.env["BADGER_PUBLIC_URL_MODE"] = "wildcard";
+    expect(() => resolvePublicUrlMode()).toThrow(/BADGER_PUBLIC_URL_MODE/);
   });
 });

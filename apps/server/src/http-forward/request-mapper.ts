@@ -4,7 +4,7 @@ import {
   type HttpCookies,
   type HttpHeaders,
   type HttpQuery,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 import type { FastifyRequest } from "fastify";
 
 /**
@@ -49,7 +49,7 @@ const STRIP_REQUEST_HEADERS = new Set([
 ]);
 
 /**
- * Maps a Fastify request into LoopLink HTTP forwarding fields.
+ * Maps a Fastify request into Badger HTTP forwarding fields.
  *
  * @param request - Inbound Fastify request (body parsed as Buffer when present).
  * @returns Normalized request fields.

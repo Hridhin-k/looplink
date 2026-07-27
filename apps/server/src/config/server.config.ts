@@ -1,5 +1,5 @@
 /**
- * Default TCP port the LoopLink server listens on when `PORT` is unset.
+ * Default TCP port the Badger server listens on when `PORT` is unset.
  */
 export const DEFAULT_SERVER_PORT = 8080;
 

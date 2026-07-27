@@ -27,7 +27,7 @@ export const JSON_FIXTURE = {
 export const HTML_FIXTURE = [
   "<!doctype html>",
   "<html>",
-  "<head><title>LoopLink sample app</title></head>",
+  "<head><title>Badger sample app</title></head>",
   "<body><h1>Hello from behind the tunnel</h1></body>",
   "</html>",
 ].join("\n");

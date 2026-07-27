@@ -8,12 +8,12 @@ import {
   MAX_WS_MESSAGE_BYTES,
   WS_MESSAGE_RATE_LIMIT,
   WS_MESSAGE_RATE_WINDOW_MS,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 
 import { parseAllowedOrigins } from "./origin-validator.js";
 
 /**
- * Resolved security limits for the LoopLink server process.
+ * Resolved security limits for the Badger server process.
  */
 export interface SecurityConfig {
   /** Fastify bodyLimit / public request body cap. */
@@ -66,27 +66,27 @@ function readPositiveInt(name: string, fallback: number): number {
  */
 export function resolveSecurityConfig(): SecurityConfig {
   return {
-    maxHttpBodyBytes: readPositiveInt("LOOPLINK_MAX_HTTP_BODY_BYTES", MAX_HTTP_BODY_BYTES),
-    maxWsMessageBytes: readPositiveInt("LOOPLINK_MAX_WS_MESSAGE_BYTES", MAX_WS_MESSAGE_BYTES),
-    maxWsConnections: readPositiveInt("LOOPLINK_MAX_WS_CONNECTIONS", MAX_WS_CONNECTIONS),
+    maxHttpBodyBytes: readPositiveInt("BADGER_MAX_HTTP_BODY_BYTES", MAX_HTTP_BODY_BYTES),
+    maxWsMessageBytes: readPositiveInt("BADGER_MAX_WS_MESSAGE_BYTES", MAX_WS_MESSAGE_BYTES),
+    maxWsConnections: readPositiveInt("BADGER_MAX_WS_CONNECTIONS", MAX_WS_CONNECTIONS),
     maxWsConnectionsPerIp: readPositiveInt(
-      "LOOPLINK_MAX_WS_CONNECTIONS_PER_IP",
+      "BADGER_MAX_WS_CONNECTIONS_PER_IP",
       MAX_WS_CONNECTIONS_PER_IP,
     ),
-    wsMessageRateLimit: readPositiveInt("LOOPLINK_WS_MESSAGE_RATE_LIMIT", WS_MESSAGE_RATE_LIMIT),
+    wsMessageRateLimit: readPositiveInt("BADGER_WS_MESSAGE_RATE_LIMIT", WS_MESSAGE_RATE_LIMIT),
     wsMessageRateWindowMs: readPositiveInt(
-      "LOOPLINK_WS_MESSAGE_RATE_WINDOW_MS",
+      "BADGER_WS_MESSAGE_RATE_WINDOW_MS",
       WS_MESSAGE_RATE_WINDOW_MS,
     ),
-    httpRateLimitMax: readPositiveInt("LOOPLINK_HTTP_RATE_LIMIT_MAX", HTTP_RATE_LIMIT_MAX),
+    httpRateLimitMax: readPositiveInt("BADGER_HTTP_RATE_LIMIT_MAX", HTTP_RATE_LIMIT_MAX),
     httpRateLimitWindowMs: readPositiveInt(
-      "LOOPLINK_HTTP_RATE_LIMIT_WINDOW_MS",
+      "BADGER_HTTP_RATE_LIMIT_WINDOW_MS",
       HTTP_RATE_LIMIT_WINDOW_MS,
     ),
     httpRequestTimeoutMs: readPositiveInt(
-      "LOOPLINK_HTTP_REQUEST_TIMEOUT_MS",
+      "BADGER_HTTP_REQUEST_TIMEOUT_MS",
       HTTP_REQUEST_TIMEOUT_MS,
     ),
-    allowedOrigins: parseAllowedOrigins(process.env["LOOPLINK_ALLOWED_ORIGINS"]),
+    allowedOrigins: parseAllowedOrigins(process.env["BADGER_ALLOWED_ORIGINS"]),
   };
 }

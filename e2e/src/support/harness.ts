@@ -8,15 +8,15 @@ import { fileURLToPath } from "node:url";
 import { request } from "undici";
 
 /** Fake public base domain used for tunnel URLs during the suite. */
-export const E2E_BASE_DOMAIN = "looplink.test";
+export const E2E_BASE_DOMAIN = "badger.test";
 
-/** Matches subdomain tunnel URLs printed by the CLI (`LOOPLINK_PUBLIC_URL_MODE=subdomain`). */
+/** Matches subdomain tunnel URLs printed by the CLI (`BADGER_PUBLIC_URL_MODE=subdomain`). */
 export const TUNNEL_URL_PATTERN = new RegExp(
   `https://[a-z0-9]+\\.${E2E_BASE_DOMAIN.replace(".", "\\.")}`,
   "g",
 );
 
-/** Matches path-based tunnel URLs (`LOOPLINK_PUBLIC_URL_MODE=path`). */
+/** Matches path-based tunnel URLs (`BADGER_PUBLIC_URL_MODE=path`). */
 export const PATH_TUNNEL_URL_PATTERN = new RegExp(
   `https://${E2E_BASE_DOMAIN.replace(".", "\\.")}/tunnel/[a-f0-9]{32}`,
   "g",
@@ -138,7 +138,7 @@ export class ManagedProcess {
 }
 
 /**
- * Spawns the built LoopLink server and waits until `/health` responds.
+ * Spawns the built Badger server and waits until `/health` responds.
  *
  * Rate limits are raised far beyond the defaults so the suite exercises
  * forwarding rather than the security throttles (covered by unit tests).
@@ -156,10 +156,10 @@ export async function startServer(
       ...process.env,
       PORT: String(serverPort),
       HOST: "127.0.0.1",
-      LOOPLINK_PUBLIC_BASE_DOMAIN: E2E_BASE_DOMAIN,
-      LOOPLINK_PUBLIC_URL_MODE: options.publicUrlMode ?? "subdomain",
-      LOOPLINK_WS_MESSAGE_RATE_LIMIT: "100000",
-      LOOPLINK_HTTP_RATE_LIMIT_MAX: "100000",
+      BADGER_PUBLIC_BASE_DOMAIN: E2E_BASE_DOMAIN,
+      BADGER_PUBLIC_URL_MODE: options.publicUrlMode ?? "subdomain",
+      BADGER_WS_MESSAGE_RATE_LIMIT: "100000",
+      BADGER_HTTP_RATE_LIMIT_MAX: "100000",
       NO_COLOR: "1",
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -174,7 +174,7 @@ export async function startServer(
  * Spawns the built CLI pointed at a local server and sample app port.
  *
  * @param appPort - Local port the CLI should expose.
- * @param serverPort - Port of the running LoopLink server.
+ * @param serverPort - Port of the running Badger server.
  * @returns Managed process handle.
  */
 export function startCli(appPort: number, serverPort: number): ManagedProcess {
@@ -215,7 +215,7 @@ export interface TunnelResponse {
  * under that prefix so `/api/data` becomes `/tunnel/{id}/api/data`. For
  * subdomain URLs the path is used as-is (routing is via `Host`).
  *
- * @param serverPort - LoopLink server port.
+ * @param serverPort - Badger server port.
  * @param publicUrl - Tunnel URL printed by the CLI.
  * @param requestPath - Application path (with optional query string).
  * @param options - Method, extra headers, and body.
@@ -255,7 +255,7 @@ export async function tunnelRequest(
  *
  * @param publicPathname - Pathname from the minted public URL (`/` or `/tunnel/{id}`).
  * @param requestPath - Application path, optionally with a query string.
- * @returns Path (+ query) to send to the LoopLink server.
+ * @returns Path (+ query) to send to the Badger server.
  */
 export function joinTunnelRequestPath(publicPathname: string, requestPath: string): string {
   const queryIndex = requestPath.indexOf("?");

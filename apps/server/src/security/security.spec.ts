@@ -52,25 +52,25 @@ describe("OriginValidator", () => {
   });
 
   it("allows missing Origin (CLI) but rejects disallowed browser Origins", () => {
-    const validator = new OriginValidator(["https://looplink.dev"]);
+    const validator = new OriginValidator(["https://badger.dev"]);
 
     expect(validator.isOriginAllowed(undefined)).toBe(true);
-    expect(validator.isOriginAllowed("https://looplink.dev")).toBe(true);
+    expect(validator.isOriginAllowed("https://badger.dev")).toBe(true);
     expect(validator.isOriginAllowed("https://evil.example")).toBe(false);
   });
 
   it("accepts apex and tunnel hosts for the configured base domain", () => {
     const validator = new OriginValidator([]);
 
-    expect(validator.isHostAllowed("looplink.dev", "looplink.dev")).toBe(true);
-    expect(validator.isHostAllowed("abcd1234567890ab.looplink.dev", "looplink.dev")).toBe(true);
-    expect(validator.isHostAllowed("evil.example", "looplink.dev")).toBe(true);
+    expect(validator.isHostAllowed("badger.dev", "badger.dev")).toBe(true);
+    expect(validator.isHostAllowed("abcd1234567890ab.badger.dev", "badger.dev")).toBe(true);
+    expect(validator.isHostAllowed("evil.example", "badger.dev")).toBe(true);
   });
 
   it("rejects foreign hosts when an allow-list is configured", () => {
-    const validator = new OriginValidator(["https://looplink.dev"]);
+    const validator = new OriginValidator(["https://badger.dev"]);
 
-    expect(validator.isHostAllowed("evil.example", "looplink.dev")).toBe(false);
-    expect(validator.isHostAllowed("abcd.looplink.dev", "looplink.dev")).toBe(true);
+    expect(validator.isHostAllowed("evil.example", "badger.dev")).toBe(false);
+    expect(validator.isHostAllowed("abcd.badger.dev", "badger.dev")).toBe(true);
   });
 });

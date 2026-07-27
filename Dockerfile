@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# LoopLink server image.
+# Badger server image.
 #
 # Targets:
 #   production  — minimal runtime (default)
@@ -34,7 +34,7 @@ COPY apps/server/package.json apps/server/
 # Lockfile integrity requires every workspace package.json to be present.
 COPY apps/cli/package.json apps/cli/
 
-RUN pnpm install --frozen-lockfile --filter @looplink/server...
+RUN pnpm install --frozen-lockfile --filter @hridhin-k/badger-server...
 
 # ---------------------------------------------------------------------------
 # Build: compile shared + server
@@ -45,8 +45,8 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY packages/shared packages/shared
 COPY apps/server apps/server
 
-RUN pnpm --filter @looplink/shared build \
-  && pnpm --filter @looplink/server build
+RUN pnpm --filter @hridhin-k/badger-shared build \
+  && pnpm --filter @hridhin-k/badger-server build
 
 # ---------------------------------------------------------------------------
 # Development: keep sources + toolchain for compose volume workflows
@@ -69,7 +69,7 @@ CMD ["node", "apps/server/dist/main.js"]
 # ---------------------------------------------------------------------------
 FROM build AS deploy
 
-RUN pnpm --filter @looplink/server deploy --prod --legacy /deploy
+RUN pnpm --filter @hridhin-k/badger-server deploy --prod --legacy /deploy
 
 # ---------------------------------------------------------------------------
 # Production: slim runtime image
@@ -82,11 +82,11 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-RUN addgroup -S looplink && adduser -S looplink -G looplink
+RUN addgroup -S badger && adduser -S badger -G badger
 
-COPY --from=deploy --chown=looplink:looplink /deploy ./
+COPY --from=deploy --chown=badger:badger /deploy ./
 
-USER looplink
+USER badger
 
 # TCP 8080 — HTTP (GET /health, public tunnel traffic) + WebSocket upgrades.
 EXPOSE 8080

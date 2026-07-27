@@ -1,8 +1,8 @@
 {
-  "name": "@looplink/server",
+  "name": "@hridhin-k/badger-server",
   "version": "0.0.0",
   "private": true,
-  "description": "LoopLink tunnel server that relays public traffic to local clients.",
+  "description": "Badger tunnel server that relays public traffic to local clients.",
   "license": "MIT",
   "type": "module",
   "files": [
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.1.0",
-    "@looplink/shared": "workspace:*",
+    "@hridhin-k/badger-shared": "workspace:*",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
     "@nestjs/platform-fastify": "^11.1.28",

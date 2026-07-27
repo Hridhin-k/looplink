@@ -1,15 +1,35 @@
 {
-  "name": "@looplink/cli",
-  "version": "0.0.0",
-  "private": true,
-  "description": "LoopLink command-line client for exposing localhost through secure public URLs.",
+  "name": "@hridhin-k/badger",
+  "version": "0.1.0",
+  "description": "Expose localhost through a secure public URL with Badger.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hridhin-k/looplink.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/Hridhin-k/looplink/tree/main/apps/cli#readme",
+  "bugs": {
+    "url": "https://github.com/Hridhin-k/looplink/issues"
+  },
+  "keywords": [
+    "badger",
+    "tunnel",
+    "localhost",
+    "ngrok",
+    "cli",
+    "devtools"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "bin": {
-    "looplink": "./dist/index.js"
+    "badger": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -b",
@@ -17,10 +37,11 @@
     "dev": "node ./dist/index.js",
     "start": "node ./dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "tsc -b"
   },
   "dependencies": {
-    "@looplink/shared": "workspace:*",
+    "@hridhin-k/badger-shared": "workspace:*",
     "chalk": "^5.6.2",
     "clipboardy": "^5.3.2",
     "commander": "^15.0.0",
@@ -34,5 +55,8 @@
     "@types/qrcode-terminal": "^0.12.2",
     "@types/ws": "^8.18.1",
     "vitest": "^4.1.10"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -48,21 +48,21 @@ describe("TunnelManager", () => {
 
     expect(created.tunnel.port).toBe(3000);
     expect(created.tunnel.id).toBe("abcd1234567890abcdef1234567890ab");
-    expect(created.publicUrl).toBe("https://looplink.dev/tunnel/abcd1234567890abcdef1234567890ab");
+    expect(created.publicUrl).toBe("https://badger.dev/tunnel/abcd1234567890abcdef1234567890ab");
     expect(created.restored).toBe(false);
   });
 
-  it("creates subdomain public URLs when LOOPLINK_PUBLIC_URL_MODE=subdomain", () => {
-    process.env["LOOPLINK_PUBLIC_URL_MODE"] = "subdomain";
+  it("creates subdomain public URLs when BADGER_PUBLIC_URL_MODE=subdomain", () => {
+    process.env["BADGER_PUBLIC_URL_MODE"] = "subdomain";
     try {
       const manager = new TunnelManager(new MemoryTunnelRepository());
       vi.spyOn(manager, "generateTunnelId").mockReturnValue("abcd1234567890abcdef1234567890ab");
 
       const created = manager.create(createClient(), 3000);
 
-      expect(created.publicUrl).toBe("https://abcd1234567890ab.looplink.dev");
+      expect(created.publicUrl).toBe("https://abcd1234567890ab.badger.dev");
     } finally {
-      delete process.env["LOOPLINK_PUBLIC_URL_MODE"];
+      delete process.env["BADGER_PUBLIC_URL_MODE"];
     }
   });
 

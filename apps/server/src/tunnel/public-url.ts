@@ -1,9 +1,9 @@
-import { TUNNEL_ID_BYTES, TUNNEL_SLUG_LENGTH } from "@looplink/shared";
+import { TUNNEL_ID_BYTES, TUNNEL_SLUG_LENGTH } from "@hridhin-k/badger-shared";
 
 /**
  * Default public DNS suffix used when building tunnel URLs.
  */
-export const DEFAULT_PUBLIC_BASE_DOMAIN = "looplink.dev";
+export const DEFAULT_PUBLIC_BASE_DOMAIN = "badger.dev";
 
 /**
  * How public tunnel URLs are minted.
@@ -135,10 +135,10 @@ export function extractTunnelSlugFromHost(
 /**
  * Resolves the public base domain from the environment.
  *
- * @returns A DNS host such as `looplink.dev` or a Railway service hostname.
+ * @returns A DNS host such as `badger.dev` or a Railway service hostname.
  */
 export function resolvePublicBaseDomain(): string {
-  const raw = process.env["LOOPLINK_PUBLIC_BASE_DOMAIN"];
+  const raw = process.env["BADGER_PUBLIC_BASE_DOMAIN"];
 
   if (raw === undefined || raw.trim().length === 0) {
     return DEFAULT_PUBLIC_BASE_DOMAIN;
@@ -153,7 +153,7 @@ export function resolvePublicBaseDomain(): string {
  * @returns `path` (default) or `subdomain`.
  */
 export function resolvePublicUrlMode(): PublicUrlMode {
-  const raw = process.env["LOOPLINK_PUBLIC_URL_MODE"];
+  const raw = process.env["BADGER_PUBLIC_URL_MODE"];
 
   if (raw === undefined || raw.trim().length === 0) {
     return DEFAULT_PUBLIC_URL_MODE;
@@ -164,11 +164,11 @@ export function resolvePublicUrlMode(): PublicUrlMode {
     return normalized;
   }
 
-  throw new Error(`Invalid LOOPLINK_PUBLIC_URL_MODE "${raw}": expected "path" or "subdomain".`);
+  throw new Error(`Invalid BADGER_PUBLIC_URL_MODE "${raw}": expected "path" or "subdomain".`);
 }
 
 /**
- * Narrows a path segment to a LoopLink tunnel id (hex of {@link TUNNEL_ID_BYTES}).
+ * Narrows a path segment to a Badger tunnel id (hex of {@link TUNNEL_ID_BYTES}).
  *
  * @param value - Candidate path segment.
  * @returns `true` when the value is a plausible tunnel id.

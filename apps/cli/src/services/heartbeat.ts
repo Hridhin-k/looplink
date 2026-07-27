@@ -1,4 +1,4 @@
-import { HEARTBEAT_INTERVAL_MS } from "@looplink/shared";
+import { HEARTBEAT_INTERVAL_MS } from "@hridhin-k/badger-shared";
 
 /**
  * Periodic keepalive loop.

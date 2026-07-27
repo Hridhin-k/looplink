@@ -10,7 +10,7 @@ services:
   server:
     build:
       target: development
-    image: looplink-server:dev
+    image: badger-server:dev
     env_file:
       - docker/development.env
     environment:
@@ -27,7 +27,7 @@ services:
       [
         "sh",
         "-c",
-        "pnpm --filter @looplink/shared build && pnpm --filter @looplink/server build && exec node apps/server/dist/main.js",
+        "pnpm --filter @hridhin-k/badger-shared build && pnpm --filter @hridhin-k/badger-server build && exec node apps/server/dist/main.js",
       ]
     healthcheck:
       interval: 15s

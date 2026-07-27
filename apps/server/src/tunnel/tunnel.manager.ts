@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@looplink/shared";
+import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@hridhin-k/badger-shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl } from "./public-url.js";
@@ -58,7 +58,7 @@ export class TunnelManager {
    * When `preferredTunnelId` is provided, the manager first tries to reclaim an
    * orphaned tunnel so the public URL survives a brief network interruption.
    *
-   * @param client - Connected LoopLink client socket.
+   * @param client - Connected Badger client socket.
    * @param port - Local TCP port on the client to expose.
    * @param options - Optional reclaim preference and clock overrides.
    * @returns The persisted tunnel and its public URL.
@@ -99,7 +99,7 @@ export class TunnelManager {
   /**
    * Registers a WebSocket client as a new tunnel session.
    *
-   * @param client - Connected LoopLink client socket.
+   * @param client - Connected Badger client socket.
    * @param port - Local TCP port on the client to expose.
    * @returns The persisted tunnel record, including its generated id.
    */

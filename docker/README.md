@@ -1,4 +1,4 @@
-# LoopLink server — Docker
+# Badger server — Docker
 
 Run the NestJS tunnel server in a container. The CLI stays on the host (or
 another machine) and connects to the published WebSocket port.
@@ -20,7 +20,7 @@ pnpm cli -- 3000 --server ws://127.0.0.1:8080
 # or, after building the CLI:
 node apps/cli/dist/index.js 3000 --server ws://127.0.0.1:8080
 # or, if linked globally:
-looplink 3000 --server ws://127.0.0.1:8080
+badger 3000 --server ws://127.0.0.1:8080
 ```
 
 Health check:
@@ -32,14 +32,14 @@ curl -s http://127.0.0.1:8080/health
 
 ## Ports
 
-LoopLink listens on **one TCP port**. HTTP, WebSocket upgrades, and public
+Badger listens on **one TCP port**. HTTP, WebSocket upgrades, and public
 tunnel forwarding all share the Fastify server.
 
 | Port     | Published by default           | Protocol                 | Who connects                     | Purpose                                                               |
 | -------- | ------------------------------ | ------------------------ | -------------------------------- | --------------------------------------------------------------------- |
 | **8080** | host `8080` → container `8080` | HTTP                     | browsers, `curl`, load balancers | `GET /health`                                                         |
 | **8080** | same mapping                   | HTTP                     | public clients                   | Tunnel traffic routed by `Host: {slug}.{domain}`                      |
-| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@looplink/cli`                  | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
+| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@hridhin-k/badger`                  | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
 
 There is **no separate WebSocket port**. Do not map 8080 and a second port for
 WS — the upgrade happens on the same listener.
@@ -58,7 +58,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ### Container-to-container
 
-On the Compose network `looplink`, other services reach the server at:
+On the Compose network `badger`, other services reach the server at:
 
 ```text
 http://server:8080/health
@@ -71,10 +71,10 @@ ws://server:8080
 | ---------------------------------- | ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                             | `8080`                       | server process / compose host mapping | Process listen port inside the container (compose fixes this at `8080`). Also selects the **host** publish port when set in `.env`. |
 | `HOST`                             | `0.0.0.0`                    | server process                        | Bind address. Must be `0.0.0.0` in Docker.                                                                                          |
-| `LOOPLINK_PUBLIC_BASE_DOMAIN`      | `looplink.dev`               | URL minting + `Host` parsing          | DNS suffix for `https://{slug}.{domain}`. Use `localhost` (or a local domain) in development.                                       |
-| `LOOPLINK_HTTP_FORWARD_TIMEOUT_MS` | `30000`                      | HTTP forwarding                       | Max wait for the CLI to answer a forwarded request.                                                                                 |
+| `BADGER_PUBLIC_BASE_DOMAIN`      | `badger.dev`               | URL minting + `Host` parsing          | DNS suffix for `https://{slug}.{domain}`. Use `localhost` (or a local domain) in development.                                       |
+| `BADGER_HTTP_FORWARD_TIMEOUT_MS` | `30000`                      | HTTP forwarding                       | Max wait for the CLI to answer a forwarded request.                                                                                 |
 | `NODE_ENV`                         | `production` / `development` | runtime                               | Set by the compose overlays.                                                                                                        |
-| `LOOPLINK_IMAGE_TAG`               | `latest`                     | compose prod                          | Tag for `looplink-server` image.                                                                                                    |
+| `BADGER_IMAGE_TAG`               | `latest`                     | compose prod                          | Tag for `badger-server` image.                                                                                                    |
 
 Files:
 
@@ -98,8 +98,8 @@ Healthchecks (image `HEALTHCHECK` and Compose `healthcheck`) call
 
 ## TLS edge (nginx)
 
-[`docker/nginx/nginx.conf`](nginx/nginx.conf) terminates HTTPS for `looplink.dev`
-and `*.looplink.dev`, proxies HTTP + WebSocket to the LoopLink upstream, and
+[`docker/nginx/nginx.conf`](nginx/nginx.conf) terminates HTTPS for `badger.dev`
+and `*.badger.dev`, proxies HTTP + WebSocket to the Badger upstream, and
 exposes an ACME webroot for Let's Encrypt.
 
 | Port    | Role                                                          |

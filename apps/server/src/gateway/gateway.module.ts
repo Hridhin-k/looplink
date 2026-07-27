@@ -7,7 +7,7 @@ import { SecurityModule } from "../security/security.module.js";
 import { TunnelModule } from "../tunnel/tunnel.module.js";
 
 /**
- * Owns the WebSocket gateway that LoopLink clients connect to.
+ * Owns the WebSocket gateway that Badger clients connect to.
  */
 @Module({
   imports: [TunnelModule, HttpForwardModule, SecurityModule],

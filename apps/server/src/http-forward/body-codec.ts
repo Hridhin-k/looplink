@@ -1,4 +1,4 @@
-import type { HttpBodyEncoding } from "@looplink/shared";
+import type { HttpBodyEncoding } from "@hridhin-k/badger-shared";
 
 /** Default body chunk size when streaming over the WebSocket protocol. */
 export const DEFAULT_BODY_CHUNK_SIZE = 64 * 1024;

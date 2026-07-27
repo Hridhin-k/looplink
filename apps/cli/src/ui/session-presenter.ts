@@ -11,7 +11,7 @@ export interface TunnelPresentation {
 }
 
 /**
- * User-facing view of a LoopLink session.
+ * User-facing view of a Badger session.
  *
  * Keeps presentation concerns (spinners, color, QR codes, clipboard) out of the
  * session service, which only reports lifecycle events.

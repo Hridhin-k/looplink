@@ -6,7 +6,7 @@ import {
   type CreateTunnelMessage,
   type ProtocolMessage,
   type TunnelCreatedMessage,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 import { randomUUID } from "node:crypto";
 
 import { ConnectionState } from "./connection-state.js";
@@ -15,10 +15,10 @@ import type { InboundForwardingMessage } from "./request-forwarder.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
- * Configuration for {@link LoopLinkWebSocketClient}.
+ * Configuration for {@link BadgerWebSocketClient}.
  */
 export interface WebSocketClientOptions {
-  /** WebSocket URL of the LoopLink server. */
+  /** WebSocket URL of the Badger server. */
   readonly url: string;
   /**
    * When `true`, the client retries after an unexpected disconnect.
@@ -140,12 +140,12 @@ interface MessageWaiter {
 const DEFAULT_WAIT_TIMEOUT_MS = 10_000;
 
 /**
- * WebSocket client that maintains a single connection to the LoopLink server.
+ * WebSocket client that maintains a single connection to the Badger server.
  *
  * When `reconnect` is enabled, unexpected closes schedule a retry every
  * {@link RECONNECT_INTERVAL_MS} and attempt to reclaim the previous tunnel.
  */
-export class LoopLinkWebSocketClient implements ServerConnection {
+export class BadgerWebSocketClient implements ServerConnection {
   private state: ConnectionState = ConnectionState.Disconnected;
   private socket: WebSocket | undefined;
   private readonly inbox: ProtocolMessage[] = [];
@@ -289,7 +289,7 @@ export class LoopLinkWebSocketClient implements ServerConnection {
     const socket = this.socket;
 
     if (socket === undefined || this.state !== ConnectionState.Connected) {
-      throw new Error("Cannot send: not connected to the LoopLink server.");
+      throw new Error("Cannot send: not connected to the Badger server.");
     }
 
     if (socket.readyState !== WebSocket.OPEN) {
@@ -409,7 +409,7 @@ export class LoopLinkWebSocketClient implements ServerConnection {
       this.setState(ConnectionState.Disconnected);
 
       if (!wasIntentional) {
-        this.scheduleReconnect(new Error("Connection to the LoopLink server was lost."));
+        this.scheduleReconnect(new Error("Connection to the Badger server was lost."));
       }
     });
 

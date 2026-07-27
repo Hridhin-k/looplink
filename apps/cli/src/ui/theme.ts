@@ -25,7 +25,7 @@ export interface Theme {
 }
 
 /**
- * Default LoopLink color palette.
+ * Default Badger color palette.
  */
 export const theme: Theme = {
   heading: (text) => chalk.bold.cyan(text),

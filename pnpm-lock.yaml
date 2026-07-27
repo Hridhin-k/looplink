@@ -32,7 +32,7 @@ importers:
 
   apps/cli:
     dependencies:
-      '@looplink/shared':
+      '@hridhin-k/badger-shared':
         specifier: workspace:*
         version: link:../../packages/shared
       chalk:
@@ -75,7 +75,7 @@ importers:
       '@fastify/rate-limit':
         specifier: ^11.1.0
         version: 11.1.0
-      '@looplink/shared':
+      '@hridhin-k/badger-shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@nestjs/common':

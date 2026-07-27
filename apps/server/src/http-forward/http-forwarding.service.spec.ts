@@ -1,4 +1,4 @@
-import { HttpMethod, MessageType, parseProtocolMessage } from "@looplink/shared";
+import { HttpMethod, MessageType, parseProtocolMessage } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 

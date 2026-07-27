@@ -6,12 +6,12 @@ import {
   TUNNEL_RECLAIM_WINDOW_MS,
   parseProtocolMessage,
   type ProtocolMessage,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
 import { ConnectionState } from "./connection-state.js";
-import { LoopLinkWebSocketClient } from "./websocket-client.js";
+import { BadgerWebSocketClient } from "./websocket-client.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 interface Orphan {
@@ -29,7 +29,7 @@ interface ActiveTunnel {
 }
 
 /**
- * Minimal LoopLink control-plane server that mirrors production reclaim rules.
+ * Minimal Badger control-plane server that mirrors production reclaim rules.
  *
  * Used only by reconnect integration tests so the CLI client can be exercised
  * against a real WebSocket peer without pulling in NestJS.
@@ -148,7 +148,7 @@ class ReclaimTestServer {
         tunnel ??= {
           id: randomUUID(),
           port: message.port,
-          publicUrl: `https://${randomUUID().slice(0, 8)}.looplink.dev`,
+          publicUrl: `https://${randomUUID().slice(0, 8)}.badger.dev`,
           client: socket,
         };
 
@@ -213,9 +213,9 @@ async function waitFor(predicate: () => boolean, timeoutMs = 5_000, pollMs = 25)
   }
 }
 
-describe("LoopLinkWebSocketClient reconnect (integration)", () => {
+describe("BadgerWebSocketClient reconnect (integration)", () => {
   const servers: ReclaimTestServer[] = [];
-  const clients: LoopLinkWebSocketClient[] = [];
+  const clients: BadgerWebSocketClient[] = [];
 
   afterEach(async () => {
     for (const client of clients.splice(0)) {
@@ -235,7 +235,7 @@ describe("LoopLinkWebSocketClient reconnect (integration)", () => {
     const onReconnected = vi.fn();
     const onReconnectFailed = vi.fn();
 
-    const client = new LoopLinkWebSocketClient({
+    const client = new BadgerWebSocketClient({
       url,
       reconnect: true,
       reconnectIntervalMs: 50,
@@ -282,7 +282,7 @@ describe("LoopLinkWebSocketClient reconnect (integration)", () => {
     const onReconnectFailed = vi.fn();
     const onReconnected = vi.fn();
 
-    const client = new LoopLinkWebSocketClient({
+    const client = new BadgerWebSocketClient({
       url,
       reconnect: true,
       reconnectIntervalMs: 40,
@@ -315,7 +315,7 @@ describe("LoopLinkWebSocketClient reconnect (integration)", () => {
 
     const onConnectionLost = vi.fn();
 
-    const client = new LoopLinkWebSocketClient({
+    const client = new BadgerWebSocketClient({
       url,
       reconnect: true,
       reconnectIntervalMs: 50,
@@ -344,7 +344,7 @@ describe("LoopLinkWebSocketClient reconnect (integration)", () => {
 
     const onReconnected = vi.fn();
 
-    const client = new LoopLinkWebSocketClient({
+    const client = new BadgerWebSocketClient({
       url,
       reconnect: true,
       reconnectIntervalMs: 80,

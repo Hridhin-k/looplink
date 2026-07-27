@@ -1,5 +1,5 @@
 {
-  "name": "looplink",
+  "name": "badger",
   "version": "0.0.0",
   "private": true,
   "description": "Expose localhost through secure public URLs.",
@@ -18,10 +18,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "cli": "node ./apps/cli/dist/index.js",
-    "server:dev": "pnpm --filter @looplink/server dev",
-    "server:start": "pnpm --filter @looplink/server start",
-    "test": "pnpm --filter @looplink/server --filter @looplink/cli test",
-    "test:e2e": "pnpm build && pnpm --filter @looplink/e2e test"
+    "server:dev": "pnpm --filter @hridhin-k/badger-server dev",
+    "server:start": "pnpm --filter @hridhin-k/badger-server start",
+    "test": "pnpm --filter @hridhin-k/badger-server --filter @hridhin-k/badger test",
+    "test:e2e": "pnpm build && pnpm --filter @hridhin-k/badger-e2e test",
+    "publish:cli": "pnpm build && pnpm --filter @hridhin-k/badger-shared publish && pnpm --filter @hridhin-k/badger publish"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

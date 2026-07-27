@@ -7,7 +7,7 @@ import { OriginValidator } from "./origin-validator.js";
 /**
  * Rejects browser requests whose `Origin` is not allow-listed.
  *
- * Applied to the public HTTP data plane. The LoopLink CLI does not send
+ * Applied to the public HTTP data plane. The Badger CLI does not send
  * `Origin`, so those requests pass. Tunnel Host headers must still match the
  * configured public base domain (or the allow-list in permissive setups).
  */

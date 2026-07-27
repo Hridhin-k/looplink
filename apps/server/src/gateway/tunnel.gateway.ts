@@ -15,7 +15,7 @@ import {
   type PongMessage,
   type ProtocolMessage,
   type TunnelCreatedMessage,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
@@ -25,7 +25,7 @@ import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /**
- * WebSocket entry point for LoopLink CLI clients.
+ * WebSocket entry point for Badger CLI clients.
  *
  * Accepts connections under connection/origin limits, enforces per-IP message
  * rate limits and frame size caps, handles tunnel creation, and delivers HTTP

@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "@looplink/shared";
+import { err, ok, type Result } from "@hridhin-k/badger-shared";
 
 /** Inclusive lower bound of a valid TCP port. */
 const MIN_PORT = 1;

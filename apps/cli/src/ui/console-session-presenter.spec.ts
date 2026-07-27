@@ -66,21 +66,21 @@ describe("ConsoleSessionPresenter", () => {
     presenter.starting(3000);
     presenter.connected();
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
 
-    expect(spinner.calls[0]).toContain("start:Starting LoopLink on port 3000");
-    expect(spinner.calls[1]).toContain("update:Connected to LoopLink server.");
-    expect(spinner.calls[2]).toBe("succeed:Connected to LoopLink server.");
+    expect(spinner.calls[0]).toContain("start:Starting Badger on port 3000");
+    expect(spinner.calls[1]).toContain("update:Connected to Badger server.");
+    expect(spinner.calls[2]).toBe("succeed:Connected to Badger server.");
   });
 
   it("renders the URL, local target, clipboard status, QR code and stop hint", async () => {
     const { presenter, copyToClipboard, renderQrCode, output } = setup();
 
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
@@ -88,20 +88,20 @@ describe("ConsoleSessionPresenter", () => {
     const text = output();
 
     expect(text).toContain("Tunnel Created");
-    expect(text).toContain("https://a.looplink.dev");
+    expect(text).toContain("https://a.badger.dev");
     expect(text).toContain("http://localhost:3000");
     expect(text).toContain("URL copied");
     expect(text).toContain("[QR]");
     expect(text).toContain("Press Ctrl+C to stop");
-    expect(copyToClipboard).toHaveBeenCalledWith("https://a.looplink.dev");
-    expect(renderQrCode).toHaveBeenCalledWith("https://a.looplink.dev");
+    expect(copyToClipboard).toHaveBeenCalledWith("https://a.badger.dev");
+    expect(renderQrCode).toHaveBeenCalledWith("https://a.badger.dev");
   });
 
   it("reports clipboard failures without throwing", async () => {
     const { presenter, output } = setup({ copySucceeds: false });
 
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
@@ -116,7 +116,7 @@ describe("ConsoleSessionPresenter", () => {
     });
 
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
@@ -130,12 +130,12 @@ describe("ConsoleSessionPresenter", () => {
     const { presenter, renderQrCode, spinner, output } = setup();
 
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
     await presenter.reconnected({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: true,
     });
@@ -149,18 +149,18 @@ describe("ConsoleSessionPresenter", () => {
     const { presenter, renderQrCode, output } = setup();
 
     await presenter.tunnelReady({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: false,
     });
     await presenter.reconnected({
-      publicUrl: "https://b.looplink.dev",
+      publicUrl: "https://b.badger.dev",
       port: 3000,
       restored: false,
     });
 
     expect(renderQrCode).toHaveBeenCalledTimes(2);
-    expect(output()).toContain("https://b.looplink.dev");
+    expect(output()).toContain("https://b.badger.dev");
   });
 
   it("warns on connection loss and reports retry failures", () => {
@@ -169,7 +169,7 @@ describe("ConsoleSessionPresenter", () => {
     presenter.connectionLost();
     presenter.reconnectFailed(new Error("ECONNREFUSED"));
 
-    expect(spinner.calls[0]).toContain("start:Connection lost. Reconnecting to LoopLink...");
+    expect(spinner.calls[0]).toContain("start:Connection lost. Reconnecting to Badger...");
     expect(spinner.calls[1]).toContain("update:Reconnect failed: ECONNREFUSED. Retrying...");
   });
 
@@ -186,7 +186,7 @@ describe("ConsoleSessionPresenter", () => {
 
     // A later outage is announced again once the session has recovered.
     await presenter.reconnected({
-      publicUrl: "https://a.looplink.dev",
+      publicUrl: "https://a.badger.dev",
       port: 3000,
       restored: true,
     });
@@ -221,7 +221,7 @@ describe("ConsoleSessionPresenter", () => {
     presenter.stopped();
 
     expect(spinner.calls).toContain("stop");
-    expect(output()).toContain("Stopping LoopLink...");
+    expect(output()).toContain("Stopping Badger...");
     expect(output()).toContain("Tunnel closed. Goodbye.");
   });
 });

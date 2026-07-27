@@ -7,7 +7,7 @@ services:
   server:
     build:
       target: production
-    image: looplink-server:${LOOPLINK_IMAGE_TAG:-latest}
+    image: badger-server:${BADGER_IMAGE_TAG:-latest}
     env_file:
       - docker/production.env
     environment:

@@ -1,15 +1,15 @@
 import { createRequire } from "node:module";
-import { APP_DISPLAY_NAME, APP_NAME } from "@looplink/shared";
+import { APP_DISPLAY_NAME, APP_NAME } from "@hridhin-k/badger-shared";
 
 const require = createRequire(import.meta.url);
 
 /**
- * Static configuration that describes the LoopLink CLI binary.
+ * Static configuration that describes the Badger CLI binary.
  */
 export interface CliConfig {
-  /** Machine-readable binary name, e.g. `looplink`. */
+  /** Machine-readable binary name, e.g. `badger`. */
   readonly name: string;
-  /** Human-readable product name, e.g. `LoopLink`. */
+  /** Human-readable product name, e.g. `Badger`. */
   readonly displayName: string;
   /** One-line description shown in `--help`. */
   readonly description: string;

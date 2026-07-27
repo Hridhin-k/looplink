@@ -26,7 +26,7 @@ import {
  *
  *   test → server (public host) → WebSocket → CLI → Express app → back.
  */
-describe("LoopLink end-to-end", () => {
+describe("Badger end-to-end", () => {
   let app: RunningSampleApp;
   let server: ManagedProcess;
   let cli: ManagedProcess;
@@ -51,7 +51,7 @@ describe("LoopLink end-to-end", () => {
   });
 
   it("creates a tunnel and reports the public URL", () => {
-    expect(publicUrl).toMatch(/^https:\/\/[a-z0-9]{16}\.looplink\.test$/);
+    expect(publicUrl).toMatch(/^https:\/\/[a-z0-9]{16}\.badger\.test$/);
     expect(cli.output()).toContain("Tunnel Created");
   });
 

@@ -1,5 +1,5 @@
 /**
- * Discriminator values for every LoopLink protocol message.
+ * Discriminator values for every Badger protocol message.
  *
  * String enums are used so the wire format stays human-readable JSON and does
  * not depend on TypeScript's numeric enum numbering.
@@ -35,7 +35,7 @@ export enum MessageType {
 }
 
 /**
- * Fields shared by every LoopLink protocol message.
+ * Fields shared by every Badger protocol message.
  *
  * Correlation identifiers (`requestId`) are intentionally not declared here —
  * they belong only on messages that participate in a request/response pair.

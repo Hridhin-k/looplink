@@ -1,7 +1,7 @@
 import { MessageType, type BaseMessage } from "./protocol.js";
 
 /**
- * HTTP methods supported by LoopLink request forwarding.
+ * HTTP methods supported by Badger request forwarding.
  */
 export enum HttpMethod {
   GET = "GET",

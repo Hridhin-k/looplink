@@ -1,15 +1,17 @@
 /**
- * Default WebSocket URL for a locally running LoopLink server.
+ * Default WebSocket URL for the hosted Badger server.
+ *
+ * Override with `--server` or {@link SERVER_URL_ENV} for local development.
  */
-export const DEFAULT_SERVER_URL = "ws://127.0.0.1:8080";
+export const DEFAULT_SERVER_URL = "wss://looplinkserver-production.up.railway.app";
 
 /**
  * Environment variable that overrides {@link DEFAULT_SERVER_URL}.
  */
-export const SERVER_URL_ENV = "LOOPLINK_SERVER_URL";
+export const SERVER_URL_ENV = "BADGER_SERVER_URL";
 
 /**
- * Resolves the LoopLink server WebSocket URL.
+ * Resolves the Badger server WebSocket URL.
  *
  * Precedence: explicit CLI override → {@link SERVER_URL_ENV} → {@link DEFAULT_SERVER_URL}.
  *

@@ -6,7 +6,7 @@ import {
   type HttpRequestEndMessage,
   type HttpRequestStartMessage,
   type ProtocolMessage,
-} from "@looplink/shared";
+} from "@hridhin-k/badger-shared";
 
 import type { LocalProxy, LocalProxyResponse } from "./local-proxy.js";
 import { concatChunks, decodeBodyChunk, encodeBodyChunk, splitBytes } from "../utils/body-codec.js";
@@ -18,7 +18,7 @@ export type InboundForwardingMessage =
   HttpRequestStartMessage | HttpRequestChunkMessage | HttpRequestEndMessage | HttpCancelMessage;
 
 /**
- * Sends a protocol message back to the LoopLink server.
+ * Sends a protocol message back to the Badger server.
  */
 export type SendMessage = (message: ProtocolMessage) => void;
 

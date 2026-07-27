@@ -1,4 +1,4 @@
-# Shared LoopLink server definition.
+# Shared Badger server definition.
 #
 # Development:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -14,8 +14,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: looplink-server:local
-    container_name: looplink-server
+    image: badger-server:local
+    container_name: badger-server
     ports:
       # Host:container — both sides default to 8080; override host with PORT.
       - "${PORT:-8080}:8080"
@@ -35,9 +35,9 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - looplink
+      - badger
 
 networks:
-  looplink:
-    name: looplink
+  badger:
+    name: badger
     driver: bridge

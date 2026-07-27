@@ -6,7 +6,7 @@ import type WebSocket from "ws";
 export interface TunnelRecord {
   /** Unique tunnel identifier. */
   readonly id: string;
-  /** Connected LoopLink client that owns this tunnel. */
+  /** Connected Badger client that owns this tunnel. */
   readonly client: WebSocket;
   /** Local TCP port on the client machine that this tunnel exposes. */
   readonly port: number;

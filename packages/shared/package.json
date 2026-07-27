@@ -1,10 +1,18 @@
 {
-  "name": "@looplink/shared",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Shared types, constants, and utilities for LoopLink.",
+  "name": "@hridhin-k/badger-shared",
+  "version": "0.1.0",
+  "description": "Shared types, constants, and utilities for Badger.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hridhin-k/looplink.git",
+    "directory": "packages/shared"
+  },
+  "homepage": "https://github.com/Hridhin-k/looplink#readme",
+  "bugs": {
+    "url": "https://github.com/Hridhin-k/looplink/issues"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,6 +24,10 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "prepublishOnly": "tsc -b"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }
