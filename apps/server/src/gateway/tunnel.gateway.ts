@@ -111,18 +111,20 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param data - Raw WebSocket payload.
    */
   private handleClientMessage(client: WebSocket, data: WebSocket.RawData): void {
-    if (!this.security.allowMessage(client)) {
-      this.sendMessage(client, {
-        type: MessageType.Error,
-        code: "rate_limited",
-        message: "WebSocket message rate limit exceeded.",
-      });
-      return;
-    }
-
     const parsed = parseProtocolMessage(rawDataToString(data));
 
     if (!parsed.ok) {
+      // Invalid frames still consume the control-plane budget so a flood of
+      // garbage cannot bypass rate limiting by failing to parse.
+      if (!this.security.allowMessage(client)) {
+        this.sendMessage(client, {
+          type: MessageType.Error,
+          code: "rate_limited",
+          message: "WebSocket message rate limit exceeded.",
+        });
+        return;
+      }
+
       this.sendMessage(client, {
         type: MessageType.Error,
         code: "invalid_message",
@@ -132,6 +134,18 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const message = parsed.value;
+
+    // HTTP response frames are volume-bound by public HTTP rate limits, body
+    // caps, and pending-exchange limits. Counting them toward the WS control
+    // budget breaks Next.js/Vite pages that fan out dozens of asset responses.
+    if (!isHttpDataPlaneFromClient(message) && !this.security.allowMessage(client)) {
+      this.sendMessage(client, {
+        type: MessageType.Error,
+        code: "rate_limited",
+        message: "WebSocket message rate limit exceeded.",
+      });
+      return;
+    }
 
     switch (message.type) {
       case MessageType.CreateTunnel:
@@ -252,4 +266,21 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.send(JSON.stringify(message));
   }
+}
+
+/**
+ * HTTP data-plane frames the CLI sends while answering public requests.
+ *
+ * These are excluded from the WebSocket control-plane rate limit.
+ *
+ * @param message - Parsed protocol message.
+ * @returns `true` for response/cancel frames.
+ */
+function isHttpDataPlaneFromClient(message: ProtocolMessage): boolean {
+  return (
+    message.type === MessageType.HttpResponseStart ||
+    message.type === MessageType.HttpResponseChunk ||
+    message.type === MessageType.HttpResponseEnd ||
+    message.type === MessageType.HttpCancel
+  );
 }

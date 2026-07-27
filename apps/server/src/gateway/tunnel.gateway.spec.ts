@@ -152,4 +152,72 @@ describe("TunnelGateway heartbeat", () => {
 
     heartbeats.onModuleDestroy();
   });
+
+  it("does not count HTTP response frames toward the WebSocket control-plane rate limit", () => {
+    process.env["LOOPLINK_WS_MESSAGE_RATE_LIMIT"] = "2";
+
+    try {
+      const tunnelManager = {
+        unregisterClient: vi.fn().mockReturnValue(false),
+        detachClient: vi.fn().mockReturnValue(false),
+        lookup: vi.fn(),
+      } as unknown as TunnelManager;
+
+      const heartbeats = new HeartbeatMonitor(60_000, 3_600_000);
+      const exchanges = new HttpExchangeCoordinator();
+      const deliver = vi.spyOn(exchanges, "deliver").mockReturnValue(true);
+      const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
+      const gateway = new TunnelGateway(tunnelManager, exchanges, heartbeats, security);
+      const socket = new FakeSocket();
+      const client = asClient(socket);
+
+      vi.mocked(tunnelManager.lookup).mockReturnValue({
+        id: "tun-1",
+        client,
+        port: 3000,
+      });
+
+      gateway.handleConnection(client, createUpgradeRequest());
+
+      for (let i = 0; i < 2; i += 1) {
+        socket.emit(
+          "message",
+          Buffer.from(JSON.stringify({ type: MessageType.Ping, requestId: `burn-${String(i)}` })),
+        );
+      }
+
+      socket.sent.length = 0;
+
+      socket.emit(
+        "message",
+        Buffer.from(JSON.stringify({ type: MessageType.Ping, requestId: "over-budget" })),
+      );
+      expect(socket.sentMessages().some((message) => message.code === "rate_limited")).toBe(true);
+
+      socket.sent.length = 0;
+
+      for (let i = 0; i < 20; i += 1) {
+        socket.emit(
+          "message",
+          Buffer.from(
+            JSON.stringify({
+              type: MessageType.HttpResponseChunk,
+              requestId: "asset-1",
+              tunnelId: "tun-1",
+              sequence: i,
+              encoding: "base64",
+              data: Buffer.from(`chunk-${String(i)}`).toString("base64"),
+            }),
+          ),
+        );
+      }
+
+      expect(deliver).toHaveBeenCalledTimes(20);
+      expect(socket.sentMessages().some((message) => message.code === "rate_limited")).toBe(false);
+
+      heartbeats.onModuleDestroy();
+    } finally {
+      delete process.env["LOOPLINK_WS_MESSAGE_RATE_LIMIT"];
+    }
+  });
 });

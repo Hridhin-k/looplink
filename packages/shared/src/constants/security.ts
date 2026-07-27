@@ -30,6 +30,10 @@ export const MAX_WS_CONNECTIONS_PER_IP = 50;
 
 /**
  * Maximum protocol messages a single WebSocket may send per window.
+ *
+ * Applies to control-plane traffic (create tunnel, ping, invalid frames).
+ * HTTP response frames are excluded so a Next.js/Vite asset fan-out does not
+ * trip the limiter; those are bounded by HTTP rate limits and body caps.
  */
 export const WS_MESSAGE_RATE_LIMIT = 120;
 
@@ -40,8 +44,11 @@ export const WS_MESSAGE_RATE_WINDOW_MS = 60_000;
 
 /**
  * Maximum public HTTP requests allowed per IP per window.
+ *
+ * Sized for a modern SPA/Next.js cold load (many parallel `/_next` assets)
+ * without being unbounded.
  */
-export const HTTP_RATE_LIMIT_MAX = 300;
+export const HTTP_RATE_LIMIT_MAX = 2_000;
 
 /**
  * Sliding window length for public HTTP rate limiting (ms).
