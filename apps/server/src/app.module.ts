@@ -5,11 +5,12 @@ import { GatewayModule } from "./gateway/gateway.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { HttpForwardModule } from "./http-forward/http-forward.module.js";
 import { SecurityModule } from "./security/security.module.js";
+import { TrafficModule } from "./traffic/traffic.module.js";
 import { TunnelModule } from "./tunnel/tunnel.module.js";
 
 /**
  * Root application module. Composes the health, gateway, tunnel, HTTP
- * forwarding, and security features.
+ * forwarding, traffic recorder, and security features.
  */
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { TunnelModule } from "./tunnel/tunnel.module.js";
     HealthModule,
     TunnelModule,
     HttpForwardModule,
+    TrafficModule,
     GatewayModule,
   ],
 })

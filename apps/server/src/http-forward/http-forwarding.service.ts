@@ -85,13 +85,17 @@ export class HttpForwardingService {
   async forward(request: ForwardHttpRequest): Promise<ForwardHttpResponse> {
     const { tunnel } = request;
     const requestId = randomUUID();
+    const receivedAt = Date.now();
+    const requestBody = request.body ?? new Uint8Array();
 
     this.eventBus.publish(BadgerEventType.RequestReceived, {
       tunnelId: tunnel.id,
       requestId,
       method: request.method,
       path: request.path,
-      occurredAt: Date.now(),
+      headers: request.headers,
+      body: requestBody,
+      occurredAt: receivedAt,
     });
 
     if (tunnel.client.readyState !== WebSocket.OPEN) {
@@ -132,20 +136,24 @@ export class HttpForwardingService {
 
       const start = await exchange.waitForStart();
 
-      this.eventBus.publish(BadgerEventType.ResponseReturned, {
-        tunnelId: tunnel.id,
-        requestId,
-        method: request.method,
-        path: request.path,
-        statusCode: start.statusCode,
-        occurredAt: Date.now(),
-      });
-
       return {
         statusCode: start.statusCode,
         headers: start.headers,
         setCookies: start.setCookies,
-        body: this.consumeBody(exchange.body, start.hasBody),
+        body: this.observeBody(exchange.body, start.hasBody, (responseBody) => {
+          const occurredAt = Date.now();
+          this.eventBus.publish(BadgerEventType.ResponseReturned, {
+            tunnelId: tunnel.id,
+            requestId,
+            method: request.method,
+            path: request.path,
+            statusCode: start.statusCode,
+            responseHeaders: start.headers,
+            responseBody,
+            latencyMs: Math.max(0, occurredAt - receivedAt),
+            occurredAt,
+          });
+        }),
       };
     } catch (error: unknown) {
       this.coordinator.complete(requestId);
@@ -219,14 +227,34 @@ export class HttpForwardingService {
     );
   }
 
-  private async *consumeBody(
+  /**
+   * Yields response chunks unchanged while assembling a copy for EventBus observers.
+   *
+   * Forwarding behavior is unchanged: chunks still stream to the public client as
+   * they arrive. {@link onComplete} runs after the upstream body ends.
+   *
+   * @param body - Upstream response body.
+   * @param hasBody - When `false`, chunks are consumed but not yielded.
+   * @param onComplete - Invoked with the assembled body once the stream ends.
+   */
+  private async *observeBody(
     body: AsyncIterable<Uint8Array>,
     hasBody: boolean,
+    onComplete: (responseBody: Uint8Array) => void,
   ): AsyncIterable<Uint8Array> {
-    for await (const chunk of body) {
-      if (hasBody) {
-        yield chunk;
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+
+    try {
+      for await (const chunk of body) {
+        if (hasBody) {
+          chunks.push(chunk);
+          totalBytes += chunk.byteLength;
+          yield chunk;
+        }
       }
+    } finally {
+      onComplete(concatChunks(chunks, totalBytes));
     }
   }
 
@@ -237,6 +265,32 @@ export class HttpForwardingService {
 
     client.send(JSON.stringify(message));
   }
+}
+
+/**
+ * Concatenates body chunks into a single buffer.
+ *
+ * @param chunks - Chunk list.
+ * @param totalBytes - Sum of chunk lengths.
+ * @returns Assembled bytes.
+ */
+function concatChunks(chunks: readonly Uint8Array[], totalBytes: number): Uint8Array {
+  if (chunks.length === 0) {
+    return new Uint8Array();
+  }
+
+  if (chunks.length === 1) {
+    const only = chunks[0];
+    return only ?? new Uint8Array();
+  }
+
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return merged;
 }
 
 /**

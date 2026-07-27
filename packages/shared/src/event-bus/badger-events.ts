@@ -1,4 +1,4 @@
-import type { HttpMethod } from "../types/http-forwarding.js";
+import type { HttpHeaders, HttpMethod } from "../types/http-forwarding.js";
 
 /**
  * Canonical names for Badger lifecycle events.
@@ -95,6 +95,10 @@ export interface RequestReceivedEvent {
   readonly method: HttpMethod;
   /** Path forwarded to the local application. */
   readonly path: string;
+  /** Inbound request headers (Cookie excluded; see cookies on the wire protocol). */
+  readonly headers: HttpHeaders;
+  /** Raw request body; empty when the request has no body. */
+  readonly body: Uint8Array;
   /** Epoch ms when the event was produced. */
   readonly occurredAt: number;
 }
@@ -129,6 +133,12 @@ export interface ResponseReturnedEvent {
   readonly path: string;
   /** HTTP status returned by the CLI / local app. */
   readonly statusCode: number;
+  /** Response headers excluding Set-Cookie. */
+  readonly responseHeaders: HttpHeaders;
+  /** Assembled response body; empty when the response has no body. */
+  readonly responseBody: Uint8Array;
+  /** Milliseconds from {@link RequestReceivedEvent.occurredAt} to response completion. */
+  readonly latencyMs: number;
   /** Epoch ms when the event was produced. */
   readonly occurredAt: number;
 }

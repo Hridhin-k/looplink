@@ -63,18 +63,18 @@ and tunnel control flow are never affected.
 
 ## Lifecycle events
 
-| Event                | Emitter                 | When                                   |
-| -------------------- | ----------------------- | -------------------------------------- |
-| `TunnelCreated`      | `TunnelManager`         | After a tunnel is created or reclaimed |
-| `TunnelClosed`       | `TunnelManager`         | After unregister / orphan expiry purge |
-| `ClientConnected`    | `TunnelGateway`         | After a WebSocket client is admitted   |
-| `ClientDisconnected` | `TunnelGateway`         | After disconnect cleanup               |
-| `RequestReceived`    | `HttpForwardingService` | Public HTTP forward begins             |
-| `RequestForwarded`   | `HttpForwardingService` | Request frames sent to the CLI         |
-| `ResponseReturned`   | `HttpForwardingService` | CLI response start received            |
-| `RequestFailed`      | `HttpForwardingService` | Forward fails or times out             |
-| `ReconnectStarted`   | `BadgerWebSocketClient` | A reconnect attempt begins             |
-| `ReconnectSucceeded` | `BadgerWebSocketClient` | Tunnel restored after reconnect        |
+| Event                | Emitter                 | When                                                              |
+| -------------------- | ----------------------- | ----------------------------------------------------------------- |
+| `TunnelCreated`      | `TunnelManager`         | After a tunnel is created or reclaimed                            |
+| `TunnelClosed`       | `TunnelManager`         | After unregister / orphan expiry purge                            |
+| `ClientConnected`    | `TunnelGateway`         | After a WebSocket client is admitted                              |
+| `ClientDisconnected` | `TunnelGateway`         | After disconnect cleanup                                          |
+| `RequestReceived`    | `HttpForwardingService` | Public HTTP forward begins (includes headers + body)              |
+| `RequestForwarded`   | `HttpForwardingService` | Request frames sent to the CLI                                    |
+| `ResponseReturned`   | `HttpForwardingService` | Response body finished streaming (status, headers, body, latency) |
+| `RequestFailed`      | `HttpForwardingService` | Forward fails or times out                                        |
+| `ReconnectStarted`   | `BadgerWebSocketClient` | A reconnect attempt begins                                        |
+| `ReconnectSucceeded` | `BadgerWebSocketClient` | Tunnel restored after reconnect                                   |
 
 Protocol messages such as `tunnel_created` are unchanged. Lifecycle events are
 parallel observability signals, not wire-format changes.

@@ -24,7 +24,9 @@ e2e/          @hridhin-k/badger-e2e   — black-box end-to-end tests (never publ
   the workspace package and talks to the server only over public REST/WebSocket APIs.
 
 Internal lifecycle observability uses a typed EventBus in shared. See
-[docs/event-bus.md](docs/event-bus.md). Dashboard scaffolding notes:
+[docs/event-bus.md](docs/event-bus.md). HTTP exchanges are recorded by the
+server-side TrafficRecorder (EventBus subscriber). See
+[docs/traffic-recorder.md](docs/traffic-recorder.md). Dashboard scaffolding notes:
 [docs/dashboard.md](docs/dashboard.md).
 
 ## Prerequisites
