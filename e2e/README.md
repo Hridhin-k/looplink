@@ -13,7 +13,7 @@ test (undici) ──HTTP──▶ server (public host) ──WebSocket──▶ 
 
 | Scenario      | Test                                                                         |
 | ------------- | ---------------------------------------------------------------------------- |
-| Tunnel create | CLI prints a `https://<slug>.badger.test` URL after connecting             |
+| Tunnel create | CLI prints a `https://<slug>.badger.test` URL after connecting               |
 | JSON          | `GET /api/data` round-trips a JSON document                                  |
 | HTML          | `GET /` round-trips an HTML page with `text/html`                            |
 | Headers       | Custom request header reaches the app; custom response header comes back     |
@@ -23,7 +23,7 @@ test (undici) ──HTTP──▶ server (public host) ──WebSocket──▶ 
 | Streaming     | Chunked `/stream` response arrives complete, with no `Content-Length`        |
 | Heartbeat     | A raw WebSocket `ping` receives a `pong` with the matching `requestId`       |
 | Reconnect     | Server is SIGKILLed and restarted; the CLI reconnects and forwarding resumes |
-| Path routing  | `BADGER_PUBLIC_URL_MODE=path` serves `/tunnel/{id}/...` (Railway-style)    |
+| Path routing  | `BADGER_PUBLIC_URL_MODE=path` serves `/tunnel/{id}/...` (Railway-style)      |
 
 ## Running the suite
 

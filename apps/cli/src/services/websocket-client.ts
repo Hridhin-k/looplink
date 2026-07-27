@@ -1,9 +1,12 @@
 import WebSocket from "ws";
 import {
+  BadgerEventType,
   MessageType,
   RECONNECT_INTERVAL_MS,
+  createEventBus,
   parseProtocolMessage,
   type CreateTunnelMessage,
+  type EventBus,
   type ProtocolMessage,
   type TunnelCreatedMessage,
 } from "@hridhin-k/badger-shared";
@@ -33,6 +36,10 @@ export interface WebSocketClientOptions {
    * interval; override only in tests.
    */
   readonly heartbeatIntervalMs?: number;
+  /**
+   * Lifecycle event bus. Defaults to an isolated in-memory bus when omitted.
+   */
+  readonly eventBus?: EventBus;
   /**
    * Invoked when the live connection drops unexpectedly and reconnect is armed.
    *
@@ -157,12 +164,14 @@ export class BadgerWebSocketClient implements ServerConnection {
   private activeTunnel: ActiveTunnelSession | undefined;
   private forwardingHandler: ((message: InboundForwardingMessage) => void) | undefined;
   private readonly reconnectIntervalMs: number;
+  private readonly eventBus: EventBus;
 
   /**
    * @param options - Connection URL and reconnect policy.
    */
   constructor(private readonly options: WebSocketClientOptions) {
     this.reconnectIntervalMs = options.reconnectIntervalMs ?? RECONNECT_INTERVAL_MS;
+    this.eventBus = options.eventBus ?? createEventBus();
   }
 
   /**
@@ -515,11 +524,18 @@ export class BadgerWebSocketClient implements ServerConnection {
     this.reconnectInFlight = true;
     this.setState(ConnectionState.Reconnecting);
 
+    const session = this.activeTunnel;
+    this.eventBus.publish(BadgerEventType.ReconnectStarted, {
+      tunnelId: session?.tunnelId,
+      publicUrl: session?.publicUrl,
+      port: session?.port,
+      occurredAt: Date.now(),
+    });
+
     try {
       await this.connect();
       await this.waitForMessage((message) => message.type === MessageType.Connected);
 
-      const session = this.activeTunnel;
       if (session === undefined) {
         this.reconnectInFlight = false;
         return;
@@ -530,6 +546,13 @@ export class BadgerWebSocketClient implements ServerConnection {
       const restored = tunnel.tunnelId === previousTunnelId;
 
       this.reconnectInFlight = false;
+      this.eventBus.publish(BadgerEventType.ReconnectSucceeded, {
+        tunnelId: tunnel.tunnelId,
+        publicUrl: tunnel.publicUrl,
+        port: session.port,
+        restored,
+        occurredAt: Date.now(),
+      });
       this.options.onReconnected?.(tunnel, restored);
     } catch (error: unknown) {
       this.reconnectInFlight = false;

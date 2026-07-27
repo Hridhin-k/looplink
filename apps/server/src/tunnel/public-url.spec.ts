@@ -84,9 +84,7 @@ describe("parseTunnelPath", () => {
 describe("extractTunnelSlugFromHost", () => {
   it("extracts the slug from a tunnel host", () => {
     expect(extractTunnelSlugFromHost("abcd1234567890ab.badger.dev")).toBe("abcd1234567890ab");
-    expect(extractTunnelSlugFromHost("ABCD1234567890AB.badger.dev:8080")).toBe(
-      "abcd1234567890ab",
-    );
+    expect(extractTunnelSlugFromHost("ABCD1234567890AB.badger.dev:8080")).toBe("abcd1234567890ab");
   });
 
   it("returns undefined for non-tunnel hosts", () => {

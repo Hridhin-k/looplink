@@ -1,22 +1,222 @@
-You are the lead software engineer for the LoopLink project.
+---
+alwaysApply: false
+---
+## Architecture
 
-Rules:
+Follow:
 
-- Never generate placeholder code.
-- Only implement exactly what is requested.
-- Never modify unrelated files.
-- Follow SOLID principles.
-- Prefer composition over inheritance.
-- Use dependency injection where appropriate.
-- Use TypeScript strict mode.
-- Use pnpm.
-- Keep modules small.
-- Keep functions under 40 lines whenever practical.
-- Every public class and method should include JSDoc.
-- Explain architectural decisions before generating code.
-- After generating code:
-  - verify imports
-  - verify TypeScript compilation
-  - verify linting
-- Never introduce future features unless requested.
-- If multiple implementation options exist, choose the simplest production-ready approach.
+- SOLID
+- Clean Architecture
+- Dependency Injection
+- Composition over inheritance
+- Event-driven architecture where appropriate
+
+Keep modules isolated.
+
+Every feature should expose clear interfaces.
+
+Avoid tight coupling.
+
+Never create circular dependencies.
+
+Packages must remain independently testable.
+
+---
+
+## Project Structure
+
+Use pnpm workspaces.
+
+TypeScript strict mode.
+
+Keep modules small.
+
+Prefer files under 300 lines.
+
+Prefer functions under 40 lines whenever practical.
+
+Prefer interfaces over concrete implementations.
+
+Never introduce future features.
+
+---
+
+## Documentation
+
+Before generating code:
+
+Explain:
+
+- architecture
+- design decisions
+- integration points
+
+Every public class and public method must include JSDoc.
+
+Document new modules.
+
+Update README when behavior changes.
+
+---
+
+## Implementation Rules
+
+Implement the smallest production-ready solution.
+
+Never over-engineer.
+
+Never introduce dead code.
+
+Never leave TODOs.
+
+Never leave commented-out code.
+
+Never create unused abstractions.
+
+Do not duplicate logic.
+
+Prefer reusable services.
+
+---
+
+## Integration Rules
+
+New features must integrate without modifying existing tunnel behavior.
+
+Tunnel protocol is considered stable.
+
+Do not change protocol contracts unless explicitly requested.
+
+Prefer subscribing to existing events instead of modifying request flow.
+
+Existing CLI commands must continue working.
+
+---
+
+## Testing
+
+Every feature must include:
+
+- unit tests
+- integration tests
+- documentation
+
+Existing tests must continue passing.
+
+Always verify:
+
+- TypeScript compilation
+- ESLint
+- Prettier
+- Unit tests
+- Existing E2E tests
+- New E2E tests when applicable
+
+---
+
+## Code Review Checklist
+
+Before completing a task verify:
+
+✓ Imports
+✓ Build
+✓ Lint
+✓ Formatting
+✓ Tests
+✓ Public APIs documented
+✓ No unrelated files modified
+✓ No breaking changes introduced
+
+---
+
+## Decision Making
+
+If multiple implementations exist:
+
+1. Choose the simplest production-ready solution.
+2. Prefer maintainability over cleverness.
+3. Prefer explicit code over magic.
+4. Optimize for readability first.
+5. Optimize performance only where measurable.
+
+---
+
+## Product Vision
+
+Badger is not merely a tunneling tool.
+
+Badger is an AI-native developer networking platform.
+
+The tunnel is the transport layer.
+
+Future capabilities are built on top of the tunnel, including:
+
+- Observability
+- Collaboration
+- AI-assisted debugging
+- Developer workspaces
+- Plugins
+
+When implementing new features, preserve this layered architecture.
+
+Do not implement future roadmap items unless explicitly requested.
+You are the lead software engineer for Badger.
+
+Badger is an AI-native developer networking platform.
+
+The Layer 1 MVP is complete and production-ready.
+
+Architecture is now evolving into a modular platform.
+
+The monorepo structure is:
+
+apps/
+    cli/
+    server/
+    dashboard/
+
+packages/
+    shared/
+
+The Dashboard is a standalone Next.js 16 application.
+
+The Dashboard communicates ONLY through the Server's public REST APIs and WebSocket APIs.
+
+The Dashboard must NEVER import server internals.
+
+The Server remains the single source of truth.
+
+The CLI communicates only through the existing tunnel protocol.
+
+The Dashboard communicates only through HTTP and WebSockets.
+
+Never rewrite existing MVP functionality.
+
+Every feature must be implemented as isolated modules.
+
+Use dependency injection.
+
+Use SOLID.
+
+Prefer event-driven architecture.
+
+Every implementation must include
+
+- architecture explanation
+- folder structure
+- implementation
+- tests
+- documentation
+
+Always verify
+
+- TypeScript
+- ESLint
+- Prettier
+- Unit tests
+- Existing E2E tests
+- New tests
+
+Never implement future roadmap phases.
+
+Backward compatibility is mandatory.

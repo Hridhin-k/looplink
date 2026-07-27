@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
+  BadgerEventType,
+  EVENT_BUS,
   MessageType,
+  type EventBus,
   type HttpCookies,
   type HttpHeaders,
   type HttpMethod,
@@ -64,8 +67,12 @@ export class HttpForwardingService {
 
   /**
    * @param coordinator - Correlates CLI response frames with in-flight requests.
+   * @param eventBus - Lifecycle event bus (fire-and-forget).
    */
-  constructor(private readonly coordinator: HttpExchangeCoordinator) {
+  constructor(
+    private readonly coordinator: HttpExchangeCoordinator,
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
+  ) {
     this.timeoutMs = resolveHttpForwardTimeoutMs();
   }
 
@@ -77,12 +84,21 @@ export class HttpForwardingService {
    */
   async forward(request: ForwardHttpRequest): Promise<ForwardHttpResponse> {
     const { tunnel } = request;
+    const requestId = randomUUID();
+
+    this.eventBus.publish(BadgerEventType.RequestReceived, {
+      tunnelId: tunnel.id,
+      requestId,
+      method: request.method,
+      path: request.path,
+      occurredAt: Date.now(),
+    });
 
     if (tunnel.client.readyState !== WebSocket.OPEN) {
+      this.publishRequestFailed(request, requestId, "Tunnel WebSocket is not open.");
       throw new Error("Tunnel WebSocket is not open.");
     }
 
-    const requestId = randomUUID();
     const exchange = this.coordinator.begin(requestId);
     const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal =
@@ -106,7 +122,24 @@ export class HttpForwardingService {
 
     try {
       this.sendRequestFrames(tunnel, requestId, request);
+      this.eventBus.publish(BadgerEventType.RequestForwarded, {
+        tunnelId: tunnel.id,
+        requestId,
+        method: request.method,
+        path: request.path,
+        occurredAt: Date.now(),
+      });
+
       const start = await exchange.waitForStart();
+
+      this.eventBus.publish(BadgerEventType.ResponseReturned, {
+        tunnelId: tunnel.id,
+        requestId,
+        method: request.method,
+        path: request.path,
+        statusCode: start.statusCode,
+        occurredAt: Date.now(),
+      });
 
       return {
         statusCode: start.statusCode,
@@ -116,10 +149,27 @@ export class HttpForwardingService {
       };
     } catch (error: unknown) {
       this.coordinator.complete(requestId);
+      const message = error instanceof Error ? error.message : "Upstream tunnel error.";
+      this.publishRequestFailed(request, requestId, message);
       throw error;
     } finally {
       signal.removeEventListener("abort", onAbort);
     }
+  }
+
+  private publishRequestFailed(
+    request: ForwardHttpRequest,
+    requestId: string,
+    error: string,
+  ): void {
+    this.eventBus.publish(BadgerEventType.RequestFailed, {
+      tunnelId: request.tunnel.id,
+      requestId,
+      method: request.method,
+      path: request.path,
+      error,
+      occurredAt: Date.now(),
+    });
   }
 
   private sendRequestFrames(

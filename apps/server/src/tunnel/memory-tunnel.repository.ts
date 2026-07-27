@@ -166,10 +166,10 @@ export class MemoryTunnelRepository implements TunnelRepository {
    *
    * @param now - Current epoch ms.
    * @param reclaimWindowMs - Maximum orphan age to retain.
-   * @returns Number of orphans purged.
+   * @returns Identifiers of orphans that were purged.
    */
-  purgeExpiredOrphans(now: number, reclaimWindowMs: number): number {
-    let purged = 0;
+  purgeExpiredOrphans(now: number, reclaimWindowMs: number): readonly string[] {
+    const purged: string[] = [];
 
     for (const [id, orphan] of this.orphans) {
       if (now - orphan.disconnectedAt <= reclaimWindowMs) {
@@ -178,7 +178,7 @@ export class MemoryTunnelRepository implements TunnelRepository {
 
       this.orphans.delete(id);
       this.bySlug.delete(tunnelSlug(id));
-      purged += 1;
+      purged.push(id);
     }
 
     return purged;

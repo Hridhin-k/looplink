@@ -1,0 +1,50 @@
+---
+alwaysApply: false
+---
+# Badger Architecture
+
+Current Stable Components
+
+- CLI
+- Tunnel Server
+- Tunnel Protocol
+- Local Proxy
+- Request Forwarder
+- Tunnel Manager
+- Event Bus (`packages/shared/src/event-bus` — typed publish/subscribe)
+- Dashboard scaffold (`apps/dashboard` — Next.js 16, no product UI yet)
+
+Stable Contracts
+
+- Tunnel protocol messages
+- CLI commands
+- WebSocket protocol
+- Public URL generation
+- EventBus interface and `BadgerEventType` payloads (`@hridhin-k/badger-shared/event-bus`)
+- Dashboard ↔ Server boundary: public REST + WebSocket only
+
+Future Modules
+
+- Traffic Recorder
+- Inspector
+- Dashboard UI screens
+- AI Engine
+- Plugin SDK
+
+Rules
+
+Never rewrite stable modules.
+
+New features must be added as separate modules.
+
+Prefer composition through interfaces.
+
+Avoid coupling new modules directly to forwarding logic.
+
+Prefer events over direct service calls.
+
+Lifecycle emissions must be fire-and-forget and must never alter tunnel control flow.
+See [docs/event-bus.md](../../docs/event-bus.md).
+
+The Dashboard must never import server internals.
+See [docs/dashboard.md](../../docs/dashboard.md).

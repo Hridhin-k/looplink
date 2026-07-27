@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import type { IncomingMessage } from "node:http";
 import { Socket } from "node:net";
 
-import { MessageType } from "@hridhin-k/badger-shared";
+import { createEventBus, MessageType } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
@@ -48,6 +48,7 @@ function createGateway(): {
     unregisterClient: vi.fn().mockReturnValue(false),
     detachClient: vi.fn().mockReturnValue(false),
     lookup: vi.fn().mockReturnValue(undefined),
+    lookupByClient: vi.fn().mockReturnValue(undefined),
   } as unknown as TunnelManager;
 
   // Long sweep cadence: these tests never advance timers, they only assert
@@ -59,6 +60,7 @@ function createGateway(): {
     new HttpExchangeCoordinator(),
     heartbeats,
     security,
+    createEventBus(),
   );
 
   return { gateway, heartbeats, tunnelManager, security };
@@ -161,13 +163,20 @@ describe("TunnelGateway heartbeat", () => {
         unregisterClient: vi.fn().mockReturnValue(false),
         detachClient: vi.fn().mockReturnValue(false),
         lookup: vi.fn(),
+        lookupByClient: vi.fn().mockReturnValue(undefined),
       } as unknown as TunnelManager;
 
       const heartbeats = new HeartbeatMonitor(60_000, 3_600_000);
       const exchanges = new HttpExchangeCoordinator();
       const deliver = vi.spyOn(exchanges, "deliver").mockReturnValue(true);
       const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
-      const gateway = new TunnelGateway(tunnelManager, exchanges, heartbeats, security);
+      const gateway = new TunnelGateway(
+        tunnelManager,
+        exchanges,
+        heartbeats,
+        security,
+        createEventBus(),
+      );
       const socket = new FakeSocket();
       const client = asClient(socket);
 

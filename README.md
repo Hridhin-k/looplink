@@ -9,16 +9,23 @@ URL to a service running on your machine.
 
 ```
 apps/
-  cli/        @hridhin-k/badger    — command-line client run by developers
-  server/     @hridhin-k/badger-server — public tunnel server that relays traffic
+  cli/        @hridhin-k/badger          — command-line client run by developers
+  server/     @hridhin-k/badger-server   — public tunnel server that relays traffic
+  dashboard/  @hridhin-k/badger-dashboard — Next.js dashboard (Phase 2 scaffold)
 packages/
-  shared/     @hridhin-k/badger-shared — protocol types, schemas, and constants
+  shared/     @hridhin-k/badger-shared — protocol types, schemas, constants, EventBus
 e2e/          @hridhin-k/badger-e2e   — black-box end-to-end tests (never published)
 ```
 
 - `apps/` contains deployable applications. They are never imported by other workspaces.
 - `packages/` contains internal libraries consumed by the apps.
-- The dependency graph is enforced by TypeScript project references: `cli → shared ← server`.
+- The dependency graph is enforced by TypeScript project references for the
+  tunnel stack: `cli → shared ← server`. The dashboard depends on `shared` via
+  the workspace package and talks to the server only over public REST/WebSocket APIs.
+
+Internal lifecycle observability uses a typed EventBus in shared. See
+[docs/event-bus.md](docs/event-bus.md). Dashboard scaffolding notes:
+[docs/dashboard.md](docs/dashboard.md).
 
 ## Prerequisites
 
@@ -52,18 +59,20 @@ pnpm install
 
 Run from the repository root:
 
-| Script              | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `pnpm build`        | Incremental build of all workspaces (`tsc -b`) |
-| `pnpm typecheck`    | Type-check without emitting                    |
-| `pnpm lint`         | Lint all workspaces                            |
-| `pnpm lint:fix`     | Lint and auto-fix                              |
-| `pnpm format`       | Format with Prettier                           |
-| `pnpm format:check` | Verify formatting                              |
-| `pnpm test`         | Unit tests for the server and CLI              |
-| `pnpm test:e2e`     | Build, then run the end-to-end suite           |
-| `pnpm publish:cli`  | Build and publish shared + CLI to GH Packages  |
-| `pnpm clean`        | Remove build output                            |
+| Script               | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `pnpm build`         | Build shared/cli/server (`tsc -b`), then the dashboard |
+| `pnpm build:tsc`     | Incremental TypeScript build of tunnel workspaces      |
+| `pnpm typecheck`     | Type-check tunnel workspaces + dashboard               |
+| `pnpm lint`          | Lint all workspaces                                    |
+| `pnpm lint:fix`      | Lint and auto-fix                                      |
+| `pnpm format`        | Format with Prettier                                   |
+| `pnpm format:check`  | Verify formatting                                      |
+| `pnpm test`          | Unit tests (shared, server, CLI, dashboard)            |
+| `pnpm test:e2e`      | Build tunnel stack, then run the end-to-end suite      |
+| `pnpm dashboard:dev` | Run the Next.js dashboard on port 3001                 |
+| `pnpm publish:cli`   | Build and publish shared + CLI to GH Packages          |
+| `pnpm clean`         | Remove build output                                    |
 
 ## Testing
 

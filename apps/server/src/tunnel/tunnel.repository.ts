@@ -66,9 +66,9 @@ export interface TunnelRepository {
    *
    * @param now - Current epoch ms.
    * @param reclaimWindowMs - Maximum orphan age to retain.
-   * @returns Number of orphans purged.
+   * @returns Identifiers of orphans that were purged.
    */
-  purgeExpiredOrphans(now: number, reclaimWindowMs: number): number;
+  purgeExpiredOrphans(now: number, reclaimWindowMs: number): readonly string[];
 
   /**
    * Looks up a tunnel by id.

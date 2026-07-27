@@ -1,7 +1,7 @@
 {
   "name": "@hridhin-k/badger-shared",
   "version": "0.1.0",
-  "description": "Shared types, constants, and utilities for Badger.",
+  "description": "Shared types, constants, utilities, and EventBus for Badger.",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -17,6 +17,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./event-bus": {
+      "types": "./dist/event-bus/index.d.ts",
+      "default": "./dist/event-bus/index.js"
     }
   },
   "files": [
@@ -25,7 +29,12 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "tsc -b"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
