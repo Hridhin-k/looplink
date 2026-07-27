@@ -6,7 +6,7 @@ import {
   type HttpRequestEndMessage,
   type HttpRequestStartMessage,
   type ProtocolMessage,
-} from "@hridhin-k/badger-shared";
+} from "@badger/shared";
 
 import type { LocalProxy, LocalProxyResponse } from "./local-proxy.js";
 import { concatChunks, decodeBodyChunk, encodeBodyChunk, splitBytes } from "../utils/body-codec.js";

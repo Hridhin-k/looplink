@@ -39,7 +39,7 @@ tunnel forwarding all share the Fastify server.
 | -------- | ------------------------------ | ------------------------ | -------------------------------- | --------------------------------------------------------------------- |
 | **8080** | host `8080` → container `8080` | HTTP                     | browsers, `curl`, load balancers | `GET /health`                                                         |
 | **8080** | same mapping                   | HTTP                     | public clients                   | Tunnel traffic routed by `Host: {slug}.{domain}`                      |
-| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@hridhin-k/badger`              | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
+| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@badger/cli`                    | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
 
 There is **no separate WebSocket port**. Do not map 8080 and a second port for
 WS — the upgrade happens on the same listener.
@@ -71,7 +71,8 @@ ws://server:8080
 | -------------------------------- | ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                           | `8080`                       | server process / compose host mapping | Process listen port inside the container (compose fixes this at `8080`). Also selects the **host** publish port when set in `.env`. |
 | `HOST`                           | `0.0.0.0`                    | server process                        | Bind address. Must be `0.0.0.0` in Docker.                                                                                          |
-| `BADGER_PUBLIC_BASE_DOMAIN`      | `badger.dev`                 | URL minting + `Host` parsing          | DNS suffix for `https://{slug}.{domain}`. Use `localhost` (or a local domain) in development.                                       |
+| `BADGER_PUBLIC_BASE_DOMAIN`      | `badger.dev`                 | URL minting + `Host` parsing          | DNS suffix for tunnel URLs. Alias: `LOOPLINK_PUBLIC_BASE_DOMAIN` (deprecated; `BADGER_*` wins). Use `localhost` in development.     |
+| `BADGER_PUBLIC_URL_MODE`         | `path`                       | URL minting                           | `path` or `subdomain`. Alias: `LOOPLINK_PUBLIC_URL_MODE` (deprecated).                                                              |
 | `BADGER_HTTP_FORWARD_TIMEOUT_MS` | `30000`                      | HTTP forwarding                       | Max wait for the CLI to answer a forwarded request.                                                                                 |
 | `NODE_ENV`                       | `production` / `development` | runtime                               | Set by the compose overlays.                                                                                                        |
 | `BADGER_IMAGE_TAG`               | `latest`                     | compose prod                          | Tag for `badger-server` image.                                                                                                      |

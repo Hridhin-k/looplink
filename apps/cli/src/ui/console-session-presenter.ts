@@ -1,4 +1,4 @@
-import { APP_DISPLAY_NAME } from "@hridhin-k/badger-shared";
+import { APP_DISPLAY_NAME } from "@badger/shared";
 
 import type { SessionPresenter, TunnelPresentation } from "./session-presenter.js";
 import type { Spinner } from "./spinner.js";

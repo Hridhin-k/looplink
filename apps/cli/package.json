@@ -1,6 +1,6 @@
 {
-  "name": "@hridhin-k/badger",
-  "version": "0.1.0",
+  "name": "@badger/cli",
+  "version": "1.0.0",
   "description": "Expose localhost through a secure public URL with Badger.",
   "license": "MIT",
   "type": "module",
@@ -15,6 +15,7 @@
   },
   "keywords": [
     "badger",
+    "looplink",
     "tunnel",
     "localhost",
     "ngrok",
@@ -25,7 +26,8 @@
     "node": ">=20.0.0"
   },
   "bin": {
-    "badger": "./dist/index.js"
+    "badger": "./dist/index.js",
+    "looplink": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -41,7 +43,7 @@
     "prepublishOnly": "tsc -b"
   },
   "dependencies": {
-    "@hridhin-k/badger-shared": "workspace:*",
+    "@badger/shared": "workspace:*",
     "chalk": "^5.6.2",
     "clipboardy": "^5.3.2",
     "commander": "^15.0.0",

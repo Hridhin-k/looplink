@@ -1,4 +1,4 @@
-# @hridhin-k/badger
+# @badger/cli
 
 Expose any local port through a secure public HTTPS URL.
 
@@ -11,22 +11,25 @@ GitHub Packages requires auth even for public packages. Create a GitHub
 Add to your user `~/.npmrc`:
 
 ```ini
-@hridhin-k:registry=https://npm.pkg.github.com
+@badger:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
 
 Then:
 
 ```bash
-npm install -g @hridhin-k/badger
+npm install -g @badger/cli
 badger 3000
 ```
 
 Or one-off:
 
 ```bash
-npx @hridhin-k/badger 3000
+npx @badger/cli 3000
 ```
+
+The `looplink` binary is installed as a **deprecated alias** for one release and
+prints a migration warning. Prefer `badger`.
 
 ## Usage
 
@@ -45,27 +48,20 @@ export BADGER_SERVER_URL=ws://127.0.0.1:8080
 badger 3000
 ```
 
+`LOOPLINK_SERVER_URL` is still accepted as a deprecated alias.
+
 When ready, the CLI prints a public URL such as:
 
 ```text
-https://<slug>.tunnel.wybrand.in → http://localhost:3000
+https://abcd1234567890ab.badger.dev
 ```
 
-Press `Ctrl+C` to stop.
+or, in path mode:
 
-## Tips for web apps
-
-Dev servers with HMR (Next.js `next dev`, Vite `vite dev`) open a browser
-WebSocket that Badger does not tunnel yet. For demos, prefer:
-
-```bash
-npx next build && npx next start -p 3000
-# or
-npx vite build && npx vite preview --host 127.0.0.1 --port 3000
+```text
+https://your-host.example/tunnel/<tunnelId>
 ```
 
-Then run `badger 3000`.
+## Migrating from LoopLink
 
-## License
-
-MIT
+See [docs/migration.md](../../docs/migration.md).

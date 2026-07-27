@@ -27,7 +27,7 @@ services:
       [
         "sh",
         "-c",
-        "pnpm --filter @hridhin-k/badger-shared build && pnpm --filter @hridhin-k/badger-server build && exec node apps/server/dist/main.js",
+        "pnpm --filter @badger/shared build && pnpm --filter @badger/server build && exec node apps/server/dist/main.js",
       ]
     healthcheck:
       interval: 15s

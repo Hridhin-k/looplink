@@ -1,4 +1,4 @@
-import { TUNNEL_ID_BYTES, TUNNEL_SLUG_LENGTH } from "@hridhin-k/badger-shared";
+import { resolveEnvPreferringBadger, TUNNEL_ID_BYTES, TUNNEL_SLUG_LENGTH } from "@badger/shared";
 
 /**
  * Default public DNS suffix used when building tunnel URLs.
@@ -135,36 +135,47 @@ export function extractTunnelSlugFromHost(
 /**
  * Resolves the public base domain from the environment.
  *
+ * Prefers `BADGER_PUBLIC_BASE_DOMAIN`. Falls back to deprecated
+ * `LOOPLINK_PUBLIC_BASE_DOMAIN` with a warning when only the legacy name is set.
+ *
  * @returns A DNS host such as `badger.dev` or a Railway service hostname.
  */
 export function resolvePublicBaseDomain(): string {
-  const raw = process.env["BADGER_PUBLIC_BASE_DOMAIN"];
+  const raw = resolveEnvPreferringBadger(
+    "BADGER_PUBLIC_BASE_DOMAIN",
+    "LOOPLINK_PUBLIC_BASE_DOMAIN",
+  );
 
-  if (raw === undefined || raw.trim().length === 0) {
+  if (raw === undefined) {
     return DEFAULT_PUBLIC_BASE_DOMAIN;
   }
 
-  return raw.trim();
+  return raw;
 }
 
 /**
  * Resolves how public tunnel URLs are minted.
  *
+ * Prefers `BADGER_PUBLIC_URL_MODE`. Falls back to deprecated
+ * `LOOPLINK_PUBLIC_URL_MODE` with a warning when only the legacy name is set.
+ *
  * @returns `path` (default) or `subdomain`.
  */
 export function resolvePublicUrlMode(): PublicUrlMode {
-  const raw = process.env["BADGER_PUBLIC_URL_MODE"];
+  const raw = resolveEnvPreferringBadger("BADGER_PUBLIC_URL_MODE", "LOOPLINK_PUBLIC_URL_MODE");
 
-  if (raw === undefined || raw.trim().length === 0) {
+  if (raw === undefined) {
     return DEFAULT_PUBLIC_URL_MODE;
   }
 
-  const normalized = raw.trim().toLowerCase();
+  const normalized = raw.toLowerCase();
   if (normalized === "path" || normalized === "subdomain") {
     return normalized;
   }
 
-  throw new Error(`Invalid BADGER_PUBLIC_URL_MODE "${raw}": expected "path" or "subdomain".`);
+  throw new Error(
+    `Invalid public URL mode "${raw}" (BADGER_PUBLIC_URL_MODE / LOOPLINK_PUBLIC_URL_MODE): expected "path" or "subdomain".`,
+  );
 }
 
 /**

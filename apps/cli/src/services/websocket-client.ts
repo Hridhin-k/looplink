@@ -6,7 +6,7 @@ import {
   type CreateTunnelMessage,
   type ProtocolMessage,
   type TunnelCreatedMessage,
-} from "@hridhin-k/badger-shared";
+} from "@badger/shared";
 import { randomUUID } from "node:crypto";
 
 import { ConnectionState } from "./connection-state.js";

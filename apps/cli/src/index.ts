@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { basename } from "node:path";
+
 import { Command } from "commander";
 
 import { registerStartCommand, StartCommand } from "./commands/start.js";
@@ -12,6 +14,27 @@ import { argvForCommander } from "./utils/argv.js";
 import { copyToClipboard } from "./utils/clipboard.js";
 import { ConsoleWriter } from "./utils/output.js";
 import { renderQrCode } from "./utils/qrcode.js";
+
+/**
+ * Warns when the deprecated `looplink` binary alias is used.
+ *
+ * The alias ships for one release so existing scripts keep working.
+ */
+function warnIfLegacyBinary(): void {
+  const invoked = process.argv[1];
+  if (invoked === undefined) {
+    return;
+  }
+
+  const name = basename(invoked).replace(/\.(js|cjs|mjs|ts)$/u, "");
+  if (name === "looplink") {
+    console.warn(
+      "[badger] The `looplink` command is deprecated; use `badger` instead. The alias will be removed in a future major release.",
+    );
+  }
+}
+
+warnIfLegacyBinary();
 
 const config = loadCliConfig();
 const writer = new ConsoleWriter();

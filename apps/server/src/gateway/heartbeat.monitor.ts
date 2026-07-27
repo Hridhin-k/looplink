@@ -1,5 +1,5 @@
 import { Logger, type OnModuleDestroy } from "@nestjs/common";
-import { HEARTBEAT_TIMEOUT_MS } from "@hridhin-k/badger-shared";
+import { HEARTBEAT_TIMEOUT_MS } from "@badger/shared";
 import type WebSocket from "ws";
 
 /**

@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@hridhin-k/badger-shared";
+import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@badger/shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl } from "./public-url.js";

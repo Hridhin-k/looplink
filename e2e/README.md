@@ -39,8 +39,8 @@ pnpm test:e2e        # builds all workspaces, then runs the suite
 tests without rebuilding:
 
 ```bash
-pnpm --filter @hridhin-k/badger-e2e test         # single run
-pnpm --filter @hridhin-k/badger-e2e test:watch   # watch mode
+pnpm --filter @badger/e2e test         # single run
+pnpm --filter @badger/e2e test:watch   # watch mode
 ```
 
 ## How the harness works

@@ -5,20 +5,26 @@ Expose localhost through secure public URLs.
 Badger is an open-source developer tool, similar to ngrok, that tunnels traffic from a public
 URL to a service running on your machine.
 
+> **Migrating from LoopLink?** See [docs/migration.md](docs/migration.md).
+> The `looplink` CLI binary remains available as a deprecated alias for one release.
+
 ## Repository layout
 
 ```
 apps/
-  cli/        @hridhin-k/badger    — command-line client run by developers
-  server/     @hridhin-k/badger-server — public tunnel server that relays traffic
+  cli/        @badger/cli       — command-line client run by developers
+  server/     @badger/server    — public tunnel server that relays traffic
+  dashboard/  @badger/dashboard — standalone Next.js UI (REST/WebSocket only)
 packages/
-  shared/     @hridhin-k/badger-shared — protocol types, schemas, and constants
-e2e/          @hridhin-k/badger-e2e   — black-box end-to-end tests (never published)
+  shared/     @badger/shared    — protocol types, schemas, and constants
+e2e/          @badger/e2e       — black-box end-to-end tests (never published)
 ```
 
 - `apps/` contains deployable applications. They are never imported by other workspaces.
 - `packages/` contains internal libraries consumed by the apps.
 - The dependency graph is enforced by TypeScript project references: `cli → shared ← server`.
+- The Dashboard communicates **only** through the server's public REST and WebSocket APIs.
+  It must never import server internals or share runtime state with the server.
 
 ## Prerequisites
 
@@ -27,18 +33,20 @@ e2e/          @hridhin-k/badger-e2e   — black-box end-to-end tests (never publ
 
 ## Install the CLI (GitHub Packages)
 
-Packages publish to GitHub Packages under `@hridhin-k/*`. Auth is required even
+Packages publish to GitHub Packages under `@badger/*`. Auth is required even
 for public packages. Create a PAT with `read:packages`, then add to `~/.npmrc`:
 
 ```ini
-@hridhin-k:registry=https://npm.pkg.github.com
+@badger:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
 
 ```bash
-npm install -g @hridhin-k/badger
+npm install -g @badger/cli
 badger 3000
 ```
+
+The deprecated `looplink` command is installed as an alias and prints a warning.
 
 See [docs/publishing.md](docs/publishing.md) to publish new versions.
 
@@ -60,7 +68,7 @@ Run from the repository root:
 | `pnpm lint:fix`     | Lint and auto-fix                              |
 | `pnpm format`       | Format with Prettier                           |
 | `pnpm format:check` | Verify formatting                              |
-| `pnpm test`         | Unit tests for the server and CLI              |
+| `pnpm test`         | Unit tests for shared, server, and CLI         |
 | `pnpm test:e2e`     | Build, then run the end-to-end suite           |
 | `pnpm publish:cli`  | Build and publish shared + CLI to GH Packages  |
 | `pnpm clean`        | Remove build output                            |
@@ -97,6 +105,22 @@ Full port table, environment variables, and image stages:
 
 TLS edge proxy (wildcard subdomains, WebSocket, Let's Encrypt):
 [docker/nginx/nginx.conf](docker/nginx/nginx.conf).
+
+## Railway
+
+Production deploys use Docker via [`railway.json`](railway.json). Set service
+variables in the Railway dashboard (never commit secrets):
+
+- `BADGER_PUBLIC_BASE_DOMAIN` — your Railway service hostname
+- `BADGER_PUBLIC_URL_MODE=path` — recommended on Railway
+
+See [docs/railway.md](docs/railway.md).
+
+## Environment variables
+
+Prefer `BADGER_*` names. Deprecated `LOOPLINK_*` aliases remain supported for
+`PUBLIC_BASE_DOMAIN`, `PUBLIC_URL_MODE`, and `SERVER_URL`. When both are set,
+`BADGER_*` wins. See [docs/migration.md](docs/migration.md).
 
 ## Tooling
 

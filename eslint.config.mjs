@@ -5,7 +5,14 @@ import prettierConfig from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/*.tsbuildinfo", "**/vitest.config.ts"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/*.tsbuildinfo",
+      "**/vitest.config.ts",
+      // Next.js app uses its own ESLint toolchain (eslint-config-next).
+      "apps/dashboard/**",
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,

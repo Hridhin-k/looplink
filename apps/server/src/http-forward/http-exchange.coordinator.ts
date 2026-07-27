@@ -8,7 +8,7 @@ import {
   type HttpForwardingMessage,
   type HttpResponseChunkMessage,
   type HttpResponseStartMessage,
-} from "@hridhin-k/badger-shared";
+} from "@badger/shared";
 
 /**
  * A pending HTTP exchange waiting for CLI response frames.

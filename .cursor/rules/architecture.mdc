@@ -1,12 +1,10 @@
----
-alwaysApply: false
----
 # Badger Architecture
 
 Current Stable Components
 
-- CLI
-- Tunnel Server
+- CLI (`@badger/cli`)
+- Tunnel Server (`@badger/server`)
+- Shared protocol (`@badger/shared`)
 - Tunnel Protocol
 - Local Proxy
 - Request Forwarder
@@ -15,7 +13,7 @@ Current Stable Components
 Stable Contracts
 
 - Tunnel protocol messages
-- CLI commands
+- CLI commands (`badger`; deprecated alias `looplink`)
 - WebSocket protocol
 - Public URL generation
 
@@ -24,7 +22,7 @@ Future Modules
 - Event Bus
 - Traffic Recorder
 - Inspector
-- Dashboard
+- Dashboard (`@badger/dashboard` — scaffold only; REST/WS client only)
 - AI Engine
 - Plugin SDK
 
@@ -39,3 +37,5 @@ Prefer composition through interfaces.
 Avoid coupling new modules directly to forwarding logic.
 
 Prefer events over direct service calls.
+
+The Dashboard must never import server internals.

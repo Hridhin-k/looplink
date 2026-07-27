@@ -1,4 +1,4 @@
-import { HttpMethod } from "@hridhin-k/badger-shared";
+import { HttpMethod } from "@badger/shared";
 import { MockAgent, type MockPool } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
 

@@ -1,4 +1,4 @@
-import { MessageType } from "@hridhin-k/badger-shared";
+import { MessageType } from "@badger/shared";
 import { describe, expect, it } from "vitest";
 
 import { encodeBodyChunk } from "./body-codec.js";

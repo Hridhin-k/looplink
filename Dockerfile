@@ -16,6 +16,12 @@ ARG NODE_VERSION=22
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS base
 
+LABEL org.opencontainers.image.title="Badger Server" \
+      org.opencontainers.image.description="Badger tunnel server — relays public HTTPS/WebSocket traffic to local CLI clients" \
+      org.opencontainers.image.vendor="Badger" \
+      org.opencontainers.image.source="https://github.com/Hridhin-k/looplink" \
+      org.opencontainers.image.licenses="MIT"
+
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
@@ -33,8 +39,10 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 # Lockfile integrity requires every workspace package.json to be present.
 COPY apps/cli/package.json apps/cli/
+COPY apps/dashboard/package.json apps/dashboard/
+COPY e2e/package.json e2e/
 
-RUN pnpm install --frozen-lockfile --filter @hridhin-k/badger-server...
+RUN pnpm install --frozen-lockfile --filter @badger/server...
 
 # ---------------------------------------------------------------------------
 # Build: compile shared + server
@@ -45,8 +53,8 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY packages/shared packages/shared
 COPY apps/server apps/server
 
-RUN pnpm --filter @hridhin-k/badger-shared build \
-  && pnpm --filter @hridhin-k/badger-server build
+RUN pnpm --filter @badger/shared build \
+  && pnpm --filter @badger/server build
 
 # ---------------------------------------------------------------------------
 # Development: keep sources + toolchain for compose volume workflows
@@ -69,12 +77,18 @@ CMD ["node", "apps/server/dist/main.js"]
 # ---------------------------------------------------------------------------
 FROM build AS deploy
 
-RUN pnpm --filter @hridhin-k/badger-server deploy --prod --legacy /deploy
+RUN pnpm --filter @badger/server deploy --prod --legacy /deploy
 
 # ---------------------------------------------------------------------------
 # Production: slim runtime image
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS production
+
+LABEL org.opencontainers.image.title="Badger Server" \
+      org.opencontainers.image.description="Badger tunnel server — relays public HTTPS/WebSocket traffic to local CLI clients" \
+      org.opencontainers.image.vendor="Badger" \
+      org.opencontainers.image.source="https://github.com/Hridhin-k/looplink" \
+      org.opencontainers.image.licenses="MIT"
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

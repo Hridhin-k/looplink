@@ -4,6 +4,7 @@ import {
   buildPublicUrl,
   extractTunnelSlugFromHost,
   parseTunnelPath,
+  resolvePublicBaseDomain,
   resolvePublicUrlMode,
   tunnelSlug,
 } from "./public-url.js";
@@ -97,6 +98,7 @@ describe("extractTunnelSlugFromHost", () => {
 describe("resolvePublicUrlMode", () => {
   afterEach(() => {
     delete process.env["BADGER_PUBLIC_URL_MODE"];
+    delete process.env["LOOPLINK_PUBLIC_URL_MODE"];
   });
 
   it("defaults to path", () => {
@@ -109,8 +111,41 @@ describe("resolvePublicUrlMode", () => {
     expect(resolvePublicUrlMode()).toBe("subdomain");
   });
 
+  it("falls back to LOOPLINK_PUBLIC_URL_MODE", () => {
+    process.env["LOOPLINK_PUBLIC_URL_MODE"] = "subdomain";
+    expect(resolvePublicUrlMode()).toBe("subdomain");
+  });
+
+  it("prefers BADGER_PUBLIC_URL_MODE over LOOPLINK_PUBLIC_URL_MODE", () => {
+    process.env["BADGER_PUBLIC_URL_MODE"] = "path";
+    process.env["LOOPLINK_PUBLIC_URL_MODE"] = "subdomain";
+    expect(resolvePublicUrlMode()).toBe("path");
+  });
+
   it("rejects unknown values", () => {
     process.env["BADGER_PUBLIC_URL_MODE"] = "wildcard";
-    expect(() => resolvePublicUrlMode()).toThrow(/BADGER_PUBLIC_URL_MODE/);
+    expect(() => resolvePublicUrlMode()).toThrow(/public URL mode/);
+  });
+});
+
+describe("resolvePublicBaseDomain", () => {
+  afterEach(() => {
+    delete process.env["BADGER_PUBLIC_BASE_DOMAIN"];
+    delete process.env["LOOPLINK_PUBLIC_BASE_DOMAIN"];
+  });
+
+  it("defaults to badger.dev", () => {
+    expect(resolvePublicBaseDomain()).toBe("badger.dev");
+  });
+
+  it("falls back to LOOPLINK_PUBLIC_BASE_DOMAIN", () => {
+    process.env["LOOPLINK_PUBLIC_BASE_DOMAIN"] = "legacy.example";
+    expect(resolvePublicBaseDomain()).toBe("legacy.example");
+  });
+
+  it("prefers BADGER_PUBLIC_BASE_DOMAIN over LOOPLINK_PUBLIC_BASE_DOMAIN", () => {
+    process.env["BADGER_PUBLIC_BASE_DOMAIN"] = "badger.dev";
+    process.env["LOOPLINK_PUBLIC_BASE_DOMAIN"] = "legacy.example";
+    expect(resolvePublicBaseDomain()).toBe("badger.dev");
   });
 });

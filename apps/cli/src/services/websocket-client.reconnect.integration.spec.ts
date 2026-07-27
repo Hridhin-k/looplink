@@ -6,7 +6,7 @@ import {
   TUNNEL_RECLAIM_WINDOW_MS,
   parseProtocolMessage,
   type ProtocolMessage,
-} from "@hridhin-k/badger-shared";
+} from "@badger/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 

@@ -171,12 +171,12 @@ Architecture is now evolving into a modular platform.
 The monorepo structure is:
 
 apps/
-    cli/
-    server/
-    dashboard/
+    cli/        (@badger/cli)
+    server/     (@badger/server)
+    dashboard/  (@badger/dashboard)
 
 packages/
-    shared/
+    shared/     (@badger/shared)
 
 The Dashboard is a standalone Next.js 16 application.
 

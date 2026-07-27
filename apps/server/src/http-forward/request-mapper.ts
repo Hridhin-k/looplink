@@ -4,7 +4,7 @@ import {
   type HttpCookies,
   type HttpHeaders,
   type HttpQuery,
-} from "@hridhin-k/badger-shared";
+} from "@badger/shared";
 import type { FastifyRequest } from "fastify";
 
 /**
