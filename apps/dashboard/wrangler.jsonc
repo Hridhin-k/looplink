@@ -3,6 +3,9 @@
   // Must match the Worker name in the Cloudflare dashboard.
   "name": "looplink",
   "main": ".open-next/worker.js",
+  // Avoid esbuild `__name` helpers leaking into next-themes inline scripts.
+  // See https://opennext.js.org/cloudflare/howtos/keep_names
+  "keep_names": false,
   "compatibility_date": "2026-07-28",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
