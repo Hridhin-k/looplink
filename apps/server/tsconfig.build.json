@@ -7,13 +7,9 @@
     "types": ["node"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "verbatimModuleSyntax": false,
-    "noEmit": true,
-    "composite": false,
-    "declaration": false,
-    "declarationMap": false,
-    "sourceMap": false
+    "verbatimModuleSyntax": false
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"],
   "references": [{ "path": "../../packages/shared" }]
 }
