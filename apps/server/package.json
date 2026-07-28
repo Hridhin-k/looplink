@@ -1,6 +1,6 @@
 {
   "name": "@hridhin-k/badger-server",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Badger tunnel server that relays public traffic to local clients.",
   "license": "MIT",
