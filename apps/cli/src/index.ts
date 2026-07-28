@@ -4,8 +4,10 @@ import { basename } from "node:path";
 
 import { Command } from "commander";
 
+import { registerReplayCommand, ReplayCommand } from "./commands/replay.js";
 import { registerStartCommand, StartCommand } from "./commands/start.js";
 import { loadCliConfig } from "./config/cli.js";
+import { ReplayApiClient } from "./services/replay-api-client.js";
 import { ShutdownController } from "./services/shutdown.js";
 import { createDefaultServerConnection, StartTunnelService } from "./services/start-tunnel.js";
 import { ConsoleSessionPresenter } from "./ui/console-session-presenter.js";
@@ -63,11 +65,13 @@ shutdown.install();
 
 const startTunnel = new StartTunnelService(presenter, createDefaultServerConnection, shutdown);
 const startCommand = new StartCommand(startTunnel, writer);
+const replayCommand = new ReplayCommand(new ReplayApiClient(), writer);
 
 const program = new Command();
 
 program.name(config.name).description(config.description).version(config.version);
 
+registerReplayCommand(program, replayCommand);
 registerStartCommand(program, startCommand);
 
 // pnpm injects a literal `--` before script args; strip it so options parse.

@@ -38,6 +38,13 @@ export class HttpForwardController {
       return;
     }
 
+    // Management surfaces live under /api/v1 and /api/docs. Do not treat them as
+    // Host-based tunnel traffic — but allow application paths such as /api/data.
+    if (isReservedManagementPath(path)) {
+      await reply.status(404).send({ statusCode: 404, message: "Not found." });
+      return;
+    }
+
     // Path-based tunnels are owned by PathTunnelController. If a request still
     // lands here (for example `/tunnel` with no id), reject rather than treating
     // it as Host-based traffic.
@@ -66,4 +73,21 @@ export class HttpForwardController {
 
     await this.publicForwarder.forward(tunnel, request, reply);
   }
+}
+
+/**
+ * Returns `true` when `path` is reserved for Badger management HTTP APIs.
+ *
+ * Application tunnels may expose their own `/api/...` routes; only the
+ * versioned inspector surface and Swagger docs are reserved.
+ *
+ * @param path - Request pathname without query string.
+ */
+export function isReservedManagementPath(path: string): boolean {
+  return (
+    path === "/api/v1" ||
+    path.startsWith("/api/v1/") ||
+    path === "/api/docs" ||
+    path.startsWith("/api/docs/")
+  );
 }

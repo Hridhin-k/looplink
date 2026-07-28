@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import { MessageType } from "@hridhin-k/badger-shared";
 import { describe, expect, it } from "vitest";
 

@@ -1,222 +1,147 @@
 ---
 alwaysApply: false
 ---
-## Architecture
+## Monorepo Structure
 
-Follow:
+apps/
+  cli/
+  server/
+  dashboard/
 
-- SOLID
-- Clean Architecture
-- Dependency Injection
-- Composition over inheritance
-- Event-driven architecture where appropriate
+packages/
+  shared/
+    event-bus/
+    storage/
+    traffic/
+    replay/
+    types/
+    utils/
 
-Keep modules isolated.
+Dashboard is a standalone Next.js application.
 
-Every feature should expose clear interfaces.
+Dashboard communicates with the server only through REST and WebSocket APIs.
 
-Avoid tight coupling.
-
-Never create circular dependencies.
-
-Packages must remain independently testable.
-
----
-
-## Project Structure
-
-Use pnpm workspaces.
-
-TypeScript strict mode.
-
-Keep modules small.
-
-Prefer files under 300 lines.
-
-Prefer functions under 40 lines whenever practical.
-
-Prefer interfaces over concrete implementations.
-
-Never introduce future features.
+The dashboard must never import server internals.
 
 ---
 
-## Documentation
+## Design Rules
 
-Before generating code:
+Every feature must:
 
-Explain:
+- expose a public interface
+- be independently testable
+- be independently replaceable
+- avoid global mutable state
+- avoid circular dependencies
 
-- architecture
-- design decisions
-- integration points
+No module may directly access another module's internal implementation.
 
-Every public class and public method must include JSDoc.
-
-Document new modules.
-
-Update README when behavior changes.
+Use dependency injection or events instead.
 
 ---
 
-## Implementation Rules
+## Storage Rules
 
-Implement the smallest production-ready solution.
+Never store application data directly inside services.
 
-Never over-engineer.
+Always depend on a StorageProvider interface.
 
-Never introduce dead code.
+The first implementation is in-memory storage.
 
-Never leave TODOs.
+Future implementations may include SQLite, PostgreSQL, Redis, or cloud storage.
 
-Never leave commented-out code.
-
-Never create unused abstractions.
-
-Do not duplicate logic.
-
-Prefer reusable services.
+No business logic should require changes when switching storage backends.
 
 ---
 
-## Integration Rules
+## Event Rules
 
-New features must integrate without modifying existing tunnel behavior.
+Use the shared EventBus package.
 
-Tunnel protocol is considered stable.
+Emit strongly typed events.
 
-Do not change protocol contracts unless explicitly requested.
+Never emit stringly typed events.
 
-Prefer subscribing to existing events instead of modifying request flow.
+Every event must include:
 
-Existing CLI commands must continue working.
+- event id
+- timestamp
+- tunnel id (if applicable)
+- correlation/request id (if applicable)
+
+Events should be immutable.
 
 ---
 
-## Testing
+## API Rules
 
-Every feature must include:
+REST APIs should be versionable.
+
+Prefer:
+
+/api/v1/...
+
+Responses must use consistent DTOs.
+
+Do not expose internal entities directly.
+
+---
+
+## Testing Requirements
+
+Every feature requires:
 
 - unit tests
 - integration tests
 - documentation
 
-Existing tests must continue passing.
-
-Always verify:
-
-- TypeScript compilation
-- ESLint
-- Prettier
-- Unit tests
-- Existing E2E tests
-- New E2E tests when applicable
-
----
-
-## Code Review Checklist
-
-Before completing a task verify:
-
-✓ Imports
-✓ Build
-✓ Lint
-✓ Formatting
-✓ Tests
-✓ Public APIs documented
-✓ No unrelated files modified
-✓ No breaking changes introduced
-
----
-
-## Decision Making
-
-If multiple implementations exist:
-
-1. Choose the simplest production-ready solution.
-2. Prefer maintainability over cleverness.
-3. Prefer explicit code over magic.
-4. Optimize for readability first.
-5. Optimize performance only where measurable.
-
----
-
-## Product Vision
-
-Badger is not merely a tunneling tool.
-
-Badger is an AI-native developer networking platform.
-
-The tunnel is the transport layer.
-
-Future capabilities are built on top of the tunnel, including:
-
-- Observability
-- Collaboration
-- AI-assisted debugging
-- Developer workspaces
-- Plugins
-
-When implementing new features, preserve this layered architecture.
-
-Do not implement future roadmap items unless explicitly requested.
-You are the lead software engineer for Badger.
-
-Badger is an AI-native developer networking platform.
-
-The Layer 1 MVP is complete and production-ready.
-
-Architecture is now evolving into a modular platform.
-
-The monorepo structure is:
-
-apps/
-    cli/        (@hridhin-k/badger-cli)
-    server/     (@hridhin-k/badger-server)
-    dashboard/  (@hridhin-k/badger-dashboard)
-
-packages/
-    shared/     (@hridhin-k/badger-shared)
-
-The Dashboard is a standalone Next.js 16 application.
-
-The Dashboard communicates ONLY through the Server's public REST APIs and WebSocket APIs.
-
-The Dashboard must NEVER import server internals.
-
-The Server remains the single source of truth.
-
-The CLI communicates only through the existing tunnel protocol.
-
-The Dashboard communicates only through HTTP and WebSockets.
-
-Never rewrite existing MVP functionality.
-
-Every feature must be implemented as isolated modules.
-
-Use dependency injection.
-
-Use SOLID.
-
-Prefer event-driven architecture.
-
-Every implementation must include
-
-- architecture explanation
-- folder structure
-- implementation
-- tests
-- documentation
-
-Always verify
+Before completion verify:
 
 - TypeScript
 - ESLint
 - Prettier
-- Unit tests
+- Existing unit tests
 - Existing E2E tests
 - New tests
 
-Never implement future roadmap phases.
+No regressions are acceptable.
 
-Backward compatibility is mandatory.
+---
+
+## Performance
+
+Avoid unnecessary allocations.
+
+Avoid blocking the event loop.
+
+Support thousands of requests without retaining unnecessary memory.
+
+Large request/response bodies should be handled efficiently.
+
+---
+
+## Documentation
+
+Every new module must include:
+
+- architecture overview
+- dependency graph
+- folder structure
+- public interfaces
+- extension points
+- examples
+
+---
+
+## Forbidden
+
+Do not rewrite Layer 1 networking.
+
+Do not change the tunnel protocol.
+
+Do not change CLI behavior unless explicitly requested.
+
+Do not tightly couple the dashboard to the server.
+
+Do not implement future roadmap features unless requested.

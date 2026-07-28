@@ -139,6 +139,25 @@ Prefer `BADGER_*` names. Deprecated `LOOPLINK_*` aliases remain supported for
 `PUBLIC_BASE_DOMAIN`, `PUBLIC_URL_MODE`, and `SERVER_URL`. When both are set,
 `BADGER_*` wins. See [docs/migration.md](docs/migration.md).
 
+## EventBus
+
+Lifecycle observability uses a typed in-process EventBus in
+`@hridhin-k/badger-shared` (Nest `EventModule` provides `EVENT_BUS`). See
+[docs/event-bus.md](docs/event-bus.md). Tunnel protocol and forwarding are
+unchanged.
+
+## Storage
+
+Phase 2 modules persist data through a backend-agnostic `StorageProvider`
+(default: in-memory). See [docs/storage.md](docs/storage.md). Feature code must
+not depend on a concrete backend.
+
+## TrafficRecorder
+
+HTTP exchanges are recorded by an EventBus subscriber (`TrafficRecorder`) that
+persists through `StorageProvider`. It never touches forwarding. See
+[docs/traffic-recorder.md](docs/traffic-recorder.md).
+
 ## Tooling
 
 - **TypeScript** in strict mode (plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,

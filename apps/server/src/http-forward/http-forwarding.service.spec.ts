@@ -1,4 +1,9 @@
-import { HttpMethod, MessageType, parseProtocolMessage } from "@hridhin-k/badger-shared";
+import {
+  HttpMethod,
+  MessageType,
+  createEventBus,
+  parseProtocolMessage,
+} from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
@@ -10,7 +15,19 @@ import { HttpForwardingService } from "./http-forwarding.service.js";
 describe("HttpForwardingService", () => {
   it("sends request frames and returns the streamed CLI response", async () => {
     const coordinator = new HttpExchangeCoordinator();
-    const service = new HttpForwardingService(coordinator);
+    const eventBus = createEventBus();
+    const published: string[] = [];
+    eventBus.subscribe("RequestReceived", () => {
+      published.push("RequestReceived");
+    });
+    eventBus.subscribe("RequestForwarded", () => {
+      published.push("RequestForwarded");
+    });
+    eventBus.subscribe("ResponseReturned", () => {
+      published.push("ResponseReturned");
+    });
+
+    const service = new HttpForwardingService(coordinator, eventBus);
 
     const sent: string[] = [];
     const client = {
@@ -72,11 +89,14 @@ describe("HttpForwardingService", () => {
     });
 
     expect(response.statusCode).toBe(201);
+    expect(response.requestId.length).toBeGreaterThan(0);
     expect(response.headers["x-test"]).toBe("1");
     expect(response.setCookies).toEqual(["session=1"]);
+    expect(published).toEqual(["RequestReceived", "RequestForwarded"]);
 
     const bodyText = await readBody(response.body);
     expect(bodyText).toBe("ok");
+    expect(published).toEqual(["RequestReceived", "RequestForwarded", "ResponseReturned"]);
 
     const types = sent.map((frame) => {
       const parsed = parseProtocolMessage(frame);
@@ -95,7 +115,13 @@ describe("HttpForwardingService", () => {
   });
 
   it("rejects when the tunnel websocket is not open", async () => {
-    const service = new HttpForwardingService(new HttpExchangeCoordinator());
+    const eventBus = createEventBus();
+    const failures: string[] = [];
+    eventBus.subscribe("RequestFailed", (event) => {
+      failures.push(event.error);
+    });
+
+    const service = new HttpForwardingService(new HttpExchangeCoordinator(), eventBus);
     const tunnel: TunnelRecord = {
       id: "tun-1",
       client: { readyState: WebSocket.CLOSED, send: vi.fn() } as unknown as WebSocket,
@@ -112,6 +138,8 @@ describe("HttpForwardingService", () => {
         cookies: {},
       }),
     ).rejects.toThrow(/not open/);
+
+    expect(failures).toEqual(["Tunnel WebSocket is not open."]);
   });
 });
 

@@ -3,9 +3,11 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { WsAdapter } from "@nestjs/platform-ws";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module.js";
 import { resolveServerHost, resolveServerPort } from "./config/server.config.js";
+import { registerApiCors } from "./security/register-api-cors.js";
 import { registerHttpRateLimit } from "./security/register-http-rate-limit.js";
 import { resolveSecurityConfig } from "./security/security.config.js";
 
@@ -28,9 +30,21 @@ async function bootstrap(): Promise<void> {
   );
 
   const fastify = app.getHttpAdapter().getInstance();
+  // Dashboard browsers call /api/v1/* cross-origin; tunnel CLI does not.
+  // Scoped to /api/* so we do not open CORS on the public tunnel data plane.
+  registerApiCors(fastify, security.allowedOrigins);
   await registerHttpRateLimit(fastify, security);
 
   app.useWebSocketAdapter(new WsAdapter(app));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle("Badger Inspector API")
+    .setDescription("Traffic inspection, statistics, and request replay. No authentication.")
+    .setVersion("1.0")
+    .addTag("inspector")
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup("api/docs", app, document);
 
   // Nest's Fastify adapter registers its own JSON/urlencoded parsers during
   // init, so the raw-buffer catch-all must be installed afterwards. The data

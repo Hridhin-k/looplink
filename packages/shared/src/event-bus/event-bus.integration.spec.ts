@@ -1,8 +1,10 @@
-import { HttpMethod } from "../types/http-forwarding.js";
 import { describe, expect, it } from "vitest";
 
+import { EMPTY_TRAFFIC_BODY } from "../traffic/traffic-body.js";
+import { HttpMethod } from "../types/http-forwarding.js";
 import { BadgerEventType } from "./badger-events.js";
 import { createEventBus } from "./create-event-bus.js";
+import { createEventPayload } from "./create-event-payload.js";
 import type { EventBus } from "./event-bus.js";
 
 /**
@@ -20,64 +22,105 @@ class LifecyclePublisher {
    * Emits the tunnel + client happy path used by the server gateway.
    */
   openSession(): void {
-    this.eventBus.publish(BadgerEventType.ClientConnected, {
-      connectionId: "conn-1",
-      occurredAt: 1,
-    });
-    this.eventBus.publish(BadgerEventType.TunnelCreated, {
-      tunnelId: "tun-1",
-      publicUrl: "https://tun-1.example",
-      port: 3000,
-      restored: false,
-      occurredAt: 2,
-    });
+    this.eventBus.publish(
+      BadgerEventType.ClientConnected,
+      createEventPayload({
+        connectionId: "conn-1",
+        correlationId: "conn-1",
+        occurredAt: 1,
+        eventId: "e1",
+      }),
+    );
+    this.eventBus.publish(
+      BadgerEventType.TunnelCreated,
+      createEventPayload({
+        tunnelId: "tun-1",
+        publicUrl: "https://tun-1.example",
+        port: 3000,
+        restored: false,
+        correlationId: "conn-1",
+        occurredAt: 2,
+        eventId: "e2",
+      }),
+    );
   }
 
   /**
    * Emits the HTTP forward path used by the request forwarder.
    */
   forwardRequest(): void {
-    this.eventBus.publish(BadgerEventType.RequestReceived, {
-      tunnelId: "tun-1",
-      requestId: "req-1",
-      method: HttpMethod.GET,
-      path: "/health",
-      occurredAt: 3,
-    });
-    this.eventBus.publish(BadgerEventType.RequestForwarded, {
-      tunnelId: "tun-1",
-      requestId: "req-1",
-      method: HttpMethod.GET,
-      path: "/health",
-      occurredAt: 4,
-    });
-    this.eventBus.publish(BadgerEventType.ResponseReturned, {
-      tunnelId: "tun-1",
-      requestId: "req-1",
-      method: HttpMethod.GET,
-      path: "/health",
-      statusCode: 200,
-      occurredAt: 5,
-    });
+    this.eventBus.publish(
+      BadgerEventType.RequestReceived,
+      createEventPayload({
+        tunnelId: "tun-1",
+        requestId: "req-1",
+        method: HttpMethod.GET,
+        path: "/health",
+        headers: {},
+        query: {},
+        body: EMPTY_TRAFFIC_BODY,
+        correlationId: "req-1",
+        occurredAt: 3,
+        eventId: "e3",
+      }),
+    );
+    this.eventBus.publish(
+      BadgerEventType.RequestForwarded,
+      createEventPayload({
+        tunnelId: "tun-1",
+        requestId: "req-1",
+        method: HttpMethod.GET,
+        path: "/health",
+        correlationId: "req-1",
+        occurredAt: 4,
+        eventId: "e4",
+      }),
+    );
+    this.eventBus.publish(
+      BadgerEventType.ResponseReturned,
+      createEventPayload({
+        tunnelId: "tun-1",
+        requestId: "req-1",
+        method: HttpMethod.GET,
+        path: "/health",
+        statusCode: 200,
+        responseHeaders: {},
+        responseBody: EMPTY_TRAFFIC_BODY,
+        latencyMs: 2,
+        correlationId: "req-1",
+        occurredAt: 5,
+        eventId: "e5",
+      }),
+    );
   }
 
   /**
    * Emits the CLI reconnect path.
    */
   reconnect(): void {
-    this.eventBus.publish(BadgerEventType.ReconnectStarted, {
-      tunnelId: "tun-1",
-      publicUrl: "https://tun-1.example",
-      port: 3000,
-      occurredAt: 6,
-    });
-    this.eventBus.publish(BadgerEventType.ReconnectSucceeded, {
-      tunnelId: "tun-1",
-      publicUrl: "https://tun-1.example",
-      port: 3000,
-      restored: true,
-      occurredAt: 7,
-    });
+    this.eventBus.publish(
+      BadgerEventType.ReconnectStarted,
+      createEventPayload({
+        tunnelId: "tun-1",
+        publicUrl: "https://tun-1.example",
+        port: 3000,
+        correlationId: "tun-1",
+        occurredAt: 6,
+        eventId: "e6",
+      }),
+    );
+    this.eventBus.publish(
+      BadgerEventType.ReconnectSucceeded,
+      createEventPayload({
+        tunnelId: "tun-1",
+        publicUrl: "https://tun-1.example",
+        port: 3000,
+        restored: true,
+        correlationId: "tun-1",
+        occurredAt: 7,
+        eventId: "e7",
+      }),
+    );
   }
 }
 
