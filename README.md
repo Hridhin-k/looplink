@@ -133,6 +133,16 @@ variables in the Railway dashboard (never commit secrets):
 
 See [docs/railway.md](docs/railway.md).
 
+## Cloudflare (dashboard)
+
+The Next.js dashboard deploys with OpenNext to a Cloudflare Worker. Connect this
+GitHub repo under **Workers → Builds** so pushes to `main` auto-deploy.
+
+Custom domain: `https://dashboard.wybrand.in` (same zone pattern as
+`tunnel.wybrand.in` on Railway).
+
+See [docs/cloudflare-dashboard.md](docs/cloudflare-dashboard.md).
+
 ## Environment variables
 
 Prefer `BADGER_*` names. Deprecated `LOOPLINK_*` aliases remain supported for
