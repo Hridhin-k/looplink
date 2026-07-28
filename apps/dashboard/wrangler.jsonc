@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "badger-dashboard",
+  // Must match the Worker name in the Cloudflare dashboard.
+  "name": "looplink",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-28",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -11,12 +12,10 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "badger-dashboard",
+      "service": "looplink",
     },
   ],
   // Custom domain (zone must be on this Cloudflare account).
-  // First deploy may use workers.dev; then attach dashboard.wybrand.in here
-  // or via Workers → badger-dashboard → Settings → Domains.
   "routes": [
     {
       "pattern": "dashboard.wybrand.in",

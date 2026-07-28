@@ -78,7 +78,13 @@ BADGER_ALLOWED_ORIGINS=https://dashboard.wybrand.in
 
 ## Notes
 
-- Worker name: `badger-dashboard`
+- Worker name: `looplink` (must match the Cloudflare Worker)
 - Build output: `apps/dashboard/.open-next/` (gitignored)
 - Prefer Workers Builds over local `pnpm deploy` for reproducible production
   deploys (local `.env.local` / `.dev.vars` can skew the build).
+
+### If builds stop after a merge
+
+Dashboard shows **"This project is disconnected from your Git account"** →
+**Settings → Build → Connect** (re-authorize GitHub). Until that is fixed,
+pushes to `main` will not trigger Cloudflare (Railway can still deploy).
