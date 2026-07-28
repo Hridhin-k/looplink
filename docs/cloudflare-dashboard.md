@@ -36,6 +36,13 @@ Repo root also has [`.nvmrc`](../.nvmrc) (`22.19.0`) so Workers Builds picks a N
 `NEXT_PUBLIC_*` is baked in at **build** time — set it on the Cloudflare build
 environment, not only as a Worker runtime secret.
 
+If this variable is missing, the Worker ships with the default
+`http://localhost:8080` and the browser will spam
+`ws://localhost:8080/dashboard/ws` / `ERR_CONNECTION_REFUSED`.
+
+Also ensure `apps/dashboard/wrangler.jsonc` has `"keep_names": false`
+(already set) so `next-themes` does not throw `ReferenceError: __name is not defined`.
+
 6. **Save and Deploy**. Later pushes to `main` trigger a new build automatically.
 
 If Cloudflare asks for a package manager, use **pnpm** (see root `package.json`
