@@ -1,6 +1,6 @@
 {
   "name": "@hridhin-k/badger-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Expose localhost through a secure public URL with Badger.",
   "license": "MIT",
   "type": "module",
