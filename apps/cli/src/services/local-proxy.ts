@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 
-import type { HttpCookies, HttpHeaders, HttpMethod, HttpQuery } from "@badger/shared";
+import type { HttpCookies, HttpHeaders, HttpMethod, HttpQuery } from "@hridhin-k/badger-shared";
 import { request, type Dispatcher } from "undici";
 
 /** Hop-by-hop / unsafe headers that must not be forwarded to localhost. */

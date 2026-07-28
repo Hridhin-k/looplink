@@ -3,15 +3,13 @@
 GitHub Packages requires the npm scope to match the GitHub owner (org or user).
 Packages are:
 
-1. `@badger/shared`
-2. `@badger/cli` (depends on shared; provides the `badger` and deprecated `looplink` binaries)
+1. `@hridhin-k/badger-shared`
+2. `@hridhin-k/badger-cli` (depends on shared; provides the `badger` and deprecated `looplink` binaries)
 
 Registry: `https://npm.pkg.github.com`
 
-> **Note:** Publishing under `@badger/*` requires a GitHub organization or user
-> named `badger` (or a linked package namespace). Create that org (or transfer
-> packages) before the first publish. Until then, local workspace installs work
-> without publishing.
+> **Note:** Publishing uses the `@hridhin-k/*` scope, which matches the current
+> GitHub owner and avoids package create permission errors on unavailable scopes.
 
 ## One-time setup
 
@@ -23,11 +21,11 @@ Registry: `https://npm.pkg.github.com`
 2. Add auth to your user `~/.npmrc` (never commit this):
 
 ```ini
-@badger:registry=https://npm.pkg.github.com
+@hridhin-k:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=ghp_your_token_here
 ```
 
-The repo `.npmrc` already maps `@badger` → GitHub Packages; the token
+The repo `.npmrc` already maps `@hridhin-k` → GitHub Packages; the token
 must live in your user config (or CI secrets).
 
 ## Publish
@@ -42,41 +40,41 @@ Or step by step:
 
 ```bash
 pnpm build
-pnpm --filter @badger/shared publish
-pnpm --filter @badger/cli publish
+pnpm --filter @hridhin-k/badger-shared publish
+pnpm --filter @hridhin-k/badger-cli publish
 ```
 
-After a successful publish, packages appear under the GitHub owner's
-**Packages** sidebar (for example `https://github.com/orgs/badger/packages`).
+After a successful publish, packages appear under the repository owner's
+**Packages** sidebar: `https://github.com/Hridhin-k/looplink/packages`.
 
 ## Install (for teammates)
 
 Each user needs `~/.npmrc`:
 
 ```ini
-@badger:registry=https://npm.pkg.github.com
+@hridhin-k:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=THEIR_GITHUB_PAT
 ```
 
 Then:
 
 ```bash
-npm install -g @badger/cli
+npm install -g @hridhin-k/badger-cli
 badger 3000
 ```
 
 `read:packages` on the PAT is enough for install. If the repo (or package) is
 private, they also need access to this GitHub repository/org.
 
-### Migrating from `@hridhin-k/badger*`
+### Migrating from older package names
 
 ```bash
 npm uninstall -g @hridhin-k/badger
-npm install -g @badger/cli
+npm install -g @hridhin-k/badger-cli
 ```
 
 Update any `package.json` dependencies from `@hridhin-k/badger` /
-`@hridhin-k/badger-shared` to `@badger/cli` / `@badger/shared`.
+`@hridhin-k/badger-shared` to `@hridhin-k/badger-cli` / `@hridhin-k/badger-shared`.
 
 ## Version bumps
 

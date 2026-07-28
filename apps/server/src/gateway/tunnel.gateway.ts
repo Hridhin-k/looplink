@@ -15,7 +15,7 @@ import {
   type PongMessage,
   type ProtocolMessage,
   type TunnelCreatedMessage,
-} from "@badger/shared";
+} from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";

@@ -32,7 +32,7 @@ importers:
 
   apps/cli:
     dependencies:
-      '@badger/shared':
+      '@hridhin-k/badger-shared':
         specifier: workspace:*
         version: link:../../packages/shared
       chalk:
@@ -109,7 +109,7 @@ importers:
 
   apps/server:
     dependencies:
-      '@badger/shared':
+      '@hridhin-k/badger-shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@fastify/rate-limit':

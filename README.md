@@ -12,12 +12,12 @@ URL to a service running on your machine.
 
 ```
 apps/
-  cli/        @badger/cli       — command-line client run by developers
-  server/     @badger/server    — public tunnel server that relays traffic
-  dashboard/  @badger/dashboard — standalone Next.js UI (REST/WebSocket only)
+  cli/        @hridhin-k/badger-cli       — command-line client run by developers
+  server/     @hridhin-k/badger-server    — public tunnel server that relays traffic
+  dashboard/  @hridhin-k/badger-dashboard — standalone Next.js UI (REST/WebSocket only)
 packages/
-  shared/     @badger/shared    — protocol types, schemas, and constants
-e2e/          @badger/e2e       — black-box end-to-end tests (never published)
+  shared/     @hridhin-k/badger-shared    — protocol types, schemas, and constants
+e2e/          @hridhin-k/badger-e2e       — black-box end-to-end tests (never published)
 ```
 
 - `apps/` contains deployable applications. They are never imported by other workspaces.
@@ -33,16 +33,16 @@ e2e/          @badger/e2e       — black-box end-to-end tests (never published)
 
 ## Install the CLI (GitHub Packages)
 
-Packages publish to GitHub Packages under `@badger/*`. Auth is required even
+Packages publish to GitHub Packages under `@hridhin-k/*`. Auth is required even
 for public packages. Create a PAT with `read:packages`, then add to `~/.npmrc`:
 
 ```ini
-@badger:registry=https://npm.pkg.github.com
+@hridhin-k:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
 
 ```bash
-npm install -g @badger/cli
+npm install -g @hridhin-k/badger-cli
 badger 3000
 ```
 

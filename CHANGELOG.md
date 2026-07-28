@@ -10,16 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Product rebrand:** LoopLink → **Badger** across user-facing text, docs, Docker labels, and package metadata.
-- **npm scopes:** workspace packages renamed for Phase 2:
-  - `@hridhin-k/badger` → `@badger/cli`
-  - `@hridhin-k/badger-server` → `@badger/server`
-  - `@hridhin-k/badger-shared` → `@badger/shared`
-  - `@hridhin-k/badger-e2e` → `@badger/e2e`
-  - `dashboard` → `@badger/dashboard`
-- **CLI package version** `@badger/cli` and `@badger/shared` set to `1.0.0`.
-- **GitHub Packages registry** mapping in `.npmrc` updated from `@hridhin-k` to `@badger`.
+- **npm scopes:** workspace packages use owned GitHub scope with Badger naming:
+  - `@hridhin-k/badger` → `@hridhin-k/badger-cli`
+  - `@hridhin-k/badger-server` (unchanged)
+  - `@hridhin-k/badger-shared` (unchanged)
+  - `@hridhin-k/badger-e2e` (unchanged)
+  - `dashboard` → `@hridhin-k/badger-dashboard`
+- **CLI package version** `@hridhin-k/badger-cli` and `@hridhin-k/badger-shared` set to `1.0.0`.
+- **GitHub Packages registry** mapping in `.npmrc` remains `@hridhin-k` to match publish ownership.
 - **Root scripts / Docker / compose filters** updated to the new package names.
-- **Documentation** (README, CLI README, Docker, publishing) updated for Badger branding and `@badger/*` install paths.
+- **Documentation** (README, CLI README, Docker, publishing) updated for Badger branding and `@hridhin-k/badger-*` install paths.
 
 ### Added
 
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `LOOPLINK_PUBLIC_BASE_DOMAIN` → `BADGER_PUBLIC_BASE_DOMAIN`
   - `LOOPLINK_PUBLIC_URL_MODE` → `BADGER_PUBLIC_URL_MODE`
   - `LOOPLINK_SERVER_URL` → `BADGER_SERVER_URL`
-- Shared helper `resolveEnvPreferringBadger` in `@badger/shared`.
+- Shared helper `resolveEnvPreferringBadger` in `@hridhin-k/badger-shared`.
 - **`railway.json`** for Dockerfile-based Railway deploys (health check `/health`, no secrets).
 - Docs: [docs/migration.md](docs/migration.md), [docs/railway.md](docs/railway.md).
 - OCI image labels on the Badger server Dockerfile (`org.opencontainers.image.*`).

@@ -1,5 +1,5 @@
 {
-  "name": "@badger/dashboard",
+  "name": "@hridhin-k/badger-dashboard",
   "version": "0.1.0",
   "private": true,
   "description": "Badger Dashboard — standalone Next.js UI. Communicates with the server only via public REST and WebSocket APIs.",

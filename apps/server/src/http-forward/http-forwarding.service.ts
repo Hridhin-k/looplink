@@ -8,7 +8,7 @@ import {
   type HttpMethod,
   type HttpQuery,
   type ProtocolMessage,
-} from "@badger/shared";
+} from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
 import type { TunnelRecord } from "../tunnel/tunnel.types.js";

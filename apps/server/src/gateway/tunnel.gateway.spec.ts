@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import type { IncomingMessage } from "node:http";
 import { Socket } from "node:net";
 
-import { MessageType } from "@badger/shared";
+import { MessageType } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 

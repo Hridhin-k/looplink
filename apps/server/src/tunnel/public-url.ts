@@ -1,4 +1,8 @@
-import { resolveEnvPreferringBadger, TUNNEL_ID_BYTES, TUNNEL_SLUG_LENGTH } from "@badger/shared";
+import {
+  resolveEnvPreferringBadger,
+  TUNNEL_ID_BYTES,
+  TUNNEL_SLUG_LENGTH,
+} from "@hridhin-k/badger-shared";
 
 /**
  * Default public DNS suffix used when building tunnel URLs.

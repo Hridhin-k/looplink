@@ -39,7 +39,7 @@ tunnel forwarding all share the Fastify server.
 | -------- | ------------------------------ | ------------------------ | -------------------------------- | --------------------------------------------------------------------- |
 | **8080** | host `8080` → container `8080` | HTTP                     | browsers, `curl`, load balancers | `GET /health`                                                         |
 | **8080** | same mapping                   | HTTP                     | public clients                   | Tunnel traffic routed by `Host: {slug}.{domain}`                      |
-| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@badger/cli`                    | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
+| **8080** | same mapping                   | WebSocket (`ws` / `wss`) | `@hridhin-k/badger-cli`          | Control plane: connect, create/restore tunnel, heartbeat, HTTP frames |
 
 There is **no separate WebSocket port**. Do not map 8080 and a second port for
 WS — the upgrade happens on the same listener.

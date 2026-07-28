@@ -6,14 +6,14 @@ keep working when you apply the aliases below.
 
 ## Summary
 
-| Area                   | LoopLink (legacy)                              | Badger (canonical)                                |
-| ---------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| Product name           | LoopLink                                       | Badger                                            |
-| CLI command            | `looplink`                                     | `badger` (`looplink` kept as alias)               |
-| npm packages           | `@hridhin-k/badger*`, historical `@looplink/*` | `@badger/cli`, `@badger/server`, `@badger/shared` |
-| Public base domain env | `LOOPLINK_PUBLIC_BASE_DOMAIN`                  | `BADGER_PUBLIC_BASE_DOMAIN`                       |
-| Public URL mode env    | `LOOPLINK_PUBLIC_URL_MODE`                     | `BADGER_PUBLIC_URL_MODE`                          |
-| CLI server URL env     | `LOOPLINK_SERVER_URL`                          | `BADGER_SERVER_URL`                               |
+| Area                   | LoopLink (legacy)                              | Badger (canonical)                                                              |
+| ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| Product name           | LoopLink                                       | Badger                                                                          |
+| CLI command            | `looplink`                                     | `badger` (`looplink` kept as alias)                                             |
+| npm packages           | `@hridhin-k/badger*`, historical `@looplink/*` | `@hridhin-k/badger-cli`, `@hridhin-k/badger-server`, `@hridhin-k/badger-shared` |
+| Public base domain env | `LOOPLINK_PUBLIC_BASE_DOMAIN`                  | `BADGER_PUBLIC_BASE_DOMAIN`                                                     |
+| Public URL mode env    | `LOOPLINK_PUBLIC_URL_MODE`                     | `BADGER_PUBLIC_URL_MODE`                                                        |
+| CLI server URL env     | `LOOPLINK_SERVER_URL`                          | `BADGER_SERVER_URL`                                                             |
 
 ## CLI
 
@@ -21,7 +21,7 @@ Install the new package:
 
 ```bash
 npm uninstall -g @hridhin-k/badger
-npm install -g @badger/cli
+npm install -g @hridhin-k/badger-cli
 ```
 
 Primary command:
@@ -75,12 +75,12 @@ You may keep the old names temporarily; migrate when convenient.
 
 ## Packages (monorepo / dependents)
 
-| Legacy                     | Current          |
-| -------------------------- | ---------------- |
-| `@hridhin-k/badger`        | `@badger/cli`    |
-| `@hridhin-k/badger-server` | `@badger/server` |
-| `@hridhin-k/badger-shared` | `@badger/shared` |
-| `@hridhin-k/badger-e2e`    | `@badger/e2e`    |
+| Legacy                     | Current                    |
+| -------------------------- | -------------------------- |
+| `@hridhin-k/badger`        | `@hridhin-k/badger-cli`    |
+| `@hridhin-k/badger-server` | `@hridhin-k/badger-server` |
+| `@hridhin-k/badger-shared` | `@hridhin-k/badger-shared` |
+| `@hridhin-k/badger-e2e`    | `@hridhin-k/badger-e2e`    |
 
 Update imports and `pnpm` / `npm` filters accordingly.
 
@@ -94,6 +94,6 @@ Update imports and `pnpm` / `npm` filters accordingly.
 
 ## Dashboard
 
-`apps/dashboard` (`@badger/dashboard`) is a standalone Next.js 16 app. It must
-not import `@badger/server` internals. Integration with the tunnel server is
+`apps/dashboard` (`@hridhin-k/badger-dashboard`) is a standalone Next.js 16 app. It must
+not import `@hridhin-k/badger-server` internals. Integration with the tunnel server is
 only via public REST and WebSocket APIs (Phase 2).

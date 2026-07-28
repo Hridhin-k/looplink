@@ -1,5 +1,5 @@
 {
-  "name": "@badger/cli",
+  "name": "@hridhin-k/badger-cli",
   "version": "1.0.0",
   "description": "Expose localhost through a secure public URL with Badger.",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "prepublishOnly": "tsc -b"
   },
   "dependencies": {
-    "@badger/shared": "workspace:*",
+    "@hridhin-k/badger-shared": "workspace:*",
     "chalk": "^5.6.2",
     "clipboardy": "^5.3.2",
     "commander": "^15.0.0",

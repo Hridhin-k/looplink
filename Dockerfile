@@ -42,7 +42,7 @@ COPY apps/cli/package.json apps/cli/
 COPY apps/dashboard/package.json apps/dashboard/
 COPY e2e/package.json e2e/
 
-RUN pnpm install --frozen-lockfile --filter @badger/server...
+RUN pnpm install --frozen-lockfile --filter @hridhin-k/badger-server...
 
 # ---------------------------------------------------------------------------
 # Build: compile shared + server
@@ -53,8 +53,8 @@ COPY tsconfig.base.json tsconfig.json ./
 COPY packages/shared packages/shared
 COPY apps/server apps/server
 
-RUN pnpm --filter @badger/shared build \
-  && pnpm --filter @badger/server build
+RUN pnpm --filter @hridhin-k/badger-shared build \
+  && pnpm --filter @hridhin-k/badger-server build
 
 # ---------------------------------------------------------------------------
 # Development: keep sources + toolchain for compose volume workflows
@@ -77,7 +77,7 @@ CMD ["node", "apps/server/dist/main.js"]
 # ---------------------------------------------------------------------------
 FROM build AS deploy
 
-RUN pnpm --filter @badger/server deploy --prod --legacy /deploy
+RUN pnpm --filter @hridhin-k/badger-server deploy --prod --legacy /deploy
 
 # ---------------------------------------------------------------------------
 # Production: slim runtime image

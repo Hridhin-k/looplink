@@ -1,4 +1,4 @@
-import { MessageType } from "@badger/shared";
+import { MessageType } from "@hridhin-k/badger-shared";
 
 import { LocalProxy } from "./local-proxy.js";
 import { RequestForwarder } from "./request-forwarder.js";

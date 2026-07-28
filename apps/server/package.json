@@ -1,5 +1,5 @@
 {
-  "name": "@badger/server",
+  "name": "@hridhin-k/badger-server",
   "version": "0.0.0",
   "private": true,
   "description": "Badger tunnel server that relays public traffic to local clients.",
@@ -17,7 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@badger/shared": "workspace:*",
+    "@hridhin-k/badger-shared": "workspace:*",
     "@fastify/rate-limit": "^11.1.0",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",

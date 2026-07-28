@@ -1,4 +1,4 @@
-import { resolveEnvPreferringBadger } from "@badger/shared";
+import { resolveEnvPreferringBadger } from "@hridhin-k/badger-shared";
 
 /**
  * Default WebSocket URL for the hosted Badger server.

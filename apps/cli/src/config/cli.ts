@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { APP_DISPLAY_NAME, APP_NAME } from "@badger/shared";
+import { APP_DISPLAY_NAME, APP_NAME } from "@hridhin-k/badger-shared";
 
 const require = createRequire(import.meta.url);
 

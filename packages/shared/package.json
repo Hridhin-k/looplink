@@ -1,5 +1,5 @@
 {
-  "name": "@badger/shared",
+  "name": "@hridhin-k/badger-shared",
   "version": "1.0.0",
   "description": "Shared types, constants, and utilities for Badger.",
   "license": "MIT",

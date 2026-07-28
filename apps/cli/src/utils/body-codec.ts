@@ -1,4 +1,4 @@
-import type { HttpBodyEncoding } from "@badger/shared";
+import type { HttpBodyEncoding } from "@hridhin-k/badger-shared";
 
 /** Body chunk size when streaming over the WebSocket protocol. */
 export const BODY_CHUNK_SIZE = 64 * 1024;

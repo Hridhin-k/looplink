@@ -2,9 +2,9 @@
 
 Current Stable Components
 
-- CLI (`@badger/cli`)
-- Tunnel Server (`@badger/server`)
-- Shared protocol (`@badger/shared`)
+- CLI (`@hridhin-k/badger-cli`)
+- Tunnel Server (`@hridhin-k/badger-server`)
+- Shared protocol (`@hridhin-k/badger-shared`)
 - Tunnel Protocol
 - Local Proxy
 - Request Forwarder
@@ -22,7 +22,7 @@ Future Modules
 - Event Bus
 - Traffic Recorder
 - Inspector
-- Dashboard (`@badger/dashboard` — scaffold only; REST/WS client only)
+- Dashboard (`@hridhin-k/badger-dashboard` — scaffold only; REST/WS client only)
 - AI Engine
 - Plugin SDK
 

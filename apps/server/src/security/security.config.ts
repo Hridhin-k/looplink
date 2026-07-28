@@ -8,7 +8,7 @@ import {
   MAX_WS_MESSAGE_BYTES,
   WS_MESSAGE_RATE_LIMIT,
   WS_MESSAGE_RATE_WINDOW_MS,
-} from "@badger/shared";
+} from "@hridhin-k/badger-shared";
 
 import { parseAllowedOrigins } from "./origin-validator.js";
 

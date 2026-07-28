@@ -10,7 +10,7 @@
     // Aliases target built declarations rather than sources, which is what
     // project references require.
     "paths": {
-      "@badger/shared": ["./packages/shared/dist/index.d.ts"]
+      "@hridhin-k/badger-shared": ["./packages/shared/dist/index.d.ts"]
     },
 
     "strict": true,

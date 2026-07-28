@@ -1,4 +1,4 @@
-# @badger/cli
+# @hridhin-k/badger-cli
 
 Expose any local port through a secure public HTTPS URL.
 
@@ -11,21 +11,21 @@ GitHub Packages requires auth even for public packages. Create a GitHub
 Add to your user `~/.npmrc`:
 
 ```ini
-@badger:registry=https://npm.pkg.github.com
+@hridhin-k:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
 ```
 
 Then:
 
 ```bash
-npm install -g @badger/cli
+npm install -g @hridhin-k/badger-cli
 badger 3000
 ```
 
 Or one-off:
 
 ```bash
-npx @badger/cli 3000
+npx @hridhin-k/badger-cli 3000
 ```
 
 The `looplink` binary is installed as a **deprecated alias** for one release and
