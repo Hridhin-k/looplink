@@ -32,6 +32,9 @@ import { rawDataToString } from "../utils/raw-data.js";
  * response frames only when the sender owns the tunnel.
  */
 @WebSocketGateway({
+  // CLI clients connect to the server root (`ws(s)://host/`). Explicit path
+  // keeps this gateway from capturing `/dashboard/ws`.
+  path: "/",
   // Bound every inbound frame before JSON parsing (DoS control).
   maxPayload: MAX_WS_MESSAGE_BYTES,
 })

@@ -40,7 +40,13 @@ export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply(OriginMiddleware)
-      .exclude({ path: "health", method: RequestMethod.GET })
+      .exclude(
+        { path: "health", method: RequestMethod.GET },
+        { path: "api/v1/(.*)", method: RequestMethod.ALL },
+        { path: "api/docs", method: RequestMethod.ALL },
+        { path: "api/docs/(.*)", method: RequestMethod.ALL },
+        { path: "api/docs-json", method: RequestMethod.ALL },
+      )
       .forRoutes("*");
   }
 }

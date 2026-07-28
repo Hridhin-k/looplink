@@ -39,6 +39,9 @@ badger 3000
 
 # Point at a local Badger server while developing the monorepo
 badger 3000 --server ws://127.0.0.1:8080
+
+# Replay a previously recorded request (tunnel must still be connected)
+badger replay <requestId> --server ws://127.0.0.1:8080
 ```
 
 Or:

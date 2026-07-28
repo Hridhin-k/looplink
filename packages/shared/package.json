@@ -13,10 +13,15 @@
   "bugs": {
     "url": "https://github.com/Hridhin-k/looplink/issues"
   },
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./dashboard": {
+      "types": "./dist/dashboard/index.d.ts",
+      "default": "./dist/dashboard/index.js"
     }
   },
   "files": [
