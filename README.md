@@ -60,18 +60,21 @@ pnpm install
 
 Run from the repository root:
 
-| Script              | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `pnpm build`        | Incremental build of all workspaces (`tsc -b`) |
-| `pnpm typecheck`    | Type-check without emitting                    |
-| `pnpm lint`         | Lint all workspaces                            |
-| `pnpm lint:fix`     | Lint and auto-fix                              |
-| `pnpm format`       | Format with Prettier                           |
-| `pnpm format:check` | Verify formatting                              |
-| `pnpm test`         | Unit tests for shared, server, and CLI         |
-| `pnpm test:e2e`     | Build, then run the end-to-end suite           |
-| `pnpm publish:cli`  | Build and publish shared + CLI to GH Packages  |
-| `pnpm clean`        | Remove build output                            |
+| Script                  | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `pnpm build`            | Incremental build of all workspaces (`tsc -b`) |
+| `pnpm typecheck`        | Type-check without emitting                    |
+| `pnpm lint`             | Lint all workspaces                            |
+| `pnpm lint:fix`         | Lint and auto-fix                              |
+| `pnpm format`           | Format with Prettier                           |
+| `pnpm format:check`     | Verify formatting                              |
+| `pnpm test`             | Unit tests for shared, server, and CLI         |
+| `pnpm test:e2e`         | Build, then run the end-to-end suite           |
+| `pnpm publish:cli`      | Build and publish shared + CLI to GH Packages  |
+| `pnpm changeset`        | Add a release note + bump intent               |
+| `pnpm version-packages` | Apply version bumps from changesets            |
+| `pnpm release`          | Publish versioned packages via Changesets      |
+| `pnpm clean`            | Remove build output                            |
 
 ## Testing
 
@@ -85,6 +88,20 @@ pnpm test:e2e
 ```
 
 See [e2e/README.md](e2e/README.md) for how the harness works.
+
+## Automated versioning and publishing
+
+Badger uses [Changesets](https://github.com/changesets/changesets) for monorepo
+versioning:
+
+1. Add a changeset in feature branches:
+   ```bash
+   pnpm changeset
+   ```
+2. Merge to `main`.
+3. GitHub Actions (`.github/workflows/release.yml`) either:
+   - opens/updates a release PR with version bumps, or
+   - publishes changed packages to GitHub Packages when a release PR is merged.
 
 ## Docker (server)
 

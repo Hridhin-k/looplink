@@ -30,6 +30,20 @@ must live in your user config (or CI secrets).
 
 ## Publish
 
+### Automated (recommended)
+
+Publishing is automated with Changesets via `.github/workflows/release.yml`.
+
+- Add a changeset in your PR:
+  ```bash
+  pnpm changeset
+  ```
+- Merge to `main`.
+- The release workflow opens/updates a version PR.
+- Merging that PR publishes changed packages automatically.
+
+### Manual fallback
+
 From the repository root (after `~/.npmrc` is set):
 
 ```bash

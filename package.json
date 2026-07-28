@@ -22,9 +22,13 @@
     "server:start": "pnpm --filter @hridhin-k/badger-server start",
     "test": "pnpm --filter @hridhin-k/badger-shared --filter @hridhin-k/badger-server --filter @hridhin-k/badger-cli test",
     "test:e2e": "pnpm build && pnpm --filter @hridhin-k/badger-e2e test",
-    "publish:cli": "pnpm build && pnpm --filter @hridhin-k/badger-shared publish && pnpm --filter @hridhin-k/badger-cli publish"
+    "publish:cli": "pnpm build && pnpm --filter @hridhin-k/badger-shared publish && pnpm --filter @hridhin-k/badger-cli publish",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.1.1",
     "eslint": "^10.8.0",
