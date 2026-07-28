@@ -43,21 +43,29 @@ If Cloudflare asks for a package manager, use **pnpm** (see root `package.json`
 
 ## Custom domain `dashboard.wybrand.in`
 
-`apps/dashboard/wrangler.jsonc` already declares:
+Deploy succeeds on `*.workers.dev` first. Custom domains require the zone
+`wybrand.in` to live on the **same Cloudflare account** as Worker `looplink`.
+
+**Error you may see:** `Could not find zone for dashboard.wybrand.in` — the
+domain’s nameservers are not on this Cloudflare account (Railway DNS for
+`tunnel.wybrand.in` alone is not enough).
+
+### Attach the domain
+
+1. Cloudflare Dashboard → **Add a site** → `wybrand.in` (if not already).
+2. Point the registrar nameservers to Cloudflare (keep existing records such as
+   `tunnel` → Railway).
+3. Workers → **looplink** → **Domains** → add `dashboard.wybrand.in`  
+   **or** uncomment in `apps/dashboard/wrangler.jsonc`:
 
 ```jsonc
 "routes": [{ "pattern": "dashboard.wybrand.in", "custom_domain": true }]
 ```
 
-**Requirements**
+4. Redeploy.
 
-1. Zone `wybrand.in` on the **same Cloudflare account** as the Worker.
-2. After a successful deploy, Cloudflare attaches the hostname and TLS.
-
-**Manual alternative:** Workers → `badger-dashboard` → **Settings** →
-**Domains & Routes** → add `dashboard.wybrand.in`.
-
-Keep existing `tunnel.wybrand.in` DNS for Railway unchanged.
+Until then, use the Worker URL shown under **Domains** (e.g.
+`looplink.<subdomain>.workers.dev`).
 
 ## Railway CORS / origins (optional)
 
