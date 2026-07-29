@@ -44,6 +44,7 @@ describe("registerApiCors", () => {
     expect(response.statusCode).toBe(204);
     expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
     expect(response.headers["access-control-allow-methods"]).toContain("GET");
+    expect(response.headers["access-control-allow-headers"]).toContain("Authorization");
   });
 
   it("does not add CORS headers on non-api routes", async () => {

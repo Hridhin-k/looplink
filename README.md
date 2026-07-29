@@ -50,6 +50,11 @@ The deprecated `looplink` command is installed as an alias and prints a warning.
 
 See [docs/publishing.md](docs/publishing.md) to publish new versions.
 
+## Commands
+
+Copy-paste commands for local run, production CLI use, package install/publish,
+and Railway/Cloudflare deploys: [COMMANDS.md](COMMANDS.md).
+
 ## Getting started (monorepo)
 
 ```bash

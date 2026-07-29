@@ -6,10 +6,14 @@ import { WsAdapter } from "@nestjs/platform-ws";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module.js";
+import { loadLocalEnv } from "./config/load-local-env.js";
 import { resolveServerHost, resolveServerPort } from "./config/server.config.js";
 import { registerApiCors } from "./security/register-api-cors.js";
 import { registerHttpRateLimit } from "./security/register-http-rate-limit.js";
 import { resolveSecurityConfig } from "./security/security.config.js";
+
+// Local `.env.local` / `.env` before any config resolution (shell env still wins).
+loadLocalEnv();
 
 /**
  * Boots the NestJS application on Fastify with native WebSocket support.
@@ -38,10 +42,14 @@ async function bootstrap(): Promise<void> {
   app.useWebSocketAdapter(new WsAdapter(app));
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("Badger Inspector API")
-    .setDescription("Traffic inspection, statistics, and request replay. No authentication.")
+    .setTitle("Badger API")
+    .setDescription(
+      "Inspector, statistics, replay, and authentication. Inspector remains public; auth endpoints use Bearer JWTs.",
+    )
     .setVersion("1.0")
+    .addBearerAuth()
     .addTag("inspector")
+    .addTag("auth")
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup("api/docs", app, document);

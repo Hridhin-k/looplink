@@ -1,147 +1,214 @@
 ---
-alwaysApply: false
----
-## Monorepo Structure
-
-apps/
-  cli/
-  server/
-  dashboard/
-
-packages/
-  shared/
-    event-bus/
-    storage/
-    traffic/
-    replay/
-    types/
-    utils/
-
-Dashboard is a standalone Next.js application.
-
-Dashboard communicates with the server only through REST and WebSocket APIs.
-
-The dashboard must never import server internals.
-
+alwaysApply: true
 ---
 
-## Design Rules
+# Badger Phase 3 Engineering Rules
 
-Every feature must:
+Badger is an AI-native developer networking platform.
 
-- expose a public interface
-- be independently testable
-- be independently replaceable
-- avoid global mutable state
-- avoid circular dependencies
+Current Status
 
-No module may directly access another module's internal implementation.
+Phase 1
+Tunnel Engine
+Production Ready
 
-Use dependency injection or events instead.
+Phase 2
+Developer Observability
+Production Ready
 
----
+Phase 3
+Multi-tenant SaaS Platform
+Currently in development
 
-## Storage Rules
+────────────────────────────────────
 
-Never store application data directly inside services.
+Mission
 
-Always depend on a StorageProvider interface.
+Build a SaaS platform around the existing tunnel engine.
 
-The first implementation is in-memory storage.
+The tunnel engine is considered stable.
 
-Future implementations may include SQLite, PostgreSQL, Redis, or cloud storage.
+The observability pipeline is considered stable.
 
-No business logic should require changes when switching storage backends.
+Never redesign either subsystem.
 
----
+Only extend them.
 
-## Event Rules
+────────────────────────────────────
 
-Use the shared EventBus package.
+Core Principles
 
-Emit strongly typed events.
+Workspace is the primary domain model.
 
-Never emit stringly typed events.
+Every authenticated user automatically owns one Personal Workspace.
 
-Every event must include:
+Shared workspaces are optional.
 
-- event id
-- timestamp
-- tunnel id (if applicable)
-- correlation/request id (if applicable)
+Organizations do not exist as a first-class entity.
 
-Events should be immutable.
+Workspaces support:
 
----
+• Personal developers
+• Freelancers
+• Teams
+• Enterprises
 
-## API Rules
+Never create architecture that only works for organizations.
 
-REST APIs should be versionable.
+────────────────────────────────────
 
-Prefer:
+Architecture
 
-/api/v1/...
+Dashboard
 
-Responses must use consistent DTOs.
+↓
 
-Do not expose internal entities directly.
+NestJS API
 
----
+↓
 
-## Testing Requirements
+Repositories
 
-Every feature requires:
+↓
 
-- unit tests
-- integration tests
-- documentation
+Supabase
 
-Before completion verify:
+Never bypass the API.
 
-- TypeScript
-- ESLint
-- Prettier
-- Existing unit tests
-- Existing E2E tests
-- New tests
+Never query Supabase directly from React.
 
-No regressions are acceptable.
+Never couple business logic to Supabase SDK.
 
----
+Supabase is an infrastructure dependency.
 
-## Performance
+Business logic must remain database agnostic.
 
-Avoid unnecessary allocations.
+────────────────────────────────────
 
-Avoid blocking the event loop.
+Authentication
 
-Support thousands of requests without retaining unnecessary memory.
+Supabase Auth
 
-Large request/response bodies should be handled efficiently.
+JWT
 
----
+Bearer Tokens
 
-## Documentation
+Stateless
 
-Every new module must include:
+No server-side sessions.
 
-- architecture overview
-- dependency graph
-- folder structure
-- public interfaces
-- extension points
-- examples
+CLI authentication must use OAuth browser flow.
 
----
+Never ask users to manually paste JWTs.
 
-## Forbidden
+────────────────────────────────────
 
-Do not rewrite Layer 1 networking.
+Code Quality
 
-Do not change the tunnel protocol.
+Strict TypeScript
 
-Do not change CLI behavior unless explicitly requested.
+No any
 
-Do not tightly couple the dashboard to the server.
+No placeholder implementations
 
-Do not implement future roadmap features unless requested.
+No TODO comments
+
+No mocked production logic
+
+No duplicated code
+
+Keep files reasonably small
+
+Prefer dependency injection
+
+Prefer interfaces
+
+Prefer composition
+
+────────────────────────────────────
+
+Database
+
+Every migration must be additive.
+
+Never remove production columns.
+
+Never rename production columns.
+
+Never perform destructive migrations.
+
+Every table must include:
+
+id
+
+created_at
+
+updated_at
+
+Indexes
+
+Foreign Keys
+
+Use UUID primary keys.
+
+────────────────────────────────────
+
+Security
+
+Never trust workspace IDs from clients.
+
+Resolve workspace membership server-side.
+
+Validate every JWT.
+
+Every endpoint must verify authorization.
+
+Every websocket must authenticate before tunnel creation.
+
+────────────────────────────────────
+
+Compatibility
+
+Do not break:
+
+Tunnel Protocol
+
+CLI Commands
+
+Inspector
+
+Replay
+
+Dashboard
+
+Public APIs
+
+────────────────────────────────────
+
+Testing
+
+Every phase must:
+
+Compile
+
+Pass lint
+
+Pass tests
+
+Maintain backward compatibility
+
+Have no regressions
+
+────────────────────────────────────
+
+Output
+
+Implement only the requested phase.
+
+Do not anticipate future phases.
+
+Avoid unnecessary refactoring.
+
+Keep commits focused.
+
+Document architectural decisions.

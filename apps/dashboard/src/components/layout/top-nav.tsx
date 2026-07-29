@@ -3,6 +3,7 @@
 import { MenuIcon, PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 
+import { AuthNavControls } from "@/components/auth/auth-nav-controls";
 import { ConnectionIndicator } from "@/components/layout/connection-indicator";
 import { APP_NAV_ITEMS } from "@/components/layout/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/stores/ui-store";
 
 /**
- * Top bar: menu (mobile/tablet), page title, live status, theme.
+ * Top bar: menu (mobile/tablet), page title, auth, live status, theme.
  */
 export function TopNav() {
   const pathname = usePathname();
@@ -25,6 +26,9 @@ export function TopNav() {
   let title = current?.label ?? "Overview";
   if (pathname.startsWith("/requests/") && pathname !== "/requests") {
     title = "Request details";
+  }
+  if (pathname.startsWith("/account")) {
+    title = "Account";
   }
 
   return (
@@ -55,6 +59,7 @@ export function TopNav() {
         <h1 className="truncate font-heading text-base tracking-tight sm:text-lg">{title}</h1>
       </div>
 
+      <AuthNavControls />
       <ConnectionIndicator className="hidden sm:inline-flex" />
       <ThemeToggle />
     </header>

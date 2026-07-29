@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { OriginValidator } from "./origin-validator.js";
 
 const CORS_METHODS = "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS";
-const CORS_HEADERS = "Content-Type, Accept";
+const CORS_HEADERS = "Content-Type, Accept, Authorization";
 const CORS_MAX_AGE = "86400";
 
 /**

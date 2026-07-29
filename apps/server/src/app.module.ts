@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AuthModule } from "./auth/auth.module.js";
+import { DatabaseModule } from "./database/database.module.js";
 import { EventModule } from "./events/event.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
 import { GatewayModule } from "./gateway/gateway.module.js";
@@ -16,10 +18,13 @@ import { TunnelModule } from "./tunnel/tunnel.module.js";
 /**
  * Root application module. Composes security, health, tunnel, HTTP forwarding,
  * gateway, EventBus, StorageProvider, TrafficRecorder, Statistics, Replay,
- * Inspector, and Dashboard live WS (no tunnel behavior changes).
+ * Inspector, Dashboard live WS, Phase 3 database infrastructure, and Auth
+ * (no tunnel behavior changes).
  */
 @Module({
   imports: [
+    DatabaseModule,
+    AuthModule,
     EventModule,
     StorageModule,
     TrafficModule,
