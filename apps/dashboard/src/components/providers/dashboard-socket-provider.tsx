@@ -9,6 +9,7 @@ import {
   resyncInspectorAfterReconnect,
 } from "@/lib/ws/apply-dashboard-message";
 import { createDashboardSocketClient } from "@/lib/ws/dashboard-socket";
+import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useConnectionStore } from "@/stores/connection-store";
 
 /**
@@ -20,6 +21,7 @@ import { useConnectionStore } from "@/stores/connection-store";
  */
 export function DashboardSocketProvider({ children }: { readonly children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useWorkspace();
 
   useEffect(() => {
     const store = useConnectionStore.getState();
@@ -30,6 +32,7 @@ export function DashboardSocketProvider({ children }: { readonly children: React
     store.setError(null);
 
     const client = createDashboardSocketClient({
+      workspaceId: activeWorkspace?.id,
       onOpen: () => {
         useConnectionStore.getState().setStatus("connected");
         useConnectionStore.getState().setError(null);
@@ -105,7 +108,7 @@ export function DashboardSocketProvider({ children }: { readonly children: React
       useConnectionStore.getState().setStatus("idle");
       useConnectionStore.getState().setError(null);
     };
-  }, [queryClient]);
+  }, [activeWorkspace?.id, queryClient]);
 
   return children;
 }

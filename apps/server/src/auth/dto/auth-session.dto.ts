@@ -9,6 +9,15 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({ nullable: true, type: String })
   email!: string | null;
+
+  @ApiPropertyOptional({ enum: ["jwt", "api_key"] })
+  authMethod?: "jwt" | "api_key";
+
+  @ApiPropertyOptional({ format: "uuid", description: "Present for API key auth" })
+  workspaceId?: string;
+
+  @ApiPropertyOptional({ format: "uuid", description: "Present for API key auth" })
+  apiKeyId?: string;
 }
 
 /**

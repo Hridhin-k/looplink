@@ -64,6 +64,8 @@ export interface TunnelCreatedEvent extends BadgerEventBase {
   readonly port: number;
   /** `true` when an orphaned tunnel was reclaimed. */
   readonly restored: boolean;
+  /** Workspace that owns this tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -117,6 +119,8 @@ export interface RequestReceivedEvent extends BadgerEventBase {
   readonly query: HttpQuery;
   /** Request body snapshot (may be truncated). */
   readonly body: TrafficBody;
+  /** Workspace that owns the tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -131,6 +135,8 @@ export interface RequestForwardedEvent extends BadgerEventBase {
   readonly method: HttpMethod;
   /** Path forwarded to the local application. */
   readonly path: string;
+  /** Workspace that owns the tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -156,6 +162,8 @@ export interface ResponseReturnedEvent extends BadgerEventBase {
   readonly responseBody: TrafficBody;
   /** Milliseconds from request receipt to response completion. */
   readonly latencyMs: number;
+  /** Workspace that owns the tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -172,6 +180,8 @@ export interface RequestFailedEvent extends BadgerEventBase {
   readonly path: string;
   /** Human-readable failure reason. */
   readonly error: string;
+  /** Workspace that owns the tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -214,6 +224,8 @@ export interface ReplayCompletedEvent extends BadgerEventBase {
   readonly path: string;
   /** Live status code returned by the local app. */
   readonly statusCode: number;
+  /** Workspace that owned the replayed tunnel/request (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -235,6 +247,8 @@ export interface StatisticsUpdatedEvent extends BadgerEventBase {
   readonly statistics: StatisticsUpdatedSnapshot;
   /** Optional tunnel scope when stats were computed for one tunnel. */
   readonly tunnelId: string | undefined;
+  /** Optional workspace scope when stats were computed for one workspace. */
+  readonly workspaceId?: string;
 }
 
 /**

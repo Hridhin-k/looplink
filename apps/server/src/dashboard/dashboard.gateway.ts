@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { IncomingMessage } from "node:http";
 
 import { Inject, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
@@ -45,6 +46,7 @@ export class DashboardGateway
 {
   private readonly logger = new Logger(DashboardGateway.name);
   private readonly clients = new Set<WebSocket>();
+  private readonly clientWorkspaceScope = new Map<WebSocket, string>();
   private readonly subscriptions: EventSubscription[] = [];
   private pingTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -106,8 +108,12 @@ export class DashboardGateway
    *
    * @param client - Connected WebSocket.
    */
-  handleConnection(client: WebSocket): void {
+  handleConnection(client: WebSocket, request?: IncomingMessage): void {
     this.clients.add(client);
+    const workspaceId = request === undefined ? undefined : readWorkspaceScopeFromRequest(request);
+    if (workspaceId !== undefined) {
+      this.clientWorkspaceScope.set(client, workspaceId);
+    }
     this.logger.log(`Dashboard client connected (${String(this.clients.size)} active)`);
 
     this.send(client, {
@@ -132,6 +138,7 @@ export class DashboardGateway
    */
   handleDisconnect(client: WebSocket): void {
     this.clients.delete(client);
+    this.clientWorkspaceScope.delete(client);
     this.logger.log(`Dashboard client disconnected (${String(this.clients.size)} active)`);
   }
 
@@ -164,7 +171,12 @@ export class DashboardGateway
   }
 
   private broadcast(message: DashboardMessage): void {
+    const workspaceId = workspaceScopeFromMessage(message);
     for (const client of [...this.clients]) {
+      const clientScope = this.clientWorkspaceScope.get(client);
+      if (workspaceId !== undefined && clientScope !== workspaceId) {
+        continue;
+      }
       this.send(client, message);
     }
   }
@@ -181,6 +193,34 @@ export class DashboardGateway
       const detail = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to send dashboard message: ${detail}`);
       this.clients.delete(client);
+      this.clientWorkspaceScope.delete(client);
     }
+  }
+}
+
+function readWorkspaceScopeFromRequest(request: IncomingMessage): string | undefined {
+  const url = request.url;
+  if (url === undefined) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(url, "http://localhost");
+    const workspaceId = parsed.searchParams.get("workspaceId")?.trim();
+    return workspaceId !== undefined && workspaceId.length > 0 ? workspaceId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function workspaceScopeFromMessage(message: DashboardMessage): string | undefined {
+  switch (message.type) {
+    case DashboardMessageType.TunnelConnected:
+    case DashboardMessageType.RequestReceived:
+    case DashboardMessageType.ResponseCompleted:
+    case DashboardMessageType.ReplayCompleted:
+    case DashboardMessageType.StatisticsUpdated:
+      return message.workspaceId;
+    default:
+      return undefined;
   }
 }

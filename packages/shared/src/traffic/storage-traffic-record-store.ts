@@ -105,6 +105,7 @@ export class StorageTrafficRecordStore implements TrafficRecordStore {
   async list(options: ListTrafficRecordsOptions = {}): Promise<readonly TrafficRecord[]> {
     const order = await this.readOrder();
     const tunnelId = options.tunnelId;
+    const workspaceId = options.workspaceId;
     const includeBodies = options.includeBodies !== false;
     const collected: TrafficRecord[] = [];
 
@@ -123,6 +124,9 @@ export class StorageTrafficRecordStore implements TrafficRecordStore {
       }
 
       if (tunnelId !== undefined && record.tunnelId !== tunnelId) {
+        continue;
+      }
+      if (workspaceId !== undefined && record.workspaceId !== workspaceId) {
         continue;
       }
 

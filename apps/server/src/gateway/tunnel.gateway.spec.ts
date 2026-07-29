@@ -44,6 +44,18 @@ function createGateway(): {
   tunnelManager: TunnelManager;
   security: GatewaySecurityPolicy;
 } {
+  const auth = {
+    verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null }),
+  };
+  const apiKeys = {
+    verifyBearerToken: vi.fn(),
+  };
+  const workspaces = {
+    resolveContext: vi.fn().mockResolvedValue({
+      activeWorkspace: { id: "w1" },
+      memberships: [],
+    }),
+  };
   const tunnelManager = {
     unregisterClient: vi.fn().mockReturnValue(false),
     detachClient: vi.fn().mockReturnValue(false),
@@ -55,6 +67,9 @@ function createGateway(): {
   const heartbeats = new HeartbeatMonitor(60_000, 3_600_000);
   const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
   const gateway = new TunnelGateway(
+    auth as never,
+    apiKeys as never,
+    workspaces as never,
     tunnelManager,
     new HttpExchangeCoordinator(),
     heartbeats,
@@ -167,7 +182,27 @@ describe("TunnelGateway heartbeat", () => {
       const exchanges = new HttpExchangeCoordinator();
       const deliver = vi.spyOn(exchanges, "deliver").mockReturnValue(true);
       const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
-      const gateway = new TunnelGateway(tunnelManager, exchanges, heartbeats, security);
+      const auth = {
+        verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null }),
+      };
+      const apiKeys = {
+        verifyBearerToken: vi.fn(),
+      };
+      const workspaces = {
+        resolveContext: vi.fn().mockResolvedValue({
+          activeWorkspace: { id: "w1" },
+          memberships: [],
+        }),
+      };
+      const gateway = new TunnelGateway(
+        auth as never,
+        apiKeys as never,
+        workspaces as never,
+        tunnelManager,
+        exchanges,
+        heartbeats,
+        security,
+      );
       const socket = new FakeSocket();
       const client = asClient(socket);
 

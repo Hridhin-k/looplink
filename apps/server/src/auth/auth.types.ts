@@ -1,9 +1,15 @@
 /**
- * Authenticated user identity derived from a verified Supabase JWT.
+ * Authenticated user identity derived from a verified Supabase JWT
+ * or a workspace-scoped API key.
  */
 export interface AuthUser {
   readonly id: string;
   readonly email: string | null;
+  /** Defaults to jwt when omitted (legacy callers). */
+  readonly authMethod?: "jwt" | "api_key";
+  /** Present when authenticated via workspace API key. */
+  readonly workspaceId?: string;
+  readonly apiKeyId?: string;
 }
 
 /**

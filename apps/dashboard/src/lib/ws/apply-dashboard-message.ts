@@ -11,6 +11,7 @@ import { INSPECTOR_REQUESTS_QUERY_KEY } from "@/hooks/use-inspector-requests";
 import type { InspectorRequestList, InspectorRequestSummary } from "@/lib/api";
 
 type RequestsQueryParams = {
+  readonly workspaceId: string | null;
   readonly tunnelId: string | null;
   readonly limit: number;
   readonly q?: string | null;
@@ -55,7 +56,7 @@ function upsertRequestReceived(
 ): void {
   const summary = toPendingSummary(message);
 
-  for (const query of matchingRequestListQueries(queryClient, message.tunnelId)) {
+  for (const query of matchingRequestListQueries(queryClient, message.workspaceId, message.tunnelId)) {
     const params = query.queryKey[2] as RequestsQueryParams;
     if (hasActiveSearch(params)) {
       void queryClient.invalidateQueries({ queryKey: query.queryKey });
@@ -75,7 +76,7 @@ function patchResponseCompleted(
   queryClient: QueryClient,
   message: DashboardResponseCompletedMessage,
 ): void {
-  for (const query of matchingRequestListQueries(queryClient, message.tunnelId)) {
+  for (const query of matchingRequestListQueries(queryClient, message.workspaceId, message.tunnelId)) {
     const params = query.queryKey[2] as RequestsQueryParams;
     if (hasActiveSearch(params)) {
       void queryClient.invalidateQueries({ queryKey: query.queryKey });
@@ -113,7 +114,11 @@ function patchResponseCompleted(
   });
 }
 
-function matchingRequestListQueries(queryClient: QueryClient, tunnelId: string) {
+function matchingRequestListQueries(
+  queryClient: QueryClient,
+  workspaceId: string | undefined,
+  tunnelId: string,
+) {
   return queryClient
     .getQueryCache()
     .findAll({ queryKey: INSPECTOR_REQUESTS_QUERY_KEY })
@@ -121,6 +126,9 @@ function matchingRequestListQueries(queryClient: QueryClient, tunnelId: string) 
       const params = query.queryKey[2] as RequestsQueryParams | undefined;
       if (params === undefined) {
         return true;
+      }
+      if ((workspaceId ?? null) !== params.workspaceId) {
+        return false;
       }
       return params.tunnelId === null || params.tunnelId === tunnelId;
     });
@@ -137,6 +145,7 @@ function toPendingSummary(message: DashboardRequestReceivedMessage): InspectorRe
     method: message.method,
     path: message.path,
     tunnelId: message.tunnelId,
+    ...(message.workspaceId === undefined ? {} : { workspaceId: message.workspaceId }),
     requestBodyByteLength: 0,
     responseBodyByteLength: 0,
   };
@@ -149,6 +158,7 @@ function toCompletedSummary(message: DashboardResponseCompletedMessage): Inspect
     method: message.method,
     path: message.path,
     tunnelId: message.tunnelId,
+    ...(message.workspaceId === undefined ? {} : { workspaceId: message.workspaceId }),
     status: message.statusCode,
     latencyMs: message.latencyMs,
     requestBodyByteLength: 0,

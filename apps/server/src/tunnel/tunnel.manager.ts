@@ -25,6 +25,10 @@ export interface CreateTunnelOptions {
   readonly now?: number;
   /** Override for the shared reclaim window. Intended for tests. */
   readonly reclaimWindowMs?: number;
+  /** Authenticated owner of this tunnel (legacy: absent). */
+  readonly ownerUserId?: string;
+  /** Workspace that owns this tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -90,7 +94,7 @@ export class TunnelManager {
       }
     }
 
-    const tunnel = this.register(client, port);
+    const tunnel = this.register(client, port, options);
     const publicUrl = buildPublicUrl(tunnel.id);
 
     return { tunnel, publicUrl, restored: false };
@@ -103,11 +107,13 @@ export class TunnelManager {
    * @param port - Local TCP port on the client to expose.
    * @returns The persisted tunnel record, including its generated id.
    */
-  register(client: WebSocket, port: number): TunnelRecord {
+  register(client: WebSocket, port: number, options: CreateTunnelOptions = {}): TunnelRecord {
     const tunnel: TunnelRecord = {
       id: this.generateTunnelId(),
       client,
       port,
+      ...(options.ownerUserId === undefined ? {} : { ownerUserId: options.ownerUserId }),
+      ...(options.workspaceId === undefined ? {} : { workspaceId: options.workspaceId }),
     };
 
     this.repository.save(tunnel);

@@ -15,6 +15,7 @@ export const inspectorApi = {
     readonly limit?: number;
     readonly tunnelId?: string;
     readonly q?: string;
+    readonly workspaceId?: string;
   }): Promise<InspectorRequestList> {
     const search = new URLSearchParams();
     if (params?.limit !== undefined) {
@@ -29,21 +30,22 @@ export const inspectorApi = {
     const query = search.toString();
     return apiClient<InspectorRequestList>(
       `/api/v1/inspector/requests${query.length > 0 ? `?${query}` : ""}`,
+      params?.workspaceId ? { headers: { "x-workspace-id": params.workspaceId } } : undefined,
     );
   },
 
-  getRequest(id: string): Promise<InspectorRequestDetail> {
-    return apiClient<InspectorRequestDetail>(`/api/v1/inspector/request/${encodeURIComponent(id)}`);
+  getRequest(id: string, workspaceId?: string): Promise<InspectorRequestDetail> {
+    return apiClient<InspectorRequestDetail>(`/api/v1/inspector/request/${encodeURIComponent(id)}`, workspaceId ? { headers: { "x-workspace-id": workspaceId } } : undefined);
   },
 
-  replayRequest(id: string): Promise<InspectorReplayResponse> {
+  replayRequest(id: string, workspaceId?: string): Promise<InspectorReplayResponse> {
     return apiClient<InspectorReplayResponse>(
       `/api/v1/inspector/replay/${encodeURIComponent(id)}`,
-      { method: "POST" },
+      workspaceId ? { method: "POST", headers: { "x-workspace-id": workspaceId } } : { method: "POST" },
     );
   },
 
-  getStatistics(params?: { readonly tunnelId?: string }): Promise<InspectorStatistics> {
+  getStatistics(params?: { readonly tunnelId?: string; readonly workspaceId?: string }): Promise<InspectorStatistics> {
     const search = new URLSearchParams();
     if (params?.tunnelId !== undefined && params.tunnelId.length > 0) {
       search.set("tunnelId", params.tunnelId);
@@ -51,6 +53,7 @@ export const inspectorApi = {
     const query = search.toString();
     return apiClient<InspectorStatistics>(
       `/api/v1/inspector/statistics${query.length > 0 ? `?${query}` : ""}`,
+      params?.workspaceId ? { headers: { "x-workspace-id": params.workspaceId } } : undefined,
     );
   },
 } as const;

@@ -10,6 +10,10 @@ export interface TunnelRecord {
   readonly client: WebSocket;
   /** Local TCP port on the client machine that this tunnel exposes. */
   readonly port: number;
+  /** Authenticated user that created the tunnel (legacy: absent). */
+  readonly ownerUserId?: string;
+  /** Workspace that owns this tunnel (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -22,6 +26,10 @@ export interface OrphanedTunnel {
   readonly port: number;
   /** Epoch ms when the client disconnected. */
   readonly disconnectedAt: number;
+  /** Authenticated owner user id (legacy: absent). */
+  readonly ownerUserId?: string;
+  /** Owning workspace id (legacy: absent). */
+  readonly workspaceId?: string;
 }
 
 /**

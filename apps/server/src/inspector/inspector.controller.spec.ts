@@ -65,7 +65,7 @@ describe("InspectorController", () => {
     const controller = new InspectorController(inspector);
     await controller.getStatistics("tun-9");
 
-    expect(inspector.getStatistics).toHaveBeenCalledWith("tun-9");
+    expect(inspector.getStatistics).toHaveBeenCalledWith("tun-9", undefined);
   });
 
   it("propagates NotFoundException from getRequest", async () => {

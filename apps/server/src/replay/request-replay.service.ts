@@ -42,12 +42,18 @@ export class RequestReplayService {
    * @returns Status, headers, and body from the live local app.
    * @throws ReplayError When the record/tunnel is missing or forward fails.
    */
-  async replay(requestId: string): Promise<ReplayResult> {
+  async replay(requestId: string, workspaceId?: string): Promise<ReplayResult> {
     const record = await this.store.findById(requestId);
     if (record === undefined) {
       throw new ReplayError(
         ReplayErrorCode.NotFound,
         `No traffic record found for request id "${requestId}".`,
+      );
+    }
+    if (workspaceId !== undefined && record.workspaceId !== workspaceId) {
+      throw new ReplayError(
+        ReplayErrorCode.NotFound,
+        `No traffic record found for request id "${requestId}" in workspace "${workspaceId}".`,
       );
     }
 
@@ -94,6 +100,7 @@ export class RequestReplayService {
           method: result.method,
           path: result.path,
           statusCode: result.statusCode,
+          ...(record.workspaceId === undefined ? {} : { workspaceId: record.workspaceId }),
           correlationId: result.originalRequestId,
         }),
       );

@@ -18,11 +18,22 @@ import {
 } from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
+import { AuthService } from "../auth/auth.service.js";
+import type { AuthUser } from "../auth/auth.types.js";
+import { extractBearerToken } from "../auth/extract-bearer-token.js";
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { GatewaySecurityPolicy } from "../security/gateway-security.policy.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
+import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
+import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
+import { WorkspaceService } from "../workspaces/workspace.service.js";
+
+interface AuthenticatedClientContext {
+  readonly user: AuthUser;
+  readonly workspaceId: string;
+}
 
 /**
  * WebSocket entry point for Badger CLI clients.
@@ -40,6 +51,7 @@ import { rawDataToString } from "../utils/raw-data.js";
 })
 export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TunnelGateway.name);
+  private readonly clientAuthContext = new Map<WebSocket, AuthenticatedClientContext>();
 
   /**
    * @param tunnelManager - Domain service that creates and tracks tunnels.
@@ -48,6 +60,9 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param security - Connection, origin, and message-rate policy.
    */
   constructor(
+    private readonly auth: AuthService,
+    private readonly apiKeys: ApiKeyService,
+    private readonly workspaces: WorkspaceService,
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
     private readonly heartbeats: HeartbeatMonitor,
@@ -60,12 +75,34 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param client - The connected `ws` client socket.
    * @param request - HTTP upgrade request (origin / IP).
    */
-  handleConnection(client: WebSocket, request: IncomingMessage): void {
+  async handleConnection(client: WebSocket, request: IncomingMessage): Promise<void> {
     const rejected = this.security.admit(client, request);
     if (rejected !== undefined) {
       this.logger.warn(`Rejected WebSocket connection: ${rejected}`);
       client.close(1008, rejected);
       return;
+    }
+
+    const header = request.headers.authorization;
+    const authorization = typeof header === "string" ? header : header?.[0];
+    const token = extractBearerToken(authorization);
+    if (authorization !== undefined && token === undefined) {
+      client.close(1008, "Malformed Authorization header.");
+      return;
+    }
+    if (token !== undefined) {
+      try {
+        const user = await this.verifyClientToken(token);
+        const requestedWorkspaceId = readWorkspaceHeader(request);
+        const context = await this.workspaces.resolveContext(user, requestedWorkspaceId);
+        this.clientAuthContext.set(client, {
+          user,
+          workspaceId: context.activeWorkspace.id,
+        });
+      } catch {
+        client.close(1008, "Unauthorized.");
+        return;
+      }
     }
 
     const connectionId = randomUUID();
@@ -97,6 +134,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: WebSocket): void {
     this.heartbeats.unregister(client);
     this.security.release(client);
+    this.clientAuthContext.delete(client);
 
     const detached = this.tunnelManager.detachClient(client);
 
@@ -223,10 +261,19 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   private handleCreateTunnel(client: WebSocket, request: CreateTunnelMessage): void {
     try {
+      const authContext = this.clientAuthContext.get(client);
       const created = this.tunnelManager.create(
         client,
         request.port,
-        request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId },
+        {
+          ...(request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId }),
+          ...(authContext === undefined
+            ? {}
+            : {
+                ownerUserId: authContext.user.id,
+                workspaceId: authContext.workspaceId,
+              }),
+        },
       );
 
       const response: TunnelCreatedMessage = {
@@ -269,6 +316,27 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.send(JSON.stringify(message));
   }
+
+  private async verifyClientToken(token: string): Promise<AuthUser> {
+    if (isApiKeyToken(token)) {
+      return this.apiKeys.verifyBearerToken(token);
+    }
+    const user = await this.auth.verifyAccessToken(token);
+    return { ...user, authMethod: "jwt" };
+  }
+}
+
+function readWorkspaceHeader(request: IncomingMessage): string | undefined {
+  const value = request.headers["x-workspace-id"];
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : undefined;
+  }
+  if (Array.isArray(value)) {
+    const first = value[0]?.trim();
+    return first !== undefined && first.length > 0 ? first : undefined;
+  }
+  return undefined;
 }
 
 /**

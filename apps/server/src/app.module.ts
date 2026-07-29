@@ -14,6 +14,7 @@ import { StatisticsModule } from "./statistics/statistics.module.js";
 import { StorageModule } from "./storage/storage.module.js";
 import { TrafficModule } from "./traffic/traffic.module.js";
 import { TunnelModule } from "./tunnel/tunnel.module.js";
+import { WorkspaceModule } from "./workspaces/workspace.module.js";
 
 /**
  * Root application module. Composes security, health, tunnel, HTTP forwarding,
@@ -25,6 +26,7 @@ import { TunnelModule } from "./tunnel/tunnel.module.js";
   imports: [
     DatabaseModule,
     AuthModule,
+    WorkspaceModule,
     EventModule,
     StorageModule,
     TrafficModule,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { OriginValidator } from "../security/origin-validator.js";
 import { AuthService } from "./auth.service.js";
 import { extractBearerToken } from "./extract-bearer-token.js";
 
@@ -42,18 +43,19 @@ describe("AuthService", () => {
       },
       anon as never,
       {} as never,
+      new OriginValidator(),
     );
 
     await expect(service.login("  Dev@Example.com ", "secret")).resolves.toEqual({
       accessToken: "access",
       refreshToken: "refresh",
       expiresAt: 1_700_000_000,
-      user: { id: "user-1", email: "Dev@Example.com" },
+      user: { id: "user-1", email: "Dev@Example.com", authMethod: "jwt" },
     });
   });
 
   it("rejects login when Supabase is disabled", async () => {
-    const service = new AuthService({ enabled: false }, null, null);
+    const service = new AuthService({ enabled: false }, null, null, new OriginValidator());
     await expect(service.login("a@b.com", "x")).rejects.toThrow(/Supabase is not configured/);
   });
 
@@ -76,11 +78,13 @@ describe("AuthService", () => {
       },
       anon as never,
       {} as never,
+      new OriginValidator(),
     );
 
     await expect(service.verifyAccessToken("jwt")).resolves.toEqual({
       id: "user-1",
       email: "a@b.com",
+      authMethod: "jwt",
     });
   });
 });

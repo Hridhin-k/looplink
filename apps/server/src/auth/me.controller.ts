@@ -34,6 +34,9 @@ export class MeController {
     return {
       id: user.id,
       email: user.email,
+      authMethod: user.authMethod ?? "jwt",
+      ...(user.workspaceId === undefined ? {} : { workspaceId: user.workspaceId }),
+      ...(user.apiKeyId === undefined ? {} : { apiKeyId: user.apiKeyId }),
     };
   }
 }

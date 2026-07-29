@@ -33,6 +33,7 @@ export function mapTunnelCreatedToDashboard(
     publicUrl: event.publicUrl,
     port: event.port,
     restored: event.restored,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 
@@ -69,6 +70,7 @@ export function mapRequestReceivedToDashboard(
     tunnelId: event.tunnelId,
     method: event.method,
     path: event.path,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 
@@ -90,6 +92,7 @@ export function mapResponseReturnedToDashboard(
     path: event.path,
     statusCode: event.statusCode,
     latencyMs: event.latencyMs,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 
@@ -110,6 +113,7 @@ export function mapReplayCompletedToDashboard(
     method: event.method,
     path: event.path,
     statusCode: event.statusCode,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 
@@ -127,6 +131,7 @@ export function mapStatisticsUpdatedToDashboard(
     occurredAt: event.occurredAt,
     statistics: event.statistics,
     tunnelId: event.tunnelId,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 

@@ -44,10 +44,15 @@ export class StartTunnelService {
    * @param port - Already-validated local port to expose.
    * @param serverUrl - WebSocket URL of the Badger server.
    */
-  async start(port: number, serverUrl: string): Promise<void> {
+  async start(
+    port: number,
+    serverUrl: string,
+    getAuthToken?: () => Promise<string | undefined>,
+  ): Promise<void> {
     this.presenter.starting(port);
 
     const connection = this.createConnection(serverUrl, {
+      ...(getAuthToken === undefined ? {} : { getAuthToken }),
       onConnectionLost: () => {
         this.presenter.connectionLost();
       },

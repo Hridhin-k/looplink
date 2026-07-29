@@ -33,17 +33,29 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
    * Subscribes to traffic / tunnel / replay events that change aggregates.
    */
   onModuleInit(): void {
-    const refresh = (): void => {
-      this.enqueueRefresh();
+    const refresh = (workspaceId?: string): void => {
+      this.enqueueRefresh(workspaceId);
     };
 
     this.subscriptions.push(
-      this.eventBus.subscribe(BadgerEventType.RequestReceived, refresh),
-      this.eventBus.subscribe(BadgerEventType.ResponseReturned, refresh),
-      this.eventBus.subscribe(BadgerEventType.RequestFailed, refresh),
-      this.eventBus.subscribe(BadgerEventType.ReplayCompleted, refresh),
-      this.eventBus.subscribe(BadgerEventType.TunnelCreated, refresh),
-      this.eventBus.subscribe(BadgerEventType.TunnelClosed, refresh),
+      this.eventBus.subscribe(BadgerEventType.RequestReceived, (event) => {
+        refresh(event.workspaceId);
+      }),
+      this.eventBus.subscribe(BadgerEventType.ResponseReturned, (event) => {
+        refresh(event.workspaceId);
+      }),
+      this.eventBus.subscribe(BadgerEventType.RequestFailed, (event) => {
+        refresh(event.workspaceId);
+      }),
+      this.eventBus.subscribe(BadgerEventType.ReplayCompleted, (event) => {
+        refresh(event.workspaceId);
+      }),
+      this.eventBus.subscribe(BadgerEventType.TunnelCreated, (event) => {
+        refresh(event.workspaceId);
+      }),
+      this.eventBus.subscribe(BadgerEventType.TunnelClosed, () => {
+        refresh();
+      }),
     );
   }
 
@@ -57,18 +69,20 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
     this.subscriptions.length = 0;
   }
 
-  private enqueueRefresh(): void {
+  private enqueueRefresh(workspaceId?: string): void {
     this.chain = this.chain
       .catch(() => {
         // Prior failures must not block later publishes.
       })
       .then(async () => {
-        const stats = await this.statistics.getStatistics();
-        this.publish(stats);
+        const stats = await this.statistics.getStatistics(
+          workspaceId === undefined ? {} : { workspaceId },
+        );
+        this.publish(stats, workspaceId);
       });
   }
 
-  private publish(stats: TrafficStatistics): void {
+  private publish(stats: TrafficStatistics, workspaceId?: string): void {
     this.eventBus.publish(
       BadgerEventType.StatisticsUpdated,
       createEventPayload({
@@ -80,6 +94,7 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
           errorRate: stats.errorRate,
         },
         tunnelId: undefined,
+        ...(workspaceId === undefined ? {} : { workspaceId }),
       }),
     );
   }

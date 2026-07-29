@@ -28,6 +28,7 @@ import {
  */
 export interface ListInspectorRequestsOptions {
   readonly tunnelId?: string;
+  readonly workspaceId?: string;
   readonly limit?: number;
   /** Case-insensitive full-text query across URL, headers, bodies, etc. */
   readonly query?: string;
@@ -67,6 +68,7 @@ export class InspectorService {
 
     const records = await this.traffic.list({
       ...(options.tunnelId === undefined ? {} : { tunnelId: options.tunnelId }),
+      ...(options.workspaceId === undefined ? {} : { workspaceId: options.workspaceId }),
       // When searching, load all candidates (bodies included) then apply limit after filter.
       ...(searching || options.limit === undefined ? {} : { limit: options.limit }),
       includeBodies: searching,
@@ -101,9 +103,12 @@ export class InspectorService {
    * @returns Detail DTO.
    * @throws NotFoundException When the record is missing.
    */
-  async getRequest(id: string): Promise<InspectorRequestDetailDto> {
+  async getRequest(id: string, workspaceId?: string): Promise<InspectorRequestDetailDto> {
     const record = await this.traffic.findById(id);
     if (record === undefined) {
+      throw new NotFoundException(`No traffic record found for id "${id}".`);
+    }
+    if (workspaceId !== undefined && record.workspaceId !== workspaceId) {
       throw new NotFoundException(`No traffic record found for id "${id}".`);
     }
 
@@ -116,8 +121,8 @@ export class InspectorService {
    * @param id - Traffic request id.
    * @returns Replay response DTO.
    */
-  async replayRequest(id: string): Promise<InspectorReplayResponseDto> {
-    const result = await this.replay.replay(id);
+  async replayRequest(id: string, workspaceId?: string): Promise<InspectorReplayResponseDto> {
+    const result = await this.replay.replay(id, workspaceId);
     return toInspectorReplayResponseDto(toReplayResponseDto(result));
   }
 
@@ -127,8 +132,11 @@ export class InspectorService {
    * @param tunnelId - Optional tunnel scope.
    * @returns Statistics DTO.
    */
-  async getStatistics(tunnelId?: string): Promise<InspectorStatisticsDto> {
-    const stats = await this.statistics.getStatistics(tunnelId === undefined ? {} : { tunnelId });
+  async getStatistics(tunnelId?: string, workspaceId?: string): Promise<InspectorStatisticsDto> {
+    const stats = await this.statistics.getStatistics({
+      ...(tunnelId === undefined ? {} : { tunnelId }),
+      ...(workspaceId === undefined ? {} : { workspaceId }),
+    });
     return toInspectorStatisticsDto(stats);
   }
 }

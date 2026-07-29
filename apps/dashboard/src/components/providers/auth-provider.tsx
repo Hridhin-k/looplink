@@ -12,10 +12,12 @@ import {
 
 import { ApiError } from "@/lib/api/errors";
 import {
+  completeOAuthRequest,
   loginRequest,
   logoutRequest,
   meRequest,
   refreshRequest,
+  startOAuthRequest,
 } from "@/lib/auth/auth-api";
 import {
   clearStoredSession,
@@ -36,6 +38,10 @@ export interface AuthContextValue {
   readonly user: AuthUser | null;
   /** Signs in and persists the session. */
   readonly login: (email: string, password: string) => Promise<void>;
+  /** Starts Google OAuth (redirects the browser). */
+  readonly loginWithGoogle: () => Promise<void>;
+  /** Completes OAuth from `/auth/callback` and persists the session. */
+  readonly completeOAuth: (code: string) => Promise<void>;
   /** Signs out locally and on the server when possible. */
   readonly logout: () => Promise<void>;
   /** Returns a valid access token, refreshing when near expiry. */
@@ -114,6 +120,20 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     [persist],
   );
 
+  const loginWithGoogle = useCallback(async (): Promise<void> => {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const url = await startOAuthRequest(redirectTo, "google");
+    window.location.assign(url);
+  }, []);
+
+  const completeOAuth = useCallback(
+    async (code: string): Promise<void> => {
+      const next = await completeOAuthRequest(code);
+      persist(next);
+    },
+    [persist],
+  );
+
   const logout = useCallback(async (): Promise<void> => {
     const token = session?.accessToken;
     persist(null);
@@ -156,10 +176,12 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       session,
       user: session?.user ?? null,
       login,
+      loginWithGoogle,
+      completeOAuth,
       logout,
       getAccessToken,
     }),
-    [getAccessToken, isLoading, login, logout, session],
+    [completeOAuth, getAccessToken, isLoading, login, loginWithGoogle, logout, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

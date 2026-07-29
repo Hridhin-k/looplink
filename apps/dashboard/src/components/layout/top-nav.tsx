@@ -7,6 +7,7 @@ import { AuthNavControls } from "@/components/auth/auth-nav-controls";
 import { ConnectionIndicator } from "@/components/layout/connection-indicator";
 import { APP_NAV_ITEMS } from "@/components/layout/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { WorkspaceSelector } from "@/components/workspaces/workspace-selector";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/stores/ui-store";
 
@@ -29,6 +30,9 @@ export function TopNav() {
   }
   if (pathname.startsWith("/account")) {
     title = "Account";
+  }
+  if (pathname.startsWith("/workspace")) {
+    title = "Workspace settings";
   }
 
   return (
@@ -59,6 +63,7 @@ export function TopNav() {
         <h1 className="truncate font-heading text-base tracking-tight sm:text-lg">{title}</h1>
       </div>
 
+      <WorkspaceSelector />
       <AuthNavControls />
       <ConnectionIndicator className="hidden sm:inline-flex" />
       <ThemeToggle />

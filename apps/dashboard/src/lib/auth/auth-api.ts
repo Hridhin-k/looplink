@@ -17,6 +17,34 @@ export async function loginRequest(email: string, password: string): Promise<Aut
 }
 
 /**
+ * Starts Google (or configured) OAuth; returns the authorize URL to navigate to.
+ * Stores the PKCE verifier in sessionStorage for the callback exchange.
+ */
+export async function startOAuthRequest(redirectTo: string, provider = "google"): Promise<string> {
+  const result = await apiClient<{ url: string; codeVerifier: string }>("/api/v1/auth/oauth/start", {
+    method: "POST",
+    json: { redirectTo, provider },
+  });
+  window.sessionStorage.setItem("badger.auth.pkce", result.codeVerifier);
+  return result.url;
+}
+
+/**
+ * Completes OAuth after `/auth/callback` receives `code`.
+ */
+export async function completeOAuthRequest(code: string): Promise<AuthSession> {
+  const codeVerifier = window.sessionStorage.getItem("badger.auth.pkce");
+  window.sessionStorage.removeItem("badger.auth.pkce");
+  if (codeVerifier === null || codeVerifier.trim().length === 0) {
+    throw new Error("Missing OAuth PKCE verifier. Start sign-in again from the login page.");
+  }
+  return apiClient<AuthSession>("/api/v1/auth/oauth/callback", {
+    method: "POST",
+    json: { code, codeVerifier },
+  });
+}
+
+/**
  * Renews an access token using a refresh token.
  *
  * @param refreshToken - Refresh token from a prior session.

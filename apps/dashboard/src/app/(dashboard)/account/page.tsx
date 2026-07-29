@@ -2,6 +2,7 @@
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -18,6 +19,7 @@ export default function AccountPage() {
 
 function AccountContent() {
   const { user, logout } = useAuth();
+  const { activeWorkspace } = useWorkspace();
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
@@ -39,6 +41,10 @@ function AccountContent() {
           <div>
             <p className="text-muted-foreground">User id</p>
             <p className="break-all font-mono text-xs">{user?.id}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Active workspace</p>
+            <p className="font-medium">{activeWorkspace?.name ?? "—"}</p>
           </div>
           <Button
             type="button"

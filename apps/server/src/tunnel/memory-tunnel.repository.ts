@@ -110,6 +110,8 @@ export class MemoryTunnelRepository implements TunnelRepository {
       id: existing.id,
       port: existing.port,
       disconnectedAt,
+      ...(existing.ownerUserId === undefined ? {} : { ownerUserId: existing.ownerUserId }),
+      ...(existing.workspaceId === undefined ? {} : { workspaceId: existing.workspaceId }),
     };
 
     this.orphans.set(id, orphan);
@@ -155,6 +157,8 @@ export class MemoryTunnelRepository implements TunnelRepository {
       id: orphan.id,
       client,
       port: orphan.port,
+      ...(orphan.ownerUserId === undefined ? {} : { ownerUserId: orphan.ownerUserId }),
+      ...(orphan.workspaceId === undefined ? {} : { workspaceId: orphan.workspaceId }),
     };
 
     this.save(tunnel);

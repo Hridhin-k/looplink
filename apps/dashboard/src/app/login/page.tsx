@@ -12,7 +12,9 @@ export default function LoginPage() {
       <div className="space-y-2 text-center">
         <p className="font-heading text-2xl tracking-tight">Badger</p>
         <h1 className="text-lg font-medium">Sign in</h1>
-        <p className="text-sm text-muted-foreground">Use your Badger account email and password.</p>
+        <p className="text-sm text-muted-foreground">
+          Continue with Google, or use email and password.
+        </p>
       </div>
       <Suspense fallback={<Skeleton className="h-48 w-full max-w-sm" />}>
         <LoginForm />

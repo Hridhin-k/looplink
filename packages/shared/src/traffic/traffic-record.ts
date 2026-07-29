@@ -32,6 +32,8 @@ export interface TrafficRecord {
   readonly latencyMs: number | undefined;
   /** Tunnel that handled the exchange. */
   readonly tunnelId: string;
+  /** Workspace that owned the tunnel when this exchange was recorded (legacy: absent). */
+  readonly workspaceId?: string;
   /** Failure reason when the exchange failed. */
   readonly error: string | undefined;
 }
@@ -55,6 +57,8 @@ export interface ListTrafficRecordsOptions {
   readonly limit?: number;
   /** When set, only records for this tunnel are returned. */
   readonly tunnelId?: string;
+  /** When set, only records for this workspace are returned. */
+  readonly workspaceId?: string;
   /**
    * When `false`, returned records use empty body snapshots while preserving
    * {@link TrafficBody.byteLength} / {@link TrafficBody.truncated} metadata.

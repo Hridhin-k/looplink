@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Headers, Param, Post, Query } from "@nestjs/common";
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -57,11 +57,14 @@ export class InspectorController {
     @Query("tunnelId") tunnelId?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
+    @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorRequestListDto> {
+    const scopedWorkspaceId = sanitizeWorkspaceHeader(workspaceId);
     return this.inspector.listRequests({
       ...(tunnelId === undefined || tunnelId.trim().length === 0
         ? {}
         : { tunnelId: tunnelId.trim() }),
+      ...(scopedWorkspaceId === undefined ? {} : { workspaceId: scopedWorkspaceId }),
       ...(limit === undefined ? {} : { limit: parseLimit(limit) }),
       ...(q === undefined || q.trim().length === 0 ? {} : { query: q }),
     });
@@ -78,8 +81,11 @@ export class InspectorController {
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorRequestDetailDto })
   @ApiNotFoundResponse({ description: "Request not found" })
-  async getRequest(@Param("id") id: string): Promise<InspectorRequestDetailDto> {
-    return this.inspector.getRequest(id);
+  async getRequest(
+    @Param("id") id: string,
+    @Headers("x-workspace-id") workspaceId?: string,
+  ): Promise<InspectorRequestDetailDto> {
+    return this.inspector.getRequest(id, sanitizeWorkspaceHeader(workspaceId));
   }
 
   /**
@@ -93,9 +99,12 @@ export class InspectorController {
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorReplayResponseDto })
   @ApiNotFoundResponse({ description: "Request not found" })
-  async replayRequest(@Param("id") id: string): Promise<InspectorReplayResponseDto> {
+  async replayRequest(
+    @Param("id") id: string,
+    @Headers("x-workspace-id") workspaceId?: string,
+  ): Promise<InspectorReplayResponseDto> {
     try {
-      return await this.inspector.replayRequest(id);
+      return await this.inspector.replayRequest(id, sanitizeWorkspaceHeader(workspaceId));
     } catch (error: unknown) {
       throw toReplayHttpException(error);
     }
@@ -111,10 +120,13 @@ export class InspectorController {
   @ApiOperation({ summary: "Get traffic statistics" })
   @ApiQuery({ name: "tunnelId", required: false, description: "Scope to a single tunnel" })
   @ApiOkResponse({ type: InspectorStatisticsDto })
-  async getStatistics(@Query("tunnelId") tunnelId?: string): Promise<InspectorStatisticsDto> {
+  async getStatistics(
+    @Query("tunnelId") tunnelId?: string,
+    @Headers("x-workspace-id") workspaceId?: string,
+  ): Promise<InspectorStatisticsDto> {
     const scoped =
       tunnelId === undefined || tunnelId.trim().length === 0 ? undefined : tunnelId.trim();
-    return this.inspector.getStatistics(scoped);
+    return this.inspector.getStatistics(scoped, sanitizeWorkspaceHeader(workspaceId));
   }
 }
 
@@ -131,4 +143,9 @@ function parseLimit(raw: string): number {
     throw new BadRequestException(`Invalid limit "${raw}": expected a non-negative integer.`);
   }
   return value;
+}
+
+function sanitizeWorkspaceHeader(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized === undefined || normalized.length === 0 ? undefined : normalized;
 }

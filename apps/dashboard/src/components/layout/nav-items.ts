@@ -1,5 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { ActivityIcon, CableIcon, LayoutDashboardIcon, ListTreeIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  CableIcon,
+  LayoutDashboardIcon,
+  ListTreeIcon,
+  SettingsIcon,
+} from "lucide-react";
 
 export interface AppNavItem {
   readonly id: string;
@@ -38,5 +44,11 @@ export const APP_NAV_ITEMS: readonly AppNavItem[] = [
     label: "Statistics",
     href: "/statistics",
     icon: ActivityIcon,
+  },
+  {
+    id: "settings",
+    label: "Workspace",
+    href: "/workspace",
+    icon: SettingsIcon,
   },
 ] as const;

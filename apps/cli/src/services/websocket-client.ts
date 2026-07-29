@@ -52,6 +52,11 @@ export interface WebSocketClientOptions {
    * @param error - Failure from the latest attempt.
    */
   readonly onReconnectFailed?: (error: Error) => void;
+  /**
+   * Optional async supplier for a bearer access token attached to the
+   * WebSocket upgrade request.
+   */
+  readonly getAuthToken?: () => Promise<string | undefined>;
 }
 
 /**
@@ -189,7 +194,7 @@ export class BadgerWebSocketClient implements ServerConnection {
    * @returns A promise that resolves on a successful handshake.
    * @throws Error When the handshake fails or the socket closes before opening.
    */
-  connect(): Promise<void> {
+  async connect(): Promise<void> {
     if (this.state === ConnectionState.Connected) {
       return Promise.resolve();
     }
@@ -201,8 +206,18 @@ export class BadgerWebSocketClient implements ServerConnection {
     this.intentionalClose = false;
     this.setState(ConnectionState.Connecting);
 
+    const token = await this.options.getAuthToken?.().catch(() => undefined);
+
     return new Promise<void>((resolve, reject) => {
-      const socket = new WebSocket(this.options.url);
+      const socket = new WebSocket(this.options.url, {
+        ...(token === undefined
+          ? {}
+          : {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }),
+      });
       this.socket = socket;
 
       const onOpen = (): void => {
