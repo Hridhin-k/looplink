@@ -10,12 +10,15 @@ export interface AuthUser {
   /** Present when authenticated via workspace API key. */
   readonly workspaceId?: string;
   readonly apiKeyId?: string;
+  /** Present for JWT users when Supabase reports confirmation. */
+  readonly emailVerified?: boolean;
 }
 
 /**
  * Opaque session tokens returned after login or refresh.
  *
- * The Nest server remains stateless — tokens are stored only on the client.
+ * The Nest server remains stateless — tokens are stored only on the client
+ * (Bearer) and optionally mirrored in HttpOnly cookies when enabled.
  */
 export interface AuthSession {
   readonly accessToken: string;

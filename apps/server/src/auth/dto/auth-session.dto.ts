@@ -18,6 +18,9 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({ format: "uuid", description: "Present for API key auth" })
   apiKeyId?: string;
+
+  @ApiPropertyOptional({ description: "Whether Supabase has confirmed the email" })
+  emailVerified?: boolean;
 }
 
 /**

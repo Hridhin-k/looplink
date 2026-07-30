@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   acceptInvitation,
   createApiKey,
+  deleteWorkspace,
   inviteMember,
   listApiKeys,
   listInvitations,
@@ -47,9 +48,11 @@ export default function WorkspaceSettingsPage() {
 
 function WorkspaceSettingsContent() {
   const { getAccessToken } = useAuth();
-  const { activeWorkspace, activeRole, isLoading } = useWorkspace();
+  const { activeWorkspace, activeRole, isLoading, setActiveWorkspaceId, memberships } =
+    useWorkspace();
   const queryClient = useQueryClient();
   const canManage = activeRole === "owner" || activeRole === "admin";
+  const canDelete = activeRole === "owner" && activeWorkspace?.kind === "shared";
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -59,6 +62,7 @@ function WorkspaceSettingsContent() {
   const [acceptToken, setAcceptToken] = useState("");
   const [apiKeyName, setApiKeyName] = useState("");
   const [createdApiToken, setCreatedApiToken] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const workspaceId = activeWorkspace?.id;
@@ -276,6 +280,62 @@ function WorkspaceSettingsContent() {
               </form>
             </CardContent>
           </Card>
+
+          {canDelete ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Delete workspace</CardTitle>
+                <CardDescription>
+                  Soft-deletes this shared workspace. Personal workspaces cannot be deleted. Type
+                  the exact workspace name to confirm.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="space-y-3"
+                  onSubmit={(event: FormEvent) => {
+                    event.preventDefault();
+                    void (async () => {
+                      setError(null);
+                      const token = await getAccessToken();
+                      if (token === null || workspaceId === undefined || activeWorkspace === null) {
+                        return;
+                      }
+                      try {
+                        await deleteWorkspace(token, workspaceId, deleteConfirmation);
+                        const fallback =
+                          memberships.find((m) => m.workspace.kind === "personal") ??
+                          memberships.find((m) => m.workspace.id !== workspaceId);
+                        if (fallback !== undefined) {
+                          setActiveWorkspaceId(fallback.workspace.id);
+                        }
+                        setDeleteConfirmation("");
+                        await queryClient.invalidateQueries({ queryKey: ["workspace"] });
+                      } catch (cause: unknown) {
+                        setError(
+                          cause instanceof Error ? cause.message : "Unable to delete workspace.",
+                        );
+                      }
+                    })();
+                  }}
+                >
+                  <Input
+                    value={deleteConfirmation}
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                    placeholder={activeWorkspace.name}
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    disabled={deleteConfirmation.trim() !== activeWorkspace.name}
+                  >
+                    Delete workspace
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="members">

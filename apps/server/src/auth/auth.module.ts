@@ -31,6 +31,8 @@ export class AuthModule implements NestModule {
       .forRoutes(
         { path: "api/v1/me", method: RequestMethod.ALL },
         { path: "api/v1/auth/logout", method: RequestMethod.POST },
+        { path: "api/v1/auth/account", method: RequestMethod.DELETE },
+        { path: "api/v1/auth/email/status", method: RequestMethod.GET },
       );
   }
 }

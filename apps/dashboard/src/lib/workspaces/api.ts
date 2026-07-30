@@ -63,6 +63,21 @@ export async function updateWorkspace(
   });
 }
 
+/**
+ * Soft-deletes a shared workspace (owner only; confirmationName must match).
+ */
+export async function deleteWorkspace(
+  accessToken: string,
+  workspaceId: string,
+  confirmationName: string,
+): Promise<void> {
+  await apiClient<void>(`/api/v1/workspaces/${workspaceId}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+    json: { confirmationName },
+  });
+}
+
 export async function listMembers(
   accessToken: string,
   workspaceId: string,

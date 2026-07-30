@@ -1,4 +1,14 @@
-import { BadRequestException, Controller, Get, Headers, Param, Post, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Query,
+  Req,
+} from "@nestjs/common";
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
@@ -8,34 +18,36 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
+import type { FastifyRequest } from "fastify";
 
+import { WorkspaceContextService } from "../access/workspace-context.service.js";
+import { AuthService } from "../auth/auth.service.js";
+import type { AuthUser } from "../auth/auth.types.js";
+import { extractBearerToken } from "../auth/extract-bearer-token.js";
 import { toReplayHttpException } from "../replay/replay-http.js";
+import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
+import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
 import { InspectorReplayResponseDto } from "./dto/inspector-replay.dto.js";
 import { InspectorRequestDetailDto, InspectorRequestListDto } from "./dto/inspector-request.dto.js";
 import { InspectorStatisticsDto } from "./dto/inspector-statistics.dto.js";
 import { InspectorService } from "./inspector.service.js";
 
 /**
- * Public inspector API for recorded traffic, statistics, and replay.
+ * Inspector API for recorded traffic, statistics, and replay.
  *
- * No authentication — intended for local/dev dashboards. Does not participate
- * in the Layer 1 forward path.
+ * Workspace-scoped reads require authenticated Membership. Unscoped reads
+ * remain available for local debugging of legacy untagged traffic.
  */
 @ApiTags("inspector")
 @Controller("api/v1/inspector")
 export class InspectorController {
-  /**
-   * @param inspector - Inspector application service.
-   */
-  constructor(private readonly inspector: InspectorService) {}
+  constructor(
+    private readonly inspector: InspectorService,
+    private readonly auth: AuthService,
+    private readonly apiKeys: ApiKeyService,
+    private readonly workspaceContext: WorkspaceContextService,
+  ) {}
 
-  /**
-   * Lists recorded HTTP exchanges (newest first).
-   *
-   * @param tunnelId - Optional tunnel filter.
-   * @param limit - Optional max items.
-   * @returns Summary list DTO.
-   */
   @Get("requests")
   @ApiOperation({ summary: "List recorded HTTP requests" })
   @ApiQuery({ name: "tunnelId", required: false, description: "Filter by tunnel id" })
@@ -54,12 +66,13 @@ export class InspectorController {
   @ApiOkResponse({ type: InspectorRequestListDto })
   @ApiBadRequestResponse({ description: "Invalid limit query parameter" })
   async listRequests(
+    @Req() request: FastifyRequest,
     @Query("tunnelId") tunnelId?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
     @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorRequestListDto> {
-    const scopedWorkspaceId = sanitizeWorkspaceHeader(workspaceId);
+    const scopedWorkspaceId = await this.resolveScopedWorkspace(request, workspaceId);
     return this.inspector.listRequests({
       ...(tunnelId === undefined || tunnelId.trim().length === 0
         ? {}
@@ -70,73 +83,89 @@ export class InspectorController {
     });
   }
 
-  /**
-   * Returns one recorded exchange including bodies.
-   *
-   * @param id - Traffic request id.
-   * @returns Detail DTO.
-   */
   @Get("request/:id")
   @ApiOperation({ summary: "Get a recorded HTTP request by id" })
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorRequestDetailDto })
   @ApiNotFoundResponse({ description: "Request not found" })
   async getRequest(
+    @Req() request: FastifyRequest,
     @Param("id") id: string,
     @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorRequestDetailDto> {
-    return this.inspector.getRequest(id, sanitizeWorkspaceHeader(workspaceId));
+    return this.inspector.getRequest(
+      id,
+      await this.resolveScopedWorkspace(request, workspaceId),
+    );
   }
 
-  /**
-   * Replays a recorded request through the existing forward pipeline.
-   *
-   * @param id - Traffic request id.
-   * @returns Live replay response DTO.
-   */
   @Post("replay/:id")
   @ApiOperation({ summary: "Replay a recorded HTTP request" })
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorReplayResponseDto })
   @ApiNotFoundResponse({ description: "Request not found" })
   async replayRequest(
+    @Req() request: FastifyRequest,
     @Param("id") id: string,
     @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorReplayResponseDto> {
     try {
-      return await this.inspector.replayRequest(id, sanitizeWorkspaceHeader(workspaceId));
+      return await this.inspector.replayRequest(
+        id,
+        await this.resolveScopedWorkspace(request, workspaceId),
+      );
     } catch (error: unknown) {
       throw toReplayHttpException(error);
     }
   }
 
-  /**
-   * Returns aggregate traffic statistics.
-   *
-   * @param tunnelId - Optional tunnel scope.
-   * @returns Statistics DTO.
-   */
   @Get("statistics")
   @ApiOperation({ summary: "Get traffic statistics" })
   @ApiQuery({ name: "tunnelId", required: false, description: "Scope to a single tunnel" })
   @ApiOkResponse({ type: InspectorStatisticsDto })
   async getStatistics(
+    @Req() request: FastifyRequest,
     @Query("tunnelId") tunnelId?: string,
     @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorStatisticsDto> {
     const scoped =
       tunnelId === undefined || tunnelId.trim().length === 0 ? undefined : tunnelId.trim();
-    return this.inspector.getStatistics(scoped, sanitizeWorkspaceHeader(workspaceId));
+    return this.inspector.getStatistics(
+      scoped,
+      await this.resolveScopedWorkspace(request, workspaceId),
+    );
+  }
+
+  /**
+   * Never trusts client workspace IDs — verifies ACTIVE membership when scoped.
+   */
+  private async resolveScopedWorkspace(
+    request: FastifyRequest,
+    workspaceHeader: string | undefined,
+  ): Promise<string | undefined> {
+    const requested = sanitizeWorkspaceHeader(workspaceHeader);
+    if (requested === undefined) {
+      return undefined;
+    }
+
+    const authorization =
+      typeof request.headers.authorization === "string"
+        ? request.headers.authorization
+        : undefined;
+    const token = extractBearerToken(authorization);
+    if (token === undefined) {
+      throw new ForbiddenException("Authentication required for workspace-scoped inspector access.");
+    }
+
+    const user: AuthUser = isApiKeyToken(token)
+      ? await this.apiKeys.verifyBearerToken(token)
+      : { ...(await this.auth.verifyAccessToken(token)), authMethod: "jwt" };
+
+    const authorized = await this.workspaceContext.resolve(user, requested);
+    return authorized.request.workspaceId;
   }
 }
 
-/**
- * Parses a positive integer limit query parameter.
- *
- * @param raw - Raw query string.
- * @returns Parsed limit.
- * @throws Error When the value is not a non-negative integer.
- */
 function parseLimit(raw: string): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0) {

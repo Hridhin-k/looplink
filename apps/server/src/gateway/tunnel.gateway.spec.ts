@@ -32,12 +32,6 @@ class FakeSocket extends EventEmitter {
   }
 }
 
-function createUpgradeRequest(ip = "127.0.0.1"): IncomingMessage {
-  const socket = new Socket();
-  Object.defineProperty(socket, "remoteAddress", { value: ip });
-  return { headers: {}, socket } as IncomingMessage;
-}
-
 function createGateway(): {
   gateway: TunnelGateway;
   heartbeats: HeartbeatMonitor;
@@ -45,21 +39,33 @@ function createGateway(): {
   security: GatewaySecurityPolicy;
 } {
   const auth = {
-    verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null }),
+    verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null, authMethod: "jwt" }),
   };
   const apiKeys = {
     verifyBearerToken: vi.fn(),
   };
-  const workspaces = {
-    resolveContext: vi.fn().mockResolvedValue({
-      activeWorkspace: { id: "w1" },
-      memberships: [],
+  const workspaceContext = {
+    resolve: vi.fn().mockResolvedValue({
+      workspace: { id: "w1" },
+      request: {
+        accountId: "u1",
+        accountEmail: null,
+        authMethod: "jwt",
+        workspaceId: "w1",
+        membershipId: "m1",
+        role: "owner",
+        permissions: new Set(["tunnel:create", "workspace:read"]),
+      },
     }),
+  };
+  const permissions = {
+    require: vi.fn(),
   };
   const tunnelManager = {
     unregisterClient: vi.fn().mockReturnValue(false),
     detachClient: vi.fn().mockReturnValue(false),
     lookup: vi.fn().mockReturnValue(undefined),
+    create: vi.fn(),
   } as unknown as TunnelManager;
 
   // Long sweep cadence: these tests never advance timers, they only assert
@@ -69,7 +75,8 @@ function createGateway(): {
   const gateway = new TunnelGateway(
     auth as never,
     apiKeys as never,
-    workspaces as never,
+    workspaceContext as never,
+    permissions as never,
     tunnelManager,
     new HttpExchangeCoordinator(),
     heartbeats,
@@ -79,27 +86,36 @@ function createGateway(): {
   return { gateway, heartbeats, tunnelManager, security };
 }
 
+function createUpgradeRequest(ip = "127.0.0.1"): IncomingMessage {
+  const socket = new Socket();
+  Object.defineProperty(socket, "remoteAddress", { value: ip });
+  return {
+    headers: { authorization: "Bearer test-token" },
+    socket,
+  } as IncomingMessage;
+}
+
 function asClient(socket: FakeSocket): WebSocket {
   return socket as unknown as WebSocket;
 }
 
 describe("TunnelGateway heartbeat", () => {
-  it("registers a client for liveness tracking on connect", () => {
+  it("registers a client for liveness tracking on connect", async () => {
     const { gateway, heartbeats } = createGateway();
     const socket = new FakeSocket();
 
-    gateway.handleConnection(asClient(socket), createUpgradeRequest());
+    await gateway.handleConnection(asClient(socket), createUpgradeRequest());
 
     expect(heartbeats.trackedClientCount()).toBe(1);
 
     heartbeats.onModuleDestroy();
   });
 
-  it("replies to PING with a PONG echoing the requestId", () => {
+  it("replies to PING with a PONG echoing the requestId", async () => {
     const { gateway, heartbeats } = createGateway();
     const socket = new FakeSocket();
 
-    gateway.handleConnection(asClient(socket), createUpgradeRequest());
+    await gateway.handleConnection(asClient(socket), createUpgradeRequest());
     socket.emit(
       "message",
       Buffer.from(JSON.stringify({ type: MessageType.Ping, requestId: "hb-1" })),
@@ -112,12 +128,12 @@ describe("TunnelGateway heartbeat", () => {
     heartbeats.onModuleDestroy();
   });
 
-  it("records a heartbeat when a PING arrives", () => {
+  it("records a heartbeat when a PING arrives", async () => {
     const { gateway, heartbeats } = createGateway();
     const socket = new FakeSocket();
     const beat = vi.spyOn(heartbeats, "beat");
 
-    gateway.handleConnection(asClient(socket), createUpgradeRequest());
+    await gateway.handleConnection(asClient(socket), createUpgradeRequest());
     socket.emit(
       "message",
       Buffer.from(JSON.stringify({ type: MessageType.Ping, requestId: "hb-2" })),
@@ -128,11 +144,11 @@ describe("TunnelGateway heartbeat", () => {
     heartbeats.onModuleDestroy();
   });
 
-  it("stops tracking a client on disconnect", () => {
+  it("stops tracking a client on disconnect", async () => {
     const { gateway, heartbeats, tunnelManager, security } = createGateway();
     const socket = new FakeSocket();
 
-    gateway.handleConnection(asClient(socket), createUpgradeRequest());
+    await gateway.handleConnection(asClient(socket), createUpgradeRequest());
     expect(security.activeConnections()).toBe(1);
 
     gateway.handleDisconnect(asClient(socket));
@@ -142,11 +158,11 @@ describe("TunnelGateway heartbeat", () => {
     expect(tunnelManager.detachClient).toHaveBeenCalledWith(asClient(socket));
   });
 
-  it("rejects HTTP response frames for tunnels the client does not own", () => {
+  it("rejects HTTP response frames for tunnels the client does not own", async () => {
     const { gateway, heartbeats } = createGateway();
     const socket = new FakeSocket();
 
-    gateway.handleConnection(asClient(socket), createUpgradeRequest());
+    await gateway.handleConnection(asClient(socket), createUpgradeRequest());
     socket.emit(
       "message",
       Buffer.from(
@@ -168,7 +184,7 @@ describe("TunnelGateway heartbeat", () => {
     heartbeats.onModuleDestroy();
   });
 
-  it("does not count HTTP response frames toward the WebSocket control-plane rate limit", () => {
+  it("does not count HTTP response frames toward the WebSocket control-plane rate limit", async () => {
     process.env["BADGER_WS_MESSAGE_RATE_LIMIT"] = "2";
 
     try {
@@ -188,16 +204,26 @@ describe("TunnelGateway heartbeat", () => {
       const apiKeys = {
         verifyBearerToken: vi.fn(),
       };
-      const workspaces = {
-        resolveContext: vi.fn().mockResolvedValue({
-          activeWorkspace: { id: "w1" },
-          memberships: [],
+      const workspaceContext = {
+        resolve: vi.fn().mockResolvedValue({
+          workspace: { id: "w1" },
+          request: {
+            accountId: "u1",
+            accountEmail: null,
+            authMethod: "jwt",
+            workspaceId: "w1",
+            membershipId: "m1",
+            role: "owner",
+            permissions: new Set(["tunnel:create"]),
+          },
         }),
       };
+      const permissions = { require: vi.fn() };
       const gateway = new TunnelGateway(
         auth as never,
         apiKeys as never,
-        workspaces as never,
+        workspaceContext as never,
+        permissions as never,
         tunnelManager,
         exchanges,
         heartbeats,
@@ -212,7 +238,7 @@ describe("TunnelGateway heartbeat", () => {
         port: 3000,
       });
 
-      gateway.handleConnection(client, createUpgradeRequest());
+      await gateway.handleConnection(client, createUpgradeRequest());
 
       for (let i = 0; i < 2; i += 1) {
         socket.emit(

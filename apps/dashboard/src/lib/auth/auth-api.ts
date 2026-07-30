@@ -81,3 +81,62 @@ export async function meRequest(accessToken: string): Promise<AuthUser> {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
+
+/**
+ * Requests a password-reset email (always returns success to the UI).
+ */
+export async function forgotPasswordRequest(email: string, redirectTo: string): Promise<void> {
+  await apiClient<void>("/api/v1/auth/password/forgot", {
+    method: "POST",
+    json: { email, redirectTo },
+  });
+}
+
+/**
+ * Completes password reset with the recovery access token from the email link.
+ */
+export async function resetPasswordRequest(accessToken: string, password: string): Promise<void> {
+  await apiClient<void>("/api/v1/auth/password/reset", {
+    method: "POST",
+    json: { accessToken, password },
+  });
+}
+
+/**
+ * Resends signup email verification.
+ */
+export async function resendVerificationRequest(email: string, redirectTo: string): Promise<void> {
+  await apiClient<void>("/api/v1/auth/email/resend-verification", {
+    method: "POST",
+    json: { email, redirectTo },
+  });
+}
+
+/**
+ * Email verification status for the signed-in user.
+ */
+export async function emailStatusRequest(
+  accessToken: string,
+): Promise<{ email: string | null; emailVerified: boolean }> {
+  return apiClient<{ email: string | null; emailVerified: boolean }>(
+    "/api/v1/auth/email/status",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+/**
+ * Permanently deletes the signed-in account.
+ */
+export async function deleteAccountRequest(
+  accessToken: string,
+  confirmation: string,
+): Promise<void> {
+  await apiClient<void>("/api/v1/auth/account", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    json: { confirmation },
+  });
+}

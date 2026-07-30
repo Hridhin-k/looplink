@@ -10,6 +10,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { ApiKeyService } from "../../workspaces/api-keys/api-key.service.js";
 import { isApiKeyToken } from "../../workspaces/workspace-crypto.js";
+import { ACCESS_COOKIE, parseCookies } from "../auth-cookies.js";
 import { AuthService } from "../auth.service.js";
 import type { AuthUser } from "../auth.types.js";
 import { extractBearerToken } from "../extract-bearer-token.js";
@@ -51,7 +52,19 @@ export class AuthMiddleware implements NestMiddleware {
     try {
       const raw = req.headers.authorization;
       const value = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : undefined;
-      const token = extractBearerToken(value);
+      const bearer = extractBearerToken(value);
+      const cookieHeader = req.headers.cookie;
+      const cookies = parseCookies(
+        typeof cookieHeader === "string"
+          ? cookieHeader
+          : Array.isArray(cookieHeader)
+            ? cookieHeader[0]
+            : undefined,
+      );
+      const cookieToken = cookies[ACCESS_COOKIE];
+      const token =
+        bearer ??
+        (cookieToken !== undefined && cookieToken.length > 0 ? cookieToken : undefined);
       if (token === undefined) {
         throw new UnauthorizedException("Missing Bearer access token.");
       }

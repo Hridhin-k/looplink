@@ -7,14 +7,12 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 
+import type { RequestContext } from "../../access/access.types.js";
+import { PermissionService } from "../../access/permission.service.js";
+import { WorkspaceContextService } from "../../access/workspace-context.service.js";
 import type { AuthUser } from "../../auth/auth.types.js";
 import { WORKSPACE_PERMISSION_KEY } from "../decorators/require-workspace-permission.decorator.js";
-import {
-  apiKeyHasPermission,
-  type WorkspacePermission,
-  roleHasPermission,
-} from "../workspace.permissions.js";
-import { WorkspaceService } from "../workspace.service.js";
+import type { WorkspacePermission } from "../workspace.permissions.js";
 import type { WorkspaceMember } from "../workspace.types.js";
 
 export interface WorkspaceAuthorizedRequest {
@@ -26,18 +24,20 @@ export interface WorkspaceAuthorizedRequest {
   };
   authUser?: AuthUser;
   workspaceMember?: WorkspaceMember;
+  requestContext?: RequestContext;
 }
 
 /**
- * Enforces {@link RequireWorkspacePermission} against server-resolved membership.
+ * Enforces {@link RequireWorkspacePermission} via Membership → PermissionService.
  *
- * Never trusts client-supplied roles — membership is loaded from the repository.
+ * Attaches {@link RequestContext} for downstream business handlers.
  */
 @Injectable()
 export class WorkspacePermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly workspaces: WorkspaceService,
+    private readonly workspaceContext: WorkspaceContextService,
+    private readonly permissions: PermissionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -60,21 +60,22 @@ export class WorkspacePermissionGuard implements CanActivate {
       throw new NotFoundException("Workspace not found.");
     }
 
-    if (user.authMethod === "api_key") {
-      if (user.workspaceId !== workspaceId) {
-        throw new ForbiddenException("API key is not valid for this workspace.");
-      }
-      if (!apiKeyHasPermission(permission)) {
-        throw new ForbiddenException("API key does not have permission for this action.");
-      }
-      return true;
+    const authorized = await this.workspaceContext.requireWorkspace(user, workspaceId);
+    this.permissions.require(authorized.request, permission);
+    request.requestContext = authorized.request;
+    if (authorized.request.membershipId !== null) {
+      request.workspaceMember = {
+        id: authorized.request.membershipId,
+        workspaceId: authorized.request.workspaceId,
+        userId: authorized.request.accountId,
+        accountId: authorized.request.accountId,
+        role: authorized.request.role,
+        status: "active",
+        joinedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     }
-
-    const member = await this.workspaces.requireMembership(workspaceId, user.id);
-    if (!roleHasPermission(member.role, permission)) {
-      throw new ForbiddenException("Insufficient workspace permissions.");
-    }
-    request.workspaceMember = member;
     return true;
   }
 }

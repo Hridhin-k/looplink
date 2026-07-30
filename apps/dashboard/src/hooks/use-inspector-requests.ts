@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { inspectorApi } from "@/lib/api";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
+import { inspectorApi } from "@/lib/api";
 
 export const INSPECTOR_REQUESTS_QUERY_KEY = ["inspector", "requests"] as const;
 
@@ -21,19 +22,32 @@ export function useInspectorRequests(options?: {
   const tunnelId = options?.tunnelId;
   const limit = options?.limit ?? DEFAULT_LIMIT;
   const q = options?.q?.trim() ?? "";
+  const { session, getAccessToken } = useAuth();
   const { activeWorkspace } = useWorkspace();
 
   return useQuery({
     queryKey: [
       ...INSPECTOR_REQUESTS_QUERY_KEY,
-      { workspaceId: activeWorkspace?.id ?? null, tunnelId: tunnelId ?? null, limit, q: q.length > 0 ? q : null },
+      {
+        workspaceId: activeWorkspace?.id ?? null,
+        tunnelId: tunnelId ?? null,
+        limit,
+        q: q.length > 0 ? q : null,
+      },
     ],
-    queryFn: () =>
-      inspectorApi.listRequests({
+    enabled: session !== null,
+    queryFn: async () => {
+      const accessToken = await getAccessToken();
+      if (accessToken === null) {
+        throw new Error("Not authenticated");
+      }
+      return inspectorApi.listRequests({
+        accessToken,
         limit,
         ...(tunnelId === undefined || tunnelId.length === 0 ? {} : { tunnelId }),
         ...(q.length > 0 ? { q } : {}),
         ...(activeWorkspace?.id ? { workspaceId: activeWorkspace.id } : {}),
-      }),
+      });
+    },
   });
 }

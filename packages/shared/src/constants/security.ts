@@ -90,3 +90,15 @@ export const HTTP_REQUEST_TIMEOUT_MS = 30_000;
  * Maximum time to establish an upstream / local connection in ms.
  */
 export const HTTP_CONNECT_TIMEOUT_MS = 10_000;
+
+/**
+ * Maximum authentication endpoint requests allowed per IP per window.
+ *
+ * Stricter than the public HTTP data-plane limit to slow credential stuffing.
+ */
+export const AUTH_RATE_LIMIT_MAX = 30;
+
+/**
+ * Sliding window length for authentication rate limiting (ms).
+ */
+export const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;

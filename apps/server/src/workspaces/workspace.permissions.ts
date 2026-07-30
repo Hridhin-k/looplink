@@ -9,6 +9,7 @@ export type WorkspacePermission =
   | "workspace:invite"
   | "workspace:manage_members"
   | "workspace:manage_api_keys"
+  | "workspace:delete"
   | "tunnel:create"
   | "inspector:read"
   | "inspector:replay";
@@ -20,6 +21,7 @@ const ROLE_PERMISSIONS: Record<WorkspaceRole, ReadonlySet<WorkspacePermission>> 
     "workspace:invite",
     "workspace:manage_members",
     "workspace:manage_api_keys",
+    "workspace:delete",
     "tunnel:create",
     "inspector:read",
     "inspector:replay",

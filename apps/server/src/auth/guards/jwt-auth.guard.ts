@@ -10,6 +10,7 @@ import {
 
 import { ApiKeyService } from "../../workspaces/api-keys/api-key.service.js";
 import { isApiKeyToken } from "../../workspaces/workspace-crypto.js";
+import { ACCESS_COOKIE, readCookie } from "../auth-cookies.js";
 import { AuthService } from "../auth.service.js";
 import type { AuthUser } from "../auth.types.js";
 import { extractBearerToken } from "../extract-bearer-token.js";
@@ -20,15 +21,15 @@ import { extractBearerToken } from "../extract-bearer-token.js";
 export interface JwtAuthenticatedRequest {
   headers: {
     authorization?: string;
+    cookie?: string;
   };
+  ip?: string;
   authUser?: AuthUser;
   accessToken?: string;
 }
 
 /**
- * Verifies `Authorization: Bearer <jwt|api-key>`.
- *
- * Attach with `@UseGuards(JwtAuthGuard)` on protected controllers/handlers.
+ * Verifies `Authorization: Bearer <jwt|api-key>` or the HttpOnly access cookie.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -41,7 +42,12 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<JwtAuthenticatedRequest>();
-    const token = extractBearerToken(request.headers.authorization);
+    const bearer = extractBearerToken(request.headers.authorization);
+    const cookieToken = readCookie(
+      request as Parameters<typeof readCookie>[0],
+      ACCESS_COOKIE,
+    );
+    const token = bearer ?? cookieToken;
     if (token === undefined) {
       throw new UnauthorizedException("Missing Bearer access token.");
     }

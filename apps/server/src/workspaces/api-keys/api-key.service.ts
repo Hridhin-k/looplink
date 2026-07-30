@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 
+import { AuditService } from "../../audit/audit.service.js";
 import type { AuthUser } from "../../auth/auth.types.js";
 import { generateApiKeyMaterial, hashSecret, isApiKeyToken } from "../workspace-crypto.js";
 import { WorkspaceService } from "../workspace.service.js";
@@ -20,6 +21,7 @@ export class ApiKeyService {
     @Inject(API_KEY_REPOSITORY)
     private readonly apiKeys: ApiKeyRepository,
     private readonly workspaces: WorkspaceService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(user: AuthUser, workspaceId: string): Promise<WorkspaceApiKey[]> {
@@ -52,6 +54,15 @@ export class ApiKeyService {
       expiresAt,
     });
 
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId,
+      action: "api_key.created",
+      resourceType: "api_key",
+      resourceId: apiKey.id,
+      metadata: { name: apiKey.name, keyPrefix: apiKey.keyPrefix },
+    });
+
     return { apiKey, token: material.plaintext };
   }
 
@@ -70,6 +81,16 @@ export class ApiKeyService {
       keyPrefix: material.keyPrefix,
       keyHash: material.keyHash,
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId,
+      action: "api_key.rotated",
+      resourceType: "api_key",
+      resourceId: apiKey.id,
+      metadata: { name: apiKey.name, keyPrefix: apiKey.keyPrefix },
+    });
+
     return { apiKey, token: material.plaintext };
   }
 
@@ -94,7 +115,33 @@ export class ApiKeyService {
         updatedAt: existing.updatedAt,
       };
     }
-    return this.apiKeys.revoke(keyId, user.id);
+    const revoked = await this.apiKeys.revoke(keyId, user.id);
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId,
+      action: "api_key.revoked",
+      resourceType: "api_key",
+      resourceId: revoked.id,
+      metadata: { name: revoked.name, keyPrefix: revoked.keyPrefix },
+    });
+    return revoked;
+  }
+
+  /**
+   * Revokes every active API key created by the user (account deletion).
+   */
+  async revokeAllForUser(userId: string): Promise<number> {
+    const count = await this.apiKeys.revokeAllCreatedByUser(userId, userId);
+    if (count > 0) {
+      await this.audit.record({
+        actorUserId: userId,
+        action: "api_key.revoked_all_for_user",
+        resourceType: "user",
+        resourceId: userId,
+        metadata: { count },
+      });
+    }
+    return count;
   }
 
   /**

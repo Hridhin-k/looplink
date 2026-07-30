@@ -127,6 +127,12 @@ export function LoginForm() {
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
+        <Link href="/forgot-password" className="underline-offset-4 hover:underline">
+          Forgot password?
+        </Link>
+      </p>
+
+      <p className="text-center text-sm text-muted-foreground">
         <Link href="/" className="underline-offset-4 hover:underline">
           Back to dashboard
         </Link>

@@ -36,9 +36,15 @@ export interface WorkspaceRepository {
     userId: string,
     role: WorkspaceRole,
   ): Promise<WorkspaceMember>;
+  setMemberStatus(
+    workspaceId: string,
+    userId: string,
+    status: import("../workspace.types.js").MembershipStatus,
+  ): Promise<WorkspaceMember>;
   removeMember(workspaceId: string, userId: string): Promise<void>;
   addMember(workspaceId: string, userId: string, role: WorkspaceRole): Promise<WorkspaceMember>;
   updateWorkspace(workspaceId: string, input: UpdateWorkspaceInput): Promise<Workspace>;
+  softDeleteWorkspace(workspaceId: string): Promise<Workspace>;
   createInvitation(input: CreateInvitationInput): Promise<WorkspaceInvitation>;
   listInvitations(workspaceId: string): Promise<WorkspaceInvitation[]>;
   findInvitationByTokenHash(tokenHash: string): Promise<WorkspaceInvitation | undefined>;

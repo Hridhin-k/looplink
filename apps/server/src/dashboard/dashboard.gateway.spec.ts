@@ -27,6 +27,23 @@ function asClient(socket: FakeSocket): WebSocket {
   return socket as unknown as WebSocket;
 }
 
+function createGateway(eventBus = createEventBus()): DashboardGateway {
+  const auth = { verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null }) };
+  const apiKeys = { verifyBearerToken: vi.fn() };
+  const workspaceContext = {
+    resolve: vi.fn().mockResolvedValue({
+      request: { workspaceId: "w1", accountId: "u1" },
+      workspace: { id: "w1" },
+    }),
+  };
+  return new DashboardGateway(eventBus, auth as never, apiKeys as never, workspaceContext as never);
+}
+
+const authRequest = {
+  headers: { authorization: "Bearer t" },
+  url: "/dashboard/ws?workspaceId=w1",
+} as never;
+
 describe("DashboardGateway", () => {
   let gateway: DashboardGateway;
 
@@ -34,13 +51,13 @@ describe("DashboardGateway", () => {
     gateway.onModuleDestroy();
   });
 
-  it("acks connections and broadcasts EventBus tunnel/request/response/replay/stats", () => {
+  it("acks connections and broadcasts EventBus tunnel/request/response/replay/stats", async () => {
     const eventBus = createEventBus();
-    gateway = new DashboardGateway(eventBus);
+    gateway = createGateway(eventBus);
     gateway.onModuleInit();
 
     const socket = new FakeSocket();
-    gateway.handleConnection(asClient(socket));
+    await gateway.handleConnection(asClient(socket), authRequest);
 
     expect(gateway.connectedClientCount()).toBe(1);
     expect(JSON.parse(socket.sent[0] ?? "{}")).toEqual(
@@ -146,13 +163,13 @@ describe("DashboardGateway", () => {
     ]);
   });
 
-  it("stops broadcasting after disconnect and module destroy", () => {
+  it("stops broadcasting after disconnect and module destroy", async () => {
     const eventBus = createEventBus();
-    gateway = new DashboardGateway(eventBus);
+    gateway = createGateway(eventBus);
     gateway.onModuleInit();
 
     const socket = new FakeSocket();
-    gateway.handleConnection(asClient(socket));
+    await gateway.handleConnection(asClient(socket), authRequest);
     gateway.handleDisconnect(asClient(socket));
     expect(gateway.connectedClientCount()).toBe(0);
 
@@ -171,9 +188,8 @@ describe("DashboardGateway", () => {
     expect(socket.sent.length).toBe(before);
   });
 
-  it("does not throw when a client send fails", () => {
-    const eventBus = createEventBus();
-    gateway = new DashboardGateway(eventBus);
+  it("does not throw when a client send fails", async () => {
+    gateway = createGateway();
     gateway.onModuleInit();
 
     const socket = new FakeSocket();
@@ -181,7 +197,7 @@ describe("DashboardGateway", () => {
       throw new Error("boom");
     }) as unknown as typeof socket.send;
 
-    gateway.handleConnection(asClient(socket));
+    await gateway.handleConnection(asClient(socket), authRequest);
     expect(gateway.connectedClientCount()).toBe(0);
   });
 });

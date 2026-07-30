@@ -18,6 +18,16 @@ export interface CliWhoAmI {
   readonly apiKeyId?: string;
 }
 
+export interface CliWorkspaceMembership {
+  readonly id: string;
+  readonly role: string;
+  readonly workspace: {
+    readonly id: string;
+    readonly name: string;
+    readonly kind: string;
+  };
+}
+
 export interface CliOAuthConfig {
   readonly supabaseUrl: string;
   readonly supabaseAnonKey: string;
@@ -60,6 +70,23 @@ export class CliAuthApiClient {
     });
     if (result === undefined) {
       throw new Error("whoami response was empty.");
+    }
+    return result;
+  }
+
+  async listWorkspaces(
+    serverWebsocketUrl: string,
+    accessToken: string,
+  ): Promise<CliWorkspaceMembership[]> {
+    const result = await this.request<CliWorkspaceMembership[]>(
+      this.url(serverWebsocketUrl, "/api/v1/workspaces"),
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}`, accept: "application/json" },
+      },
+    );
+    if (result === undefined) {
+      throw new Error("Workspace list response was empty.");
     }
     return result;
   }

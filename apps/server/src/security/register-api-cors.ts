@@ -1,9 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
+import { isAuthCookieEnabled } from "../auth/auth-cookies.js";
 import { OriginValidator } from "./origin-validator.js";
 
 const CORS_METHODS = "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS";
-const CORS_HEADERS = "Content-Type, Accept, Authorization, X-Workspace-Id";
+const CORS_HEADERS =
+  "Content-Type, Accept, Authorization, X-Workspace-Id, X-CSRF-Token";
 const CORS_MAX_AGE = "86400";
 
 /**
@@ -55,4 +57,7 @@ function applyCorsHeaders(
   void reply.header("Access-Control-Allow-Methods", CORS_METHODS);
   void reply.header("Access-Control-Allow-Headers", CORS_HEADERS);
   void reply.header("Access-Control-Max-Age", CORS_MAX_AGE);
+  if (isAuthCookieEnabled()) {
+    void reply.header("Access-Control-Allow-Credentials", "true");
+  }
 }

@@ -25,6 +25,11 @@ import {
 } from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
+import { WorkspaceContextService } from "../access/workspace-context.service.js";
+import { AuthService } from "../auth/auth.service.js";
+import { extractBearerToken } from "../auth/extract-bearer-token.js";
+import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
+import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /** How often the gateway probes dashboard clients. */
@@ -53,7 +58,12 @@ export class DashboardGateway
   /**
    * @param eventBus - Shared lifecycle bus.
    */
-  constructor(@Inject(EVENT_BUS) private readonly eventBus: EventBus) {}
+  constructor(
+    @Inject(EVENT_BUS) private readonly eventBus: EventBus,
+    private readonly auth: AuthService,
+    private readonly apiKeys: ApiKeyService,
+    private readonly workspaceContext: WorkspaceContextService,
+  ) {}
 
   /**
    * Subscribes to dashboard-relevant EventBus topics.
@@ -104,16 +114,33 @@ export class DashboardGateway
   }
 
   /**
-   * Registers a dashboard client and sends a connected ack.
-   *
-   * @param client - Connected WebSocket.
+   * Registers a dashboard client after verifying Account → Membership.
    */
-  handleConnection(client: WebSocket, request?: IncomingMessage): void {
-    this.clients.add(client);
-    const workspaceId = request === undefined ? undefined : readWorkspaceScopeFromRequest(request);
-    if (workspaceId !== undefined) {
-      this.clientWorkspaceScope.set(client, workspaceId);
+  async handleConnection(client: WebSocket, request?: IncomingMessage): Promise<void> {
+    if (request === undefined) {
+      client.close(1008, "Unauthorized.");
+      return;
     }
+
+    const token = readAccessTokenFromRequest(request);
+    if (token === undefined) {
+      client.close(1008, "Authentication required.");
+      return;
+    }
+
+    try {
+      const user = isApiKeyToken(token)
+        ? await this.apiKeys.verifyBearerToken(token)
+        : { ...(await this.auth.verifyAccessToken(token)), authMethod: "jwt" as const };
+      const requestedWorkspaceId = readWorkspaceScopeFromRequest(request);
+      const authorized = await this.workspaceContext.resolve(user, requestedWorkspaceId);
+      this.clients.add(client);
+      this.clientWorkspaceScope.set(client, authorized.request.workspaceId);
+    } catch {
+      client.close(1008, "Unauthorized.");
+      return;
+    }
+
     this.logger.log(`Dashboard client connected (${String(this.clients.size)} active)`);
 
     this.send(client, {
@@ -207,6 +234,27 @@ function readWorkspaceScopeFromRequest(request: IncomingMessage): string | undef
     const parsed = new URL(url, "http://localhost");
     const workspaceId = parsed.searchParams.get("workspaceId")?.trim();
     return workspaceId !== undefined && workspaceId.length > 0 ? workspaceId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readAccessTokenFromRequest(request: IncomingMessage): string | undefined {
+  const header = request.headers.authorization;
+  const authorization = typeof header === "string" ? header : header?.[0];
+  const bearer = extractBearerToken(authorization);
+  if (bearer !== undefined) {
+    return bearer;
+  }
+
+  const url = request.url;
+  if (url === undefined) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(url, "http://localhost");
+    const token = parsed.searchParams.get("access_token")?.trim();
+    return token !== undefined && token.length > 0 ? token : undefined;
   } catch {
     return undefined;
   }

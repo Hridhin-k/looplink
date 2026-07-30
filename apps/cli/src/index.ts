@@ -9,12 +9,14 @@ import { registerLogoutCommand, LogoutCommand } from "./commands/logout.js";
 import { registerReplayCommand, ReplayCommand } from "./commands/replay.js";
 import { registerStartCommand, StartCommand } from "./commands/start.js";
 import { registerWhoAmICommand, WhoAmICommand } from "./commands/whoami.js";
+import { registerWorkspaceCommand, WorkspaceCommand } from "./commands/workspace.js";
 import { loadCliConfig } from "./config/cli.js";
 import { AuthSessionManager } from "./services/auth-session-manager.js";
 import { CliAuthApiClient } from "./services/cli-auth-api-client.js";
 import { ReplayApiClient } from "./services/replay-api-client.js";
 import { ShutdownController } from "./services/shutdown.js";
 import { createDefaultServerConnection, StartTunnelService } from "./services/start-tunnel.js";
+import { WorkspacePreferenceStore } from "./services/workspace-preference-store.js";
 import { ConsoleSessionPresenter } from "./ui/console-session-presenter.js";
 import { createSpinner } from "./ui/spinner.js";
 import { argvForCommander } from "./utils/argv.js";
@@ -71,11 +73,13 @@ shutdown.install();
 const startTunnel = new StartTunnelService(presenter, createDefaultServerConnection, shutdown);
 const authApi = new CliAuthApiClient();
 const sessions = new AuthSessionManager(authApi);
-const startCommand = new StartCommand(startTunnel, writer, sessions);
+const workspacePreferences = new WorkspacePreferenceStore();
+const startCommand = new StartCommand(startTunnel, writer, sessions, authApi, workspacePreferences);
 const replayCommand = new ReplayCommand(new ReplayApiClient(), writer);
 const loginCommand = new LoginCommand(authApi, sessions, writer);
 const logoutCommand = new LogoutCommand(authApi, sessions, writer);
 const whoamiCommand = new WhoAmICommand(authApi, sessions, writer);
+const workspaceCommand = new WorkspaceCommand(authApi, sessions, workspacePreferences, writer);
 
 const program = new Command();
 
@@ -86,6 +90,7 @@ registerStartCommand(program, startCommand);
 registerLoginCommand(program, loginCommand);
 registerLogoutCommand(program, logoutCommand);
 registerWhoAmICommand(program, whoamiCommand);
+registerWorkspaceCommand(program, workspaceCommand);
 
 // pnpm injects a literal `--` before script args; strip it so options parse.
 program.parse(argvForCommander(process.argv));

@@ -5,6 +5,7 @@ import type { SupabaseConfig } from "../../database/supabase.config.js";
 import type {
   InviteRole,
   InvitationStatus,
+  MembershipStatus,
   Workspace,
   WorkspaceInvitation,
   WorkspaceMember,
@@ -25,6 +26,7 @@ interface WorkspaceRow {
   is_personal: boolean;
   description: string | null;
   settings: WorkspaceSettings | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +36,8 @@ interface MembershipRow {
   workspace_id: string;
   user_id: string;
   role: WorkspaceRole;
+  status: string | null;
+  joined_at: string | null;
   created_at: string;
   updated_at: string;
   workspaces: WorkspaceRow | null;
@@ -44,6 +48,8 @@ interface MemberRow {
   workspace_id: string;
   user_id: string;
   role: WorkspaceRole;
+  status: string | null;
+  joined_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,7 +69,9 @@ interface InvitationRow {
 }
 
 const WORKSPACE_SELECT =
-  "id,name,owner_user_id,is_personal,description,settings,created_at,updated_at";
+  "id,name,owner_user_id,is_personal,description,settings,deleted_at,created_at,updated_at";
+
+const ACTIVE_WORKSPACE_FILTER = "deleted_at=is.null";
 
 @Injectable()
 export class SupabaseWorkspaceRepository implements WorkspaceRepository {
@@ -76,12 +84,12 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const encodedUserId = encodeURIComponent(userId);
     const rows = await this.requestJson<MembershipRow[]>(
       "GET",
-      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,created_at,updated_at,workspaces(${WORKSPACE_SELECT})&user_id=eq.${encodedUserId}&order=created_at.asc`,
+      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,status,joined_at,created_at,updated_at,workspaces(${WORKSPACE_SELECT})&user_id=eq.${encodedUserId}&status=eq.active&order=created_at.asc`,
     );
 
     return rows.flatMap((row) => {
       const workspace = row.workspaces;
-      if (workspace === null) {
+      if (workspace === null || workspace.deleted_at !== null) {
         return [];
       }
       return [
@@ -89,7 +97,10 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
           id: row.id,
           workspaceId: row.workspace_id,
           userId: row.user_id,
+          accountId: row.user_id,
           role: normalizeRole(row.role),
+          status: normalizeStatus(row.status),
+          joinedAt: row.joined_at ?? row.created_at,
           createdAt: row.created_at,
           updatedAt: row.updated_at,
           workspace: mapWorkspace(workspace),
@@ -113,7 +124,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     await this.requestJson(
       "POST",
       "/rest/v1/workspace_members",
-      { workspace_id: workspaceRow.id, user_id: userId, role: "owner" },
+      { workspace_id: workspaceRow.id, user_id: userId, role: "owner", status: "active" },
       { prefer: "return=minimal" },
     );
 
@@ -124,7 +135,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const encodedUserId = encodeURIComponent(userId);
     const rows = await this.requestJson<WorkspaceRow[]>(
       "GET",
-      `/rest/v1/workspaces?select=${WORKSPACE_SELECT}&owner_user_id=eq.${encodedUserId}&is_personal=eq.true&limit=1`,
+      `/rest/v1/workspaces?select=${WORKSPACE_SELECT}&owner_user_id=eq.${encodedUserId}&is_personal=eq.true&${ACTIVE_WORKSPACE_FILTER}&limit=1`,
     );
     const row = rows[0];
     if (row === undefined) {
@@ -137,7 +148,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const encoded = encodeURIComponent(workspaceId);
     const rows = await this.requestJson<WorkspaceRow[]>(
       "GET",
-      `/rest/v1/workspaces?select=${WORKSPACE_SELECT}&id=eq.${encoded}&limit=1`,
+      `/rest/v1/workspaces?select=${WORKSPACE_SELECT}&id=eq.${encoded}&${ACTIVE_WORKSPACE_FILTER}&limit=1`,
     );
     const row = rows[0];
     return row === undefined ? undefined : mapWorkspace(row);
@@ -156,7 +167,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const encodedUserId = encodeURIComponent(userId);
     const rows = await this.requestJson<MemberRow[]>(
       "GET",
-      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,created_at,updated_at&workspace_id=eq.${encodedWorkspaceId}&user_id=eq.${encodedUserId}&limit=1`,
+      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,status,joined_at,created_at,updated_at&workspace_id=eq.${encodedWorkspaceId}&user_id=eq.${encodedUserId}&status=eq.active&limit=1`,
     );
     const row = rows[0];
     return row === undefined ? undefined : mapMember(row);
@@ -166,7 +177,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const encoded = encodeURIComponent(workspaceId);
     const rows = await this.requestJson<MemberRow[]>(
       "GET",
-      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,created_at,updated_at&workspace_id=eq.${encoded}&order=created_at.asc`,
+      `/rest/v1/workspace_members?select=id,workspace_id,user_id,role,status,joined_at,created_at,updated_at&workspace_id=eq.${encoded}&status=eq.active&order=created_at.asc`,
     );
     return rows.map(mapMember);
   }
@@ -191,6 +202,26 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     return mapMember(row);
   }
 
+  async setMemberStatus(
+    workspaceId: string,
+    userId: string,
+    status: MembershipStatus,
+  ): Promise<WorkspaceMember> {
+    const encodedWorkspaceId = encodeURIComponent(workspaceId);
+    const encodedUserId = encodeURIComponent(userId);
+    const rows = await this.requestJson<MemberRow[]>(
+      "PATCH",
+      `/rest/v1/workspace_members?workspace_id=eq.${encodedWorkspaceId}&user_id=eq.${encodedUserId}`,
+      { status },
+      { prefer: "return=representation" },
+    );
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error("Failed to update membership status.");
+    }
+    return mapMember(row);
+  }
+
   async removeMember(workspaceId: string, userId: string): Promise<void> {
     const encodedWorkspaceId = encodeURIComponent(workspaceId);
     const encodedUserId = encodeURIComponent(userId);
@@ -210,7 +241,7 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const rows = await this.requestJson<MemberRow[]>(
       "POST",
       "/rest/v1/workspace_members",
-      { workspace_id: workspaceId, user_id: userId, role },
+      { workspace_id: workspaceId, user_id: userId, role, status: "active" },
       { prefer: "return=representation" },
     );
     const row = rows[0];
@@ -241,6 +272,21 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     const row = rows[0];
     if (row === undefined) {
       throw new Error("Failed to update workspace.");
+    }
+    return mapWorkspace(row);
+  }
+
+  async softDeleteWorkspace(workspaceId: string): Promise<Workspace> {
+    const encoded = encodeURIComponent(workspaceId);
+    const rows = await this.requestJson<WorkspaceRow[]>(
+      "PATCH",
+      `/rest/v1/workspaces?id=eq.${encoded}&${ACTIVE_WORKSPACE_FILTER}`,
+      { deleted_at: new Date().toISOString() },
+      { prefer: "return=representation" },
+    );
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error("Failed to delete workspace.");
     }
     return mapWorkspace(row);
   }
@@ -393,7 +439,10 @@ function mapMember(row: MemberRow): WorkspaceMember {
     id: row.id,
     workspaceId: row.workspace_id,
     userId: row.user_id,
+    accountId: row.user_id,
     role: normalizeRole(row.role),
+    status: normalizeStatus(row.status),
+    joinedAt: row.joined_at ?? row.created_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -423,4 +472,16 @@ function normalizeRole(role: string): WorkspaceRole {
     return role;
   }
   return "viewer";
+}
+
+function normalizeStatus(status: string | null): MembershipStatus {
+  if (
+    status === "active" ||
+    status === "invited" ||
+    status === "suspended" ||
+    status === "left"
+  ) {
+    return status;
+  }
+  return "active";
 }

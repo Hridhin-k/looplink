@@ -47,12 +47,16 @@ export class StartTunnelService {
   async start(
     port: number,
     serverUrl: string,
-    getAuthToken?: () => Promise<string | undefined>,
+    options: {
+      readonly getAuthToken?: () => Promise<string | undefined>;
+      readonly getWorkspaceId?: () => Promise<string | undefined>;
+    } = {},
   ): Promise<void> {
     this.presenter.starting(port);
 
     const connection = this.createConnection(serverUrl, {
-      ...(getAuthToken === undefined ? {} : { getAuthToken }),
+      ...(options.getAuthToken === undefined ? {} : { getAuthToken: options.getAuthToken }),
+      ...(options.getWorkspaceId === undefined ? {} : { getWorkspaceId: options.getWorkspaceId }),
       onConnectionLost: () => {
         this.presenter.connectionLost();
       },

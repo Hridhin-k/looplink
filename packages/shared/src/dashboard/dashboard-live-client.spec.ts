@@ -16,6 +16,14 @@ describe("buildDashboardWebSocketUrl", () => {
       `wss://example.com${DASHBOARD_WS_PATH}`,
     );
   });
+
+  it("preserves auth and workspace query params", () => {
+    expect(
+      buildDashboardWebSocketUrl(
+        "http://127.0.0.1:8080?access_token=tok&workspaceId=ws-1",
+      ),
+    ).toBe(`ws://127.0.0.1:8080${DASHBOARD_WS_PATH}?access_token=tok&workspaceId=ws-1`);
+  });
 });
 
 describe("mapTunnelCreatedToDashboard", () => {

@@ -122,6 +122,20 @@ export class SupabaseApiKeyRepository implements ApiKeyRepository {
     return mapApiKeyPublic(row);
   }
 
+  async revokeAllCreatedByUser(userId: string, revokedByUserId: string): Promise<number> {
+    const encoded = encodeURIComponent(userId);
+    const rows = await this.requestJson<ApiKeyRow[]>(
+      "PATCH",
+      `/rest/v1/workspace_api_keys?created_by_user_id=eq.${encoded}&revoked_at=is.null`,
+      {
+        revoked_at: new Date().toISOString(),
+        revoked_by_user_id: revokedByUserId,
+      },
+      { prefer: "return=representation" },
+    );
+    return rows.length;
+  }
+
   async touchLastUsed(keyId: string): Promise<void> {
     const encoded = encodeURIComponent(keyId);
     await this.requestJson(

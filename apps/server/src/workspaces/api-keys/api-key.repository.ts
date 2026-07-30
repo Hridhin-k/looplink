@@ -19,6 +19,8 @@ export interface ApiKeyRepository {
     material: { readonly keyPrefix: string; readonly keyHash: string },
   ): Promise<WorkspaceApiKey>;
   revoke(keyId: string, revokedByUserId: string): Promise<WorkspaceApiKey>;
+  /** Revokes every active key created by the given user (account deletion). */
+  revokeAllCreatedByUser(userId: string, revokedByUserId: string): Promise<number>;
   touchLastUsed(keyId: string): Promise<void>;
 }
 

@@ -7,9 +7,12 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
+import { AuditService } from "../audit/audit.service.js";
 import type { AuthUser } from "../auth/auth.types.js";
+import { PermissionService } from "../access/permission.service.js";
+import { WorkspaceContextService } from "../access/workspace-context.service.js";
 import { generateInvitationToken, hashSecret } from "./workspace-crypto.js";
-import { roleHasPermission, type WorkspacePermission } from "./workspace.permissions.js";
+import type { WorkspacePermission } from "./workspace.permissions.js";
 import type { WorkspaceRepository } from "./repositories/workspace.repository.js";
 import { WORKSPACE_REPOSITORY } from "./workspace.tokens.js";
 import type {
@@ -37,6 +40,9 @@ export class WorkspaceService {
   constructor(
     @Inject(WORKSPACE_REPOSITORY)
     private readonly workspaces: WorkspaceRepository,
+    private readonly audit: AuditService,
+    private readonly workspaceContext: WorkspaceContextService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   async listForUser(user: AuthUser): Promise<WorkspaceMembership[]> {
@@ -49,41 +55,32 @@ export class WorkspaceService {
     if (normalized.length < 2) {
       throw new BadRequestException("Workspace name must be at least 2 characters.");
     }
-    return this.workspaces.createSharedWorkspace(user.id, normalized);
+    const workspace = await this.workspaces.createSharedWorkspace(user.id, normalized);
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId: workspace.id,
+      action: "workspace.created",
+      resourceType: "workspace",
+      resourceId: workspace.id,
+      metadata: { name: workspace.name },
+    });
+    return workspace;
   }
 
-  async resolveContext(user: AuthUser, requestedWorkspaceId: string | undefined): Promise<WorkspaceContext> {
-    if (user.authMethod === "api_key" && user.workspaceId) {
-      const workspace = await this.workspaces.findWorkspaceById(user.workspaceId);
-      if (workspace === undefined) {
-        throw new NotFoundException("Workspace not found for API key.");
-      }
-      if (requestedWorkspaceId && requestedWorkspaceId !== workspace.id) {
-        throw new NotFoundException("Workspace not found for current credentials.");
-      }
-      return { activeWorkspace: workspace, memberships: [] };
-    }
-
-    const memberships = await this.workspaces.listMembershipsForUser(user.id);
-    if (memberships.length === 0) {
-      throw new NotFoundException("No workspaces found for current user.");
-    }
-
-    const requested = requestedWorkspaceId?.trim();
-    if (requested && requested.length > 0) {
-      const active = memberships.find((m) => m.workspace.id === requested);
-      if (!active) {
-        throw new NotFoundException("Workspace not found for current user.");
-      }
-      return { activeWorkspace: active.workspace, memberships };
-    }
-
-    const personal = memberships.find((m) => m.workspace.kind === "personal");
-    const fallback = memberships[0];
-    if (fallback === undefined) {
-      throw new NotFoundException("No workspaces found for current user.");
-    }
-    return { activeWorkspace: (personal ?? fallback).workspace, memberships };
+  /**
+   * Resolves active workspace via Membership (Account → Membership → Workspace).
+   */
+  async resolveContext(
+    user: AuthUser,
+    requestedWorkspaceId: string | undefined,
+  ): Promise<WorkspaceContext> {
+    const authorized = await this.workspaceContext.resolve(user, requestedWorkspaceId);
+    const memberships =
+      user.authMethod === "api_key" ? [] : await this.workspaces.listMembershipsForUser(user.id);
+    return {
+      activeWorkspace: authorized.workspace,
+      memberships,
+    };
   }
 
   async getWorkspace(workspaceId: string): Promise<Workspace> {
@@ -108,7 +105,8 @@ export class WorkspaceService {
     permission: WorkspacePermission,
   ): Promise<WorkspaceMember> {
     const member = await this.requireMembership(workspaceId, userId);
-    if (!roleHasPermission(member.role, permission)) {
+    const ctxPermissions = this.permissionService.permissionsForRole(member.role);
+    if (!ctxPermissions.has(permission)) {
       throw new ForbiddenException("Insufficient workspace permissions.");
     }
     return member;
@@ -148,6 +146,101 @@ export class WorkspaceService {
     }
 
     return this.workspaces.updateWorkspace(workspaceId, patch);
+  }
+
+  /**
+   * Soft-deletes a shared workspace. Personal workspaces cannot be deleted.
+   * Authorization is Membership role `owner` via PermissionService — never owner_user_id.
+   */
+  async deleteWorkspace(
+    user: AuthUser,
+    workspaceId: string,
+    confirmationName: string,
+  ): Promise<void> {
+    this.rejectApiKeyMutation(user);
+    const member = await this.assertPermission(workspaceId, user.id, "workspace:delete");
+    if (member.role !== "owner") {
+      throw new ForbiddenException("Only the workspace owner can delete it.");
+    }
+
+    const workspace = await this.getWorkspace(workspaceId);
+    if (workspace.kind === "personal") {
+      throw new ForbiddenException("Personal workspaces cannot be deleted.");
+    }
+    if (confirmationName.trim() !== workspace.name) {
+      throw new BadRequestException("Confirmation name does not match the workspace name.");
+    }
+
+    await this.workspaces.softDeleteWorkspace(workspaceId);
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId: workspace.id,
+      action: "workspace.deleted",
+      resourceType: "workspace",
+      resourceId: workspace.id,
+      metadata: { name: workspace.name },
+    });
+  }
+
+  /**
+   * Leaves a shared workspace (marks membership `left`). Personal workspaces cannot be left.
+   */
+  async leaveWorkspace(user: AuthUser, workspaceId: string): Promise<void> {
+    this.rejectApiKeyMutation(user);
+    const workspace = await this.getWorkspace(workspaceId);
+    if (workspace.kind === "personal") {
+      throw new ForbiddenException("Cannot leave a personal workspace.");
+    }
+    const member = await this.requireMembership(workspaceId, user.id);
+    if (member.role === "owner") {
+      throw new ForbiddenException("Owners must transfer ownership before leaving.");
+    }
+    await this.workspaces.setMemberStatus(workspaceId, user.id, "left");
+    await this.audit.record({
+      actorUserId: user.id,
+      workspaceId,
+      action: "workspace.member.left",
+      resourceType: "membership",
+      resourceId: member.id,
+    });
+  }
+
+  /**
+   * Transfers ownership via Membership roles (never JWT claims).
+   */
+  async transferOwnership(
+    actor: AuthUser,
+    workspaceId: string,
+    targetAccountId: string,
+  ): Promise<void> {
+    this.rejectApiKeyMutation(actor);
+    const actorMember = await this.assertPermission(
+      workspaceId,
+      actor.id,
+      "workspace:manage_members",
+    );
+    if (actorMember.role !== "owner") {
+      throw new ForbiddenException("Only the workspace owner can transfer ownership.");
+    }
+    if (targetAccountId === actor.id) {
+      throw new BadRequestException("Cannot transfer ownership to yourself.");
+    }
+
+    const target = await this.workspaces.findMembership(workspaceId, targetAccountId);
+    if (target === undefined) {
+      throw new NotFoundException("Target account is not an active member.");
+    }
+
+    await this.workspaces.updateMemberRole(workspaceId, targetAccountId, "owner");
+    await this.workspaces.updateMemberRole(workspaceId, actor.id, "admin");
+    await this.audit.record({
+      actorUserId: actor.id,
+      workspaceId,
+      action: "workspace.ownership.transferred",
+      resourceType: "workspace",
+      resourceId: workspaceId,
+      metadata: { fromAccountId: actor.id, toAccountId: targetAccountId },
+    });
   }
 
   async listMembers(user: AuthUser, workspaceId: string): Promise<WorkspaceMember[]> {
@@ -320,7 +413,10 @@ export class WorkspaceService {
         id: existing.id,
         workspaceId: existing.workspaceId,
         userId: existing.userId,
+        accountId: existing.accountId,
         role: existing.role,
+        status: existing.status,
+        joinedAt: existing.joinedAt,
         createdAt: existing.createdAt,
         updatedAt: existing.updatedAt,
         workspace,
@@ -343,7 +439,10 @@ export class WorkspaceService {
       id: member.id,
       workspaceId: member.workspaceId,
       userId: member.userId,
+      accountId: member.accountId,
       role: member.role,
+      status: member.status,
+      joinedAt: member.joinedAt,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
       workspace,

@@ -1,6 +1,9 @@
-import { All, Controller, Req, Res } from "@nestjs/common";
+import { All, Controller, Inject, Req, Res } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import type { DatabaseClient } from "../database/database-client.js";
+import { DATABASE_CLIENT, SUPABASE_CONFIG } from "../database/database.tokens.js";
+import type { SupabaseConfig } from "../database/supabase.config.js";
 import { extractTunnelSlugFromHost, resolvePublicBaseDomain } from "../tunnel/public-url.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { PublicRequestForwarder } from "./public-request-forwarder.js";
@@ -22,6 +25,8 @@ export class HttpForwardController {
   constructor(
     private readonly tunnelManager: TunnelManager,
     private readonly publicForwarder: PublicRequestForwarder,
+    @Inject(SUPABASE_CONFIG) private readonly supabaseConfig: SupabaseConfig,
+    @Inject(DATABASE_CLIENT) private readonly database: DatabaseClient,
   ) {}
 
   /**
@@ -35,6 +40,19 @@ export class HttpForwardController {
     const path = request.url.split("?")[0] ?? "/";
     if (request.method === "GET" && path === "/health") {
       await reply.status(200).send({ status: "ok" });
+      return;
+    }
+    if (request.method === "GET" && path === "/health/ready") {
+      if (!this.supabaseConfig.enabled) {
+        await reply.status(200).send({ status: "ready", checks: { database: "skip" } });
+        return;
+      }
+      try {
+        await this.database.ping();
+        await reply.status(200).send({ status: "ready", checks: { database: "ok" } });
+      } catch {
+        await reply.status(503).send({ status: "not_ready", checks: { database: "error" } });
+      }
       return;
     }
 

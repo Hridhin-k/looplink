@@ -87,6 +87,7 @@ display. The CLI never receives a refreshable JWT for key-based login.
 | `badger login --token <key>`   | Authenticate with a workspace API key (CI/CD)    |
 | `badger logout`                | Revoke refresh tokens and clear local session    |
 | `badger whoami`                | Print the current authenticated user             |
+| `badger <port> -w <workspace>` | Open a tunnel in a specific workspace (id/name)  |
 
 ### Token lifecycle
 

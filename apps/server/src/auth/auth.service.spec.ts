@@ -4,6 +4,18 @@ import { OriginValidator } from "../security/origin-validator.js";
 import { AuthService } from "./auth.service.js";
 import { extractBearerToken } from "./extract-bearer-token.js";
 
+function createAuditMock() {
+  return { record: vi.fn().mockResolvedValue(undefined) };
+}
+
+function createMonitoringMock() {
+  return {
+    captureException: vi.fn(),
+    captureMessage: vi.fn(),
+    increment: vi.fn(),
+  };
+}
+
 describe("extractBearerToken", () => {
   it("extracts a Bearer token", () => {
     expect(extractBearerToken("Bearer abc.def.ghi")).toBe("abc.def.ghi");
@@ -27,7 +39,7 @@ describe("AuthService", () => {
               refresh_token: "refresh",
               expires_at: 1_700_000_000,
             },
-            user: { id: "user-1", email: "Dev@Example.com" },
+            user: { id: "user-1", email: "Dev@Example.com", email_confirmed_at: "2026-01-01" },
           },
           error: null,
         }),
@@ -44,18 +56,32 @@ describe("AuthService", () => {
       anon as never,
       {} as never,
       new OriginValidator(),
+      createAuditMock() as never,
+      createMonitoringMock(),
     );
 
     await expect(service.login("  Dev@Example.com ", "secret")).resolves.toEqual({
       accessToken: "access",
       refreshToken: "refresh",
       expiresAt: 1_700_000_000,
-      user: { id: "user-1", email: "Dev@Example.com", authMethod: "jwt" },
+      user: {
+        id: "user-1",
+        email: "Dev@Example.com",
+        authMethod: "jwt",
+        emailVerified: true,
+      },
     });
   });
 
   it("rejects login when Supabase is disabled", async () => {
-    const service = new AuthService({ enabled: false }, null, null, new OriginValidator());
+    const service = new AuthService(
+      { enabled: false },
+      null,
+      null,
+      new OriginValidator(),
+      createAuditMock() as never,
+      createMonitoringMock(),
+    );
     await expect(service.login("a@b.com", "x")).rejects.toThrow(/Supabase is not configured/);
   });
 
@@ -63,7 +89,7 @@ describe("AuthService", () => {
     const anon = {
       auth: {
         getUser: vi.fn().mockResolvedValue({
-          data: { user: { id: "user-1", email: "a@b.com" } },
+          data: { user: { id: "user-1", email: "a@b.com", email_confirmed_at: null } },
           error: null,
         }),
       },
@@ -79,12 +105,15 @@ describe("AuthService", () => {
       anon as never,
       {} as never,
       new OriginValidator(),
+      createAuditMock() as never,
+      createMonitoringMock(),
     );
 
-    await expect(service.verifyAccessToken("jwt")).resolves.toEqual({
+    await expect(service.verifyAccessToken("token")).resolves.toEqual({
       id: "user-1",
       email: "a@b.com",
       authMethod: "jwt",
+      emailVerified: false,
     });
   });
 });

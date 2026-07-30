@@ -21,6 +21,9 @@ import WebSocket from "ws";
 import { AuthService } from "../auth/auth.service.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { extractBearerToken } from "../auth/extract-bearer-token.js";
+import { PermissionService } from "../access/permission.service.js";
+import { WorkspaceContextService } from "../access/workspace-context.service.js";
+import type { RequestContext } from "../access/access.types.js";
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { GatewaySecurityPolicy } from "../security/gateway-security.policy.js";
@@ -28,11 +31,9 @@ import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
 import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
 import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
-import { WorkspaceService } from "../workspaces/workspace.service.js";
 
 interface AuthenticatedClientContext {
-  readonly user: AuthUser;
-  readonly workspaceId: string;
+  readonly request: RequestContext;
 }
 
 /**
@@ -62,7 +63,8 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly auth: AuthService,
     private readonly apiKeys: ApiKeyService,
-    private readonly workspaces: WorkspaceService,
+    private readonly workspaceContext: WorkspaceContextService,
+    private readonly permissions: PermissionService,
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
     private readonly heartbeats: HeartbeatMonitor,
@@ -90,19 +92,21 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.close(1008, "Malformed Authorization header.");
       return;
     }
-    if (token !== undefined) {
-      try {
-        const user = await this.verifyClientToken(token);
-        const requestedWorkspaceId = readWorkspaceHeader(request);
-        const context = await this.workspaces.resolveContext(user, requestedWorkspaceId);
-        this.clientAuthContext.set(client, {
-          user,
-          workspaceId: context.activeWorkspace.id,
-        });
-      } catch {
-        client.close(1008, "Unauthorized.");
-        return;
-      }
+    if (token === undefined) {
+      client.close(1008, "Authentication required.");
+      return;
+    }
+
+    try {
+      const user = await this.verifyClientToken(token);
+      const requestedWorkspaceId = readWorkspaceHeader(request);
+      const authorized = await this.workspaceContext.resolve(user, requestedWorkspaceId);
+      this.clientAuthContext.set(client, { request: authorized.request });
+    } catch (error: unknown) {
+      const detail = error instanceof Error ? error.message : "Unauthorized.";
+      this.logger.warn(`Rejected WebSocket authentication: ${detail}`);
+      client.close(1008, "Unauthorized. Run `badger login` and try again.");
+      return;
     }
 
     const connectionId = randomUUID();
@@ -262,19 +266,33 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private handleCreateTunnel(client: WebSocket, request: CreateTunnelMessage): void {
     try {
       const authContext = this.clientAuthContext.get(client);
-      const created = this.tunnelManager.create(
-        client,
-        request.port,
-        {
-          ...(request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId }),
-          ...(authContext === undefined
-            ? {}
-            : {
-                ownerUserId: authContext.user.id,
-                workspaceId: authContext.workspaceId,
-              }),
-        },
-      );
+      if (authContext === undefined) {
+        this.sendMessage(client, {
+          type: MessageType.Error,
+          requestId: request.requestId,
+          code: "unauthorized",
+          message: "Authentication required to create a tunnel.",
+        });
+        return;
+      }
+
+      try {
+        this.permissions.require(authContext.request, "tunnel:create");
+      } catch {
+        this.sendMessage(client, {
+          type: MessageType.Error,
+          requestId: request.requestId,
+          code: "forbidden",
+          message: "Insufficient workspace permissions to create a tunnel.",
+        });
+        return;
+      }
+
+      const created = this.tunnelManager.create(client, request.port, {
+        ...(request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId }),
+        ownerUserId: authContext.request.accountId,
+        workspaceId: authContext.request.workspaceId,
+      });
 
       const response: TunnelCreatedMessage = {
         type: MessageType.TunnelCreated,

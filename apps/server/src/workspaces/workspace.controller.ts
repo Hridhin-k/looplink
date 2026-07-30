@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -154,6 +155,56 @@ export class WorkspaceController {
         : {}),
     });
     return toWorkspaceDto(workspace);
+  }
+
+  @Delete(":workspaceId")
+  @HttpCode(204)
+  @UseGuards(WorkspacePermissionGuard)
+  @RequireWorkspacePermission("workspace:delete")
+  @ApiOperation({
+    summary: "Soft-delete a shared workspace (owner only; confirm with exact name)",
+  })
+  async deleteWorkspace(
+    @CurrentUser() user: AuthUser,
+    @Param("workspaceId") workspaceId: string,
+    @Body() body: unknown,
+  ): Promise<void> {
+    const json = parseJsonBody(body);
+    await this.workspaceService.deleteWorkspace(
+      user,
+      workspaceId,
+      readRequiredString(json, "confirmationName"),
+    );
+  }
+
+  @Post(":workspaceId/leave")
+  @HttpCode(204)
+  @UseGuards(WorkspacePermissionGuard)
+  @RequireWorkspacePermission("workspace:read")
+  @ApiOperation({ summary: "Leave a shared workspace (membership status → left)" })
+  async leave(
+    @CurrentUser() user: AuthUser,
+    @Param("workspaceId") workspaceId: string,
+  ): Promise<void> {
+    await this.workspaceService.leaveWorkspace(user, workspaceId);
+  }
+
+  @Post(":workspaceId/transfer-ownership")
+  @HttpCode(204)
+  @UseGuards(WorkspacePermissionGuard)
+  @RequireWorkspacePermission("workspace:manage_members")
+  @ApiOperation({ summary: "Transfer workspace ownership via Membership roles" })
+  async transferOwnership(
+    @CurrentUser() user: AuthUser,
+    @Param("workspaceId") workspaceId: string,
+    @Body() body: unknown,
+  ): Promise<void> {
+    const json = parseJsonBody(body);
+    await this.workspaceService.transferOwnership(
+      user,
+      workspaceId,
+      readRequiredString(json, "accountId"),
+    );
   }
 
   @Get(":workspaceId/members")
@@ -341,11 +392,21 @@ function toMemberDto(member: {
   id: string;
   workspaceId: string;
   userId: string;
+  accountId: string;
   role: "owner" | "admin" | "developer" | "viewer";
+  status: "active" | "invited" | "suspended" | "left";
+  joinedAt: string;
   createdAt: string;
   updatedAt: string;
 }): WorkspaceMemberDto {
-  return { ...member };
+  return {
+    id: member.id,
+    workspaceId: member.workspaceId,
+    userId: member.userId,
+    role: member.role,
+    createdAt: member.createdAt,
+    updatedAt: member.updatedAt,
+  };
 }
 
 function toInvitationDto(invitation: {
