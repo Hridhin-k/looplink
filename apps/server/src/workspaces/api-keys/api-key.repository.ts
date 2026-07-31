@@ -15,10 +15,11 @@ export interface ApiKeyRepository {
   findActiveByHash(keyHash: string): Promise<WorkspaceApiKeyRecord | undefined>;
   create(input: CreateApiKeyInput): Promise<WorkspaceApiKey>;
   rotate(
+    workspaceId: string,
     keyId: string,
     material: { readonly keyPrefix: string; readonly keyHash: string },
   ): Promise<WorkspaceApiKey>;
-  revoke(keyId: string, revokedByUserId: string): Promise<WorkspaceApiKey>;
+  revoke(workspaceId: string, keyId: string, revokedByUserId: string): Promise<WorkspaceApiKey>;
   /** Revokes every active key created by the given user (account deletion). */
   revokeAllCreatedByUser(userId: string, revokedByUserId: string): Promise<number>;
   touchLastUsed(keyId: string): Promise<void>;

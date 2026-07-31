@@ -18,65 +18,43 @@ import {
 } from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
-import { AuthService } from "../auth/auth.service.js";
-import type { AuthUser } from "../auth/auth.types.js";
-import { extractBearerToken } from "../auth/extract-bearer-token.js";
-import { PermissionService } from "../access/permission.service.js";
-import { WorkspaceContextService } from "../access/workspace-context.service.js";
-import type { RequestContext } from "../access/access.types.js";
+import { ContextFactory } from "../context/context.factory.js";
+import { ContextResolver } from "../context/context.resolver.js";
+import { ContextSessionStore } from "../context/providers/context-session.store.js";
+import {
+  contextHasPermission,
+  contextLogFields,
+} from "../context/tunnel-context.interface.js";
+import { ownershipAccountId, toTunnelOwnership } from "../context/to-tunnel-ownership.js";
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { GatewaySecurityPolicy } from "../security/gateway-security.policy.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import { rawDataToString } from "../utils/raw-data.js";
-import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
-import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
-
-interface AuthenticatedClientContext {
-  readonly request: RequestContext;
-}
 
 /**
  * WebSocket entry point for Badger CLI clients.
  *
- * Accepts connections under connection/origin limits, enforces per-IP message
- * rate limits and frame size caps, handles tunnel creation, and delivers HTTP
- * response frames only when the sender owns the tunnel.
+ * Admission goes through the Context Engine. Business tunnel creation consumes
+ * only {@link import("../context/tunnel-context.interface.js").TunnelContext}.
  */
 @WebSocketGateway({
-  // CLI clients connect to the server root (`ws(s)://host/`). Explicit path
-  // keeps this gateway from capturing `/dashboard/ws`.
   path: "/",
-  // Bound every inbound frame before JSON parsing (DoS control).
   maxPayload: MAX_WS_MESSAGE_BYTES,
 })
 export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TunnelGateway.name);
-  private readonly clientAuthContext = new Map<WebSocket, AuthenticatedClientContext>();
 
-  /**
-   * @param tunnelManager - Domain service that creates and tracks tunnels.
-   * @param httpExchanges - Pending HTTP forward correlation registry.
-   * @param heartbeats - Liveness tracker that drops silent clients.
-   * @param security - Connection, origin, and message-rate policy.
-   */
   constructor(
-    private readonly auth: AuthService,
-    private readonly apiKeys: ApiKeyService,
-    private readonly workspaceContext: WorkspaceContextService,
-    private readonly permissions: PermissionService,
+    private readonly contextResolver: ContextResolver,
+    private readonly contextFactory: ContextFactory,
+    private readonly contextSessions: ContextSessionStore,
     private readonly tunnelManager: TunnelManager,
     private readonly httpExchanges: HttpExchangeCoordinator,
     private readonly heartbeats: HeartbeatMonitor,
     private readonly security: GatewaySecurityPolicy,
   ) {}
 
-  /**
-   * Handles a newly accepted WebSocket client.
-   *
-   * @param client - The connected `ws` client socket.
-   * @param request - HTTP upgrade request (origin / IP).
-   */
   async handleConnection(client: WebSocket, request: IncomingMessage): Promise<void> {
     const rejected = this.security.admit(client, request);
     if (rejected !== undefined) {
@@ -85,33 +63,29 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const header = request.headers.authorization;
-    const authorization = typeof header === "string" ? header : header?.[0];
-    const token = extractBearerToken(authorization);
-    if (authorization !== undefined && token === undefined) {
-      client.close(1008, "Malformed Authorization header.");
-      return;
-    }
-    if (token === undefined) {
-      client.close(1008, "Authentication required.");
-      return;
-    }
-
     try {
-      const user = await this.verifyClientToken(token);
-      const requestedWorkspaceId = readWorkspaceHeader(request);
-      const authorized = await this.workspaceContext.resolve(user, requestedWorkspaceId);
-      this.clientAuthContext.set(client, { request: authorized.request });
+      const context = await this.contextResolver.resolveTunnelWebSocket(request);
+      this.contextSessions.bind(client, context);
     } catch (error: unknown) {
       const detail = error instanceof Error ? error.message : "Unauthorized.";
       this.logger.warn(`Rejected WebSocket authentication: ${detail}`);
-      client.close(1008, "Unauthorized. Run `badger login` and try again.");
+      const message =
+        detail.includes("anonymous") || detail.includes("Anonymous")
+          ? "Invalid or expired anonymous session."
+          : detail.includes("Malformed")
+            ? "Malformed Authorization header."
+            : detail.includes("Authentication required")
+              ? "Authentication required."
+              : "Unauthorized. Run `badger login` and try again.";
+      client.close(1008, message);
       return;
     }
 
     const connectionId = randomUUID();
-
-    this.logger.log(`Client connected (${connectionId})`);
+    const bound = this.contextSessions.require(client);
+    this.logger.log(
+      `Client connected (${connectionId}, contextId=${bound.contextId}, type=${bound.contextType})`,
+    );
     this.heartbeats.register(client);
 
     const message: ConnectedMessage = {
@@ -130,15 +104,10 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  /**
-   * Cleans up tunnel state when a client disconnects.
-   *
-   * @param client - The disconnected `ws` client socket.
-   */
   handleDisconnect(client: WebSocket): void {
     this.heartbeats.unregister(client);
     this.security.release(client);
-    this.clientAuthContext.delete(client);
+    this.contextSessions.destroy(client);
 
     const detached = this.tunnelManager.detachClient(client);
 
@@ -149,18 +118,10 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  /**
-   * Routes an inbound protocol message from a connected client.
-   *
-   * @param client - Sender socket.
-   * @param data - Raw WebSocket payload.
-   */
   private handleClientMessage(client: WebSocket, data: WebSocket.RawData): void {
     const parsed = parseProtocolMessage(rawDataToString(data));
 
     if (!parsed.ok) {
-      // Invalid frames still consume the control-plane budget so a flood of
-      // garbage cannot bypass rate limiting by failing to parse.
       if (!this.security.allowMessage(client)) {
         this.sendMessage(client, {
           type: MessageType.Error,
@@ -180,9 +141,6 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const message = parsed.value;
 
-    // HTTP response frames are volume-bound by public HTTP rate limits, body
-    // caps, and pending-exchange limits. Counting them toward the WS control
-    // budget breaks Next.js/Vite pages that fan out dozens of asset responses.
     if (!isHttpDataPlaneFromClient(message) && !this.security.allowMessage(client)) {
       this.sendMessage(client, {
         type: MessageType.Error,
@@ -219,12 +177,6 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  /**
-   * Delivers an HTTP response frame only when the sender owns the tunnel.
-   *
-   * @param client - Sending socket.
-   * @param message - HTTP forwarding frame.
-   */
   private deliverOwnedHttpFrame(client: WebSocket, message: HttpForwardingMessage): void {
     const tunnel = this.tunnelManager.lookup(message.tunnelId);
     if (tunnel?.client !== client) {
@@ -240,12 +192,6 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.httpExchanges.deliver(message);
   }
 
-  /**
-   * Records a heartbeat and echoes the ping's `requestId` back as a `PONG`.
-   *
-   * @param client - The socket that sent the keepalive probe.
-   * @param ping - Parsed ping message.
-   */
   private handlePing(client: WebSocket, ping: PingMessage): void {
     this.heartbeats.beat(client);
 
@@ -257,28 +203,20 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.sendMessage(client, reply);
   }
 
-  /**
-   * Creates a tunnel for the requesting client and replies with its public URL.
-   *
-   * @param client - Requesting WebSocket client.
-   * @param request - Parsed create-tunnel request.
-   */
   private handleCreateTunnel(client: WebSocket, request: CreateTunnelMessage): void {
     try {
-      const authContext = this.clientAuthContext.get(client);
-      if (authContext === undefined) {
+      const context = this.contextSessions.get(client);
+      if (context === undefined) {
         this.sendMessage(client, {
           type: MessageType.Error,
           requestId: request.requestId,
           code: "unauthorized",
-          message: "Authentication required to create a tunnel.",
+          message: "Tunnel context required to create a tunnel.",
         });
         return;
       }
 
-      try {
-        this.permissions.require(authContext.request, "tunnel:create");
-      } catch {
+      if (!contextHasPermission(context, "tunnel:create")) {
         this.sendMessage(client, {
           type: MessageType.Error,
           requestId: request.requestId,
@@ -288,11 +226,15 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
+      const ownerUserId = ownershipAccountId(context);
       const created = this.tunnelManager.create(client, request.port, {
+        context: toTunnelOwnership(context),
         ...(request.tunnelId === undefined ? {} : { preferredTunnelId: request.tunnelId }),
-        ownerUserId: authContext.request.accountId,
-        workspaceId: authContext.request.workspaceId,
+        ...(ownerUserId === undefined ? {} : { ownerUserId }),
       });
+
+      const bound = this.contextFactory.withTunnelId(context, created.tunnel.id);
+      this.contextSessions.replace(client, bound);
 
       const response: TunnelCreatedMessage = {
         type: MessageType.TunnelCreated,
@@ -303,7 +245,7 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const action = created.restored ? "restored" : "created";
       this.logger.log(
-        `Tunnel ${action} (${created.tunnel.id}) for port ${String(request.port)} → ${created.publicUrl}`,
+        `Tunnel ${action} (${created.tunnel.id}) for port ${String(request.port)} → ${created.publicUrl} ${JSON.stringify(contextLogFields(bound))}`,
       );
       this.sendMessage(client, response);
     } catch (error: unknown) {
@@ -320,12 +262,6 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  /**
-   * Serializes a protocol message and writes it to an open socket.
-   *
-   * @param client - Target WebSocket.
-   * @param message - Protocol payload to send.
-   */
   private sendMessage(client: WebSocket, message: ProtocolMessage): void {
     if (client.readyState !== WebSocket.OPEN) {
       this.logger.warn(`Skipped send; socket not open (readyState=${String(client.readyState)})`);
@@ -334,37 +270,8 @@ export class TunnelGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.send(JSON.stringify(message));
   }
-
-  private async verifyClientToken(token: string): Promise<AuthUser> {
-    if (isApiKeyToken(token)) {
-      return this.apiKeys.verifyBearerToken(token);
-    }
-    const user = await this.auth.verifyAccessToken(token);
-    return { ...user, authMethod: "jwt" };
-  }
 }
 
-function readWorkspaceHeader(request: IncomingMessage): string | undefined {
-  const value = request.headers["x-workspace-id"];
-  if (typeof value === "string") {
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : undefined;
-  }
-  if (Array.isArray(value)) {
-    const first = value[0]?.trim();
-    return first !== undefined && first.length > 0 ? first : undefined;
-  }
-  return undefined;
-}
-
-/**
- * HTTP data-plane frames the CLI sends while answering public requests.
- *
- * These are excluded from the WebSocket control-plane rate limit.
- *
- * @param message - Parsed protocol message.
- * @returns `true` for response/cancel frames.
- */
 function isHttpDataPlaneFromClient(message: ProtocolMessage): boolean {
   return (
     message.type === MessageType.HttpResponseStart ||

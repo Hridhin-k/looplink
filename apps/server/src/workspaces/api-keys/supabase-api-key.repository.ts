@@ -82,13 +82,15 @@ export class SupabaseApiKeyRepository implements ApiKeyRepository {
   }
 
   async rotate(
+    workspaceId: string,
     keyId: string,
     material: { readonly keyPrefix: string; readonly keyHash: string },
   ): Promise<WorkspaceApiKey> {
+    const encodedWorkspaceId = encodeURIComponent(workspaceId);
     const encoded = encodeURIComponent(keyId);
     const rows = await this.requestJson<ApiKeyRow[]>(
       "PATCH",
-      `/rest/v1/workspace_api_keys?id=eq.${encoded}`,
+      `/rest/v1/workspace_api_keys?id=eq.${encoded}&workspace_id=eq.${encodedWorkspaceId}`,
       {
         key_prefix: material.keyPrefix,
         key_hash: material.keyHash,
@@ -104,11 +106,12 @@ export class SupabaseApiKeyRepository implements ApiKeyRepository {
     return mapApiKeyPublic(row);
   }
 
-  async revoke(keyId: string, revokedByUserId: string): Promise<WorkspaceApiKey> {
+  async revoke(workspaceId: string, keyId: string, revokedByUserId: string): Promise<WorkspaceApiKey> {
+    const encodedWorkspaceId = encodeURIComponent(workspaceId);
     const encoded = encodeURIComponent(keyId);
     const rows = await this.requestJson<ApiKeyRow[]>(
       "PATCH",
-      `/rest/v1/workspace_api_keys?id=eq.${encoded}`,
+      `/rest/v1/workspace_api_keys?id=eq.${encoded}&workspace_id=eq.${encodedWorkspaceId}`,
       {
         revoked_at: new Date().toISOString(),
         revoked_by_user_id: revokedByUserId,

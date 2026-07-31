@@ -23,7 +23,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
         <TopNav />
         <ConnectionBanner />
         <main className="relative flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl px-3 py-5 sm:px-4 md:px-6 md:py-6">
+          <div className="mx-auto w-full max-w-[1200px] px-3 py-5 sm:px-4 md:px-6 md:py-8">
             {children}
           </div>
         </main>

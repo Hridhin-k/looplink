@@ -10,16 +10,28 @@ import {
 import { NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 
+import { ContextType } from "../context/context-type.js";
+import type { TunnelContext } from "../context/tunnel-context.interface.js";
 import type { RequestReplayService } from "../replay/request-replay.service.js";
 import type { StatisticsService } from "../statistics/statistics.service.js";
 import { TrafficRecorderService } from "../traffic/traffic-recorder.service.js";
+import type { WorkspacePermission } from "../workspaces/workspace.permissions.js";
 import { InspectorService } from "./inspector.service.js";
+
+const WORKSPACE_ID = "ws-1";
+
+const context: TunnelContext = Object.freeze({
+  contextId: "ctx-1",
+  contextType: ContextType.Workspace,
+  tunnelId: null,
+  workspaceId: WORKSPACE_ID,
+  anonymousSessionId: null,
+  permissions: new Set<WorkspacePermission>(["inspector:read", "inspector:replay"]),
+  metadata: Object.freeze({}),
+});
 
 /**
  * Builds a traffic record for service tests.
- *
- * @param overrides - Fields to replace.
- * @returns Complete record.
  */
 function record(overrides: Partial<TrafficRecord> = {}): TrafficRecord {
   return {
@@ -35,6 +47,7 @@ function record(overrides: Partial<TrafficRecord> = {}): TrafficRecord {
     responseBody: createTrafficBody(undefined),
     latencyMs: 5,
     tunnelId: "tun-1",
+    workspaceId: WORKSPACE_ID,
     error: undefined,
     ...overrides,
   };
@@ -47,8 +60,12 @@ describe("InspectorService", () => {
     await store.save(record({ requestId: "b", path: "/b", timestamp: 2 }));
 
     const traffic = {
-      list: (options?: { tunnelId?: string; limit?: number; includeBodies?: boolean }) =>
-        store.list(options),
+      list: (options?: {
+        workspaceId?: string;
+        tunnelId?: string;
+        limit?: number;
+        includeBodies?: boolean;
+      }) => store.list(options),
       findById: (id: string) => store.findById(id),
     } as unknown as TrafficRecorderService;
 
@@ -72,15 +89,18 @@ describe("InspectorService", () => {
 
     const service = new InspectorService(traffic, statistics, replay);
 
-    const list = await service.listRequests({ limit: 1 });
+    const list = await service.listRequests(context, { limit: 1 });
     expect(list.count).toBe(1);
     expect(list.items[0]?.id).toBe("b");
 
-    const detail = await service.getRequest("a");
+    const detail = await service.getRequest(context, "a");
     expect(detail.path).toBe("/a");
 
-    const stats = await service.getStatistics("tun-1");
-    expect(statistics.getStatistics).toHaveBeenCalledWith({ tunnelId: "tun-1" });
+    const stats = await service.getStatistics(context, "tun-1");
+    expect(statistics.getStatistics).toHaveBeenCalledWith({
+      tunnelId: "tun-1",
+      workspaceId: WORKSPACE_ID,
+    });
     expect(stats.totalRequests).toBe(2);
   });
 
@@ -95,7 +115,21 @@ describe("InspectorService", () => {
       { replay: vi.fn() } as unknown as RequestReplayService,
     );
 
-    await expect(service.getRequest("missing")).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.getRequest(context, "missing")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("throws NotFoundException when record belongs to another workspace", async () => {
+    const traffic = {
+      findById: vi.fn().mockResolvedValue(record({ workspaceId: "other-ws" })),
+    } as unknown as TrafficRecorderService;
+
+    const service = new InspectorService(
+      traffic,
+      { getStatistics: vi.fn() } as unknown as StatisticsService,
+      { replay: vi.fn() } as unknown as RequestReplayService,
+    );
+
+    await expect(service.getRequest(context, "req-1")).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("delegates replay and maps the response DTO", async () => {
@@ -119,7 +153,8 @@ describe("InspectorService", () => {
       replay,
     );
 
-    const result = await service.replayRequest("req-1");
+    const result = await service.replayRequest(context, "req-1");
+    expect(replay.replay).toHaveBeenCalledWith("req-1", WORKSPACE_ID);
     expect(result.statusCode).toBe(201);
     expect(result.bodyBase64.length).toBeGreaterThan(0);
   });
@@ -135,7 +170,7 @@ describe("InspectorService", () => {
       replay,
     );
 
-    await expect(service.replayRequest("missing")).rejects.toMatchObject({
+    await expect(service.replayRequest(context, "missing")).rejects.toMatchObject({
       code: ReplayErrorCode.NotFound,
     });
   });

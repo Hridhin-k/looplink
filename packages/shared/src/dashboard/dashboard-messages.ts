@@ -73,6 +73,7 @@ export interface DashboardTunnelDisconnectedMessage extends DashboardMessageBase
   readonly type: typeof DashboardMessageType.TunnelDisconnected;
   readonly tunnelId: string;
   readonly reason: string;
+  readonly workspaceId?: string;
 }
 
 /**

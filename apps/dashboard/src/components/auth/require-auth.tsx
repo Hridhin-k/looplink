@@ -8,8 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Renders children only when authenticated; otherwise redirects to `/login`.
- *
- * Existing inspector routes are intentionally not wrapped by this component.
  */
 export function RequireAuth({
   children,
@@ -32,9 +30,17 @@ export function RequireAuth({
 
   if (isLoading || session === null) {
     return (
-      <div className="space-y-3 py-8" aria-busy="true" aria-label="Checking session">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-24 w-full max-w-md" />
+      <div
+        className="flex min-h-svh w-full flex-col items-center justify-center gap-4 bg-obsidian-canvas px-4"
+        aria-busy="true"
+        aria-label="Checking session"
+      >
+        <p className="font-mono text-[12px] tracking-[0.18em] text-pale-stone uppercase">Badger</p>
+        <div className="w-full max-w-sm space-y-3">
+          <Skeleton className="h-3 w-24 bg-carbon-lift" />
+          <Skeleton className="h-10 w-full bg-carbon-lift" />
+          <Skeleton className="h-24 w-full bg-carbon-lift" />
+        </div>
       </div>
     );
   }

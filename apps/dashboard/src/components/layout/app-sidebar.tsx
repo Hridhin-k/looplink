@@ -21,21 +21,21 @@ export function AppSidebar() {
       aria-label="Sidebar"
       initial={false}
       animate={{ width: collapsed ? 72 : 240 }}
-      transition={{ type: "spring", stiffness: 320, damping: 32 }}
+      transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex",
+        "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-ash-stroke bg-obsidian-canvas text-bone lg:flex",
       )}
     >
       <div
         className={cn(
-          "flex h-14 items-center gap-2 px-3",
+          "flex h-16 items-center gap-2 px-3",
           collapsed ? "justify-center" : "justify-between",
         )}
       >
         {!collapsed ? (
-          <p className="font-heading truncate text-base tracking-tight">Badger</p>
+          <p className="font-mono text-[12px] tracking-[0.18em] text-bone uppercase">Badger</p>
         ) : (
-          <span className="font-heading text-sm tracking-tight" aria-hidden>
+          <span className="font-mono text-[12px] tracking-[0.18em] text-bone uppercase" aria-hidden>
             B
           </span>
         )}
@@ -59,7 +59,7 @@ export function AppSidebar() {
       </div>
 
       {collapsed ? (
-        <div className="border-t border-sidebar-border p-2">
+        <div className="border-t border-ash-stroke p-2">
           <Button
             type="button"
             variant="ghost"

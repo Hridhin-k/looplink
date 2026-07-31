@@ -76,6 +76,8 @@ export interface TunnelClosedEvent extends BadgerEventBase {
   readonly tunnelId: string;
   /** Why the tunnel was removed. */
   readonly reason: TunnelClosedReason;
+  /** Workspace that owned this tunnel (absent for anonymous). */
+  readonly workspaceId?: string;
 }
 
 /**

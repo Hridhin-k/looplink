@@ -25,11 +25,8 @@ import {
 } from "@hridhin-k/badger-shared";
 import WebSocket from "ws";
 
-import { WorkspaceContextService } from "../access/workspace-context.service.js";
-import { AuthService } from "../auth/auth.service.js";
-import { extractBearerToken } from "../auth/extract-bearer-token.js";
-import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
-import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
+import { ContextResolver } from "../context/context.resolver.js";
+import { ContextSessionStore } from "../context/providers/context-session.store.js";
 import { rawDataToString } from "../utils/raw-data.js";
 
 /** How often the gateway probes dashboard clients. */
@@ -60,9 +57,8 @@ export class DashboardGateway
    */
   constructor(
     @Inject(EVENT_BUS) private readonly eventBus: EventBus,
-    private readonly auth: AuthService,
-    private readonly apiKeys: ApiKeyService,
-    private readonly workspaceContext: WorkspaceContextService,
+    private readonly contextResolver: ContextResolver,
+    private readonly contextSessions: ContextSessionStore,
   ) {}
 
   /**
@@ -114,7 +110,7 @@ export class DashboardGateway
   }
 
   /**
-   * Registers a dashboard client after verifying Account → Membership.
+   * Registers a dashboard client after Context Engine admission.
    */
   async handleConnection(client: WebSocket, request?: IncomingMessage): Promise<void> {
     if (request === undefined) {
@@ -122,20 +118,15 @@ export class DashboardGateway
       return;
     }
 
-    const token = readAccessTokenFromRequest(request);
-    if (token === undefined) {
-      client.close(1008, "Authentication required.");
-      return;
-    }
-
     try {
-      const user = isApiKeyToken(token)
-        ? await this.apiKeys.verifyBearerToken(token)
-        : { ...(await this.auth.verifyAccessToken(token)), authMethod: "jwt" as const };
-      const requestedWorkspaceId = readWorkspaceScopeFromRequest(request);
-      const authorized = await this.workspaceContext.resolve(user, requestedWorkspaceId);
+      const context = await this.contextResolver.resolveDashboardWebSocket(request);
+      if (context.workspaceId === null) {
+        client.close(1008, "Unauthorized.");
+        return;
+      }
       this.clients.add(client);
-      this.clientWorkspaceScope.set(client, authorized.request.workspaceId);
+      this.clientWorkspaceScope.set(client, context.workspaceId);
+      this.contextSessions.bind(client, context);
     } catch {
       client.close(1008, "Unauthorized.");
       return;
@@ -159,13 +150,14 @@ export class DashboardGateway
   }
 
   /**
-   * Removes a disconnected dashboard client.
+   * Removes a disconnected dashboard client and destroys its context binding.
    *
    * @param client - Disconnected WebSocket.
    */
   handleDisconnect(client: WebSocket): void {
     this.clients.delete(client);
     this.clientWorkspaceScope.delete(client);
+    this.contextSessions.destroy(client);
     this.logger.log(`Dashboard client disconnected (${String(this.clients.size)} active)`);
   }
 
@@ -198,10 +190,27 @@ export class DashboardGateway
   }
 
   private broadcast(message: DashboardMessage): void {
+    // Keepalive frames are not workspace-scoped.
+    if (
+      message.type === DashboardMessageType.Ping ||
+      message.type === DashboardMessageType.Connected
+    ) {
+      for (const client of [...this.clients]) {
+        this.send(client, message);
+      }
+      return;
+    }
+
     const workspaceId = workspaceScopeFromMessage(message);
+    // Deny-by-default: never fan out unscoped traffic/stats/tunnel events
+    // (anonymous tunnels must not leak into authenticated dashboard sessions).
+    if (workspaceId === undefined) {
+      return;
+    }
+
     for (const client of [...this.clients]) {
       const clientScope = this.clientWorkspaceScope.get(client);
-      if (workspaceId !== undefined && clientScope !== workspaceId) {
+      if (clientScope !== workspaceId) {
         continue;
       }
       this.send(client, message);
@@ -211,6 +220,7 @@ export class DashboardGateway
   private send(client: WebSocket, message: DashboardMessage): void {
     if (client.readyState !== WebSocket.OPEN) {
       this.clients.delete(client);
+      this.clientWorkspaceScope.delete(client);
       return;
     }
 
@@ -225,44 +235,10 @@ export class DashboardGateway
   }
 }
 
-function readWorkspaceScopeFromRequest(request: IncomingMessage): string | undefined {
-  const url = request.url;
-  if (url === undefined) {
-    return undefined;
-  }
-  try {
-    const parsed = new URL(url, "http://localhost");
-    const workspaceId = parsed.searchParams.get("workspaceId")?.trim();
-    return workspaceId !== undefined && workspaceId.length > 0 ? workspaceId : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function readAccessTokenFromRequest(request: IncomingMessage): string | undefined {
-  const header = request.headers.authorization;
-  const authorization = typeof header === "string" ? header : header?.[0];
-  const bearer = extractBearerToken(authorization);
-  if (bearer !== undefined) {
-    return bearer;
-  }
-
-  const url = request.url;
-  if (url === undefined) {
-    return undefined;
-  }
-  try {
-    const parsed = new URL(url, "http://localhost");
-    const token = parsed.searchParams.get("access_token")?.trim();
-    return token !== undefined && token.length > 0 ? token : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function workspaceScopeFromMessage(message: DashboardMessage): string | undefined {
   switch (message.type) {
     case DashboardMessageType.TunnelConnected:
+    case DashboardMessageType.TunnelDisconnected:
     case DashboardMessageType.RequestReceived:
     case DashboardMessageType.ResponseCompleted:
     case DashboardMessageType.ReplayCompleted:

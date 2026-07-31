@@ -3,7 +3,9 @@ import { Buffer } from "node:buffer";
 import type { Command } from "commander";
 
 import { DEFAULT_SERVER_URL, resolveServerUrl } from "../config/server.js";
+import { AuthSessionManager } from "../services/auth-session-manager.js";
 import { ReplayApiClient, ReplayClientError } from "../services/replay-api-client.js";
+import { WorkspacePreferenceStore } from "../services/workspace-preference-store.js";
 import { theme } from "../ui/theme.js";
 import type { Writer } from "../utils/output.js";
 
@@ -13,26 +15,25 @@ import type { Writer } from "../utils/output.js";
 export interface ReplayCommandOptions {
   /** Optional WebSocket URL override from `--server`. */
   readonly server?: string;
+  /** Optional workspace override (defaults to persisted active workspace). */
+  readonly workspace?: string;
 }
 
 /**
  * Commander adapter for `badger replay <requestId>`.
+ *
+ * Requires login — replay is Membership-scoped and never anonymous.
  */
 export class ReplayCommand {
-  /**
-   * @param client - HTTP client for the replay management API.
-   * @param writer - Destination for output and errors.
-   */
   constructor(
     private readonly client: ReplayApiClient,
     private readonly writer: Writer,
+    private readonly sessions: AuthSessionManager,
+    private readonly preferences: WorkspacePreferenceStore = new WorkspacePreferenceStore(),
   ) {}
 
   /**
    * Handles a single `badger replay <requestId>` invocation.
-   *
-   * @param requestId - Traffic record id.
-   * @param options - Parsed Commander options.
    */
   async execute(requestId: string, options: ReplayCommandOptions = {}): Promise<void> {
     const trimmed = requestId.trim();
@@ -45,7 +46,22 @@ export class ReplayCommand {
     const serverUrl = resolveServerUrl(options.server);
 
     try {
-      const result = await this.client.replay(serverUrl, trimmed);
+      const accessToken = await this.sessions.getValidAccessToken(serverUrl);
+      if (accessToken === undefined) {
+        throw new Error(
+          `Not logged in. Run \`badger login -s ${serverUrl}\` before replaying traffic.`,
+        );
+      }
+
+      const workspaceId =
+        options.workspace !== undefined && options.workspace.trim().length > 0
+          ? options.workspace.trim()
+          : this.preferences.load(serverUrl)?.workspaceId;
+
+      const result = await this.client.replay(serverUrl, trimmed, {
+        accessToken,
+        ...(workspaceId === undefined ? {} : { workspaceId }),
+      });
       const bodyText = Buffer.from(result.bodyBase64, "base64").toString("utf8");
 
       this.writer.writeLine(`${result.method} ${result.path} → ${String(result.statusCode)}`);
@@ -69,9 +85,6 @@ export class ReplayCommand {
 
 /**
  * Registers `badger replay <requestId>` on a Commander program.
- *
- * @param program - Commander program to configure.
- * @param replayCommand - Command handler.
  */
 export function registerReplayCommand(program: Command, replayCommand: ReplayCommand): void {
   program
@@ -79,6 +92,7 @@ export function registerReplayCommand(program: Command, replayCommand: ReplayCom
     .description("Replay a previously recorded HTTP request through the live tunnel")
     .argument("<requestId>", "Traffic request id to replay")
     .option("-s, --server <url>", `Badger server WebSocket URL (default: ${DEFAULT_SERVER_URL})`)
+    .option("-w, --workspace <id>", "Workspace id (defaults to active workspace preference)")
     .action((requestId: string, options: ReplayCommandOptions) => {
       void replayCommand.execute(requestId, options);
     });

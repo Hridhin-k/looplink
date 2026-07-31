@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 
 /**
- * Compact KPI tile for the statistics overview.
+ * Compact KPI tile for overview and statistics.
  */
 export function StatKpi({
   label,
@@ -18,16 +18,18 @@ export function StatKpi({
   readonly className?: string;
 }) {
   return (
-    <Card size="sm" className={cn("min-w-0", className)}>
-      <CardHeader className="gap-0.5">
-        <CardDescription className="text-[11px] tracking-[0.14em] uppercase">
+    <Card size="sm" className={cn("min-w-0 shadow-none", className)}>
+      <CardHeader className="gap-1 p-5">
+        <CardDescription className="font-mono text-[12px] tracking-[-0.24px] text-pale-stone uppercase">
           {label}
         </CardDescription>
-        <CardTitle className="font-mono text-2xl tracking-tight tabular-nums">{value}</CardTitle>
+        <CardTitle className="text-[36px] leading-[1.1] font-normal tracking-[-1.12px] text-bone tabular-nums">
+          {value}
+        </CardTitle>
       </CardHeader>
       {hint !== undefined ? (
-        <CardContent>
-          <p className="text-xs text-muted-foreground">{hint}</p>
+        <CardContent className="pt-0 pb-5">
+          <p className="text-xs text-warm-granite">{hint}</p>
         </CardContent>
       ) : null}
     </Card>

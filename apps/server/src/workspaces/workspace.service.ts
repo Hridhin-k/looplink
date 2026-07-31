@@ -449,6 +449,27 @@ export class WorkspaceService {
     };
   }
 
+  /**
+   * Hard-deletes every workspace owned by the user so auth user deletion is not
+   * blocked by `workspaces.owner_user_id … ON DELETE RESTRICT`.
+   *
+   * Includes personal and soft-deleted workspaces. Only for account deletion.
+   */
+  async purgeOwnedWorkspacesForAccountDeletion(userId: string): Promise<number> {
+    const ownedIds = await this.workspaces.listOwnedWorkspaceIds(userId);
+    for (const workspaceId of ownedIds) {
+      await this.workspaces.hardDeleteWorkspace(workspaceId);
+      await this.audit.record({
+        actorUserId: userId,
+        workspaceId,
+        action: "workspace.purged_for_account_deletion",
+        resourceType: "workspace",
+        resourceId: workspaceId,
+      });
+    }
+    return ownedIds.length;
+  }
+
   private rejectApiKeyMutation(user: AuthUser): void {
     if (user.authMethod === "api_key") {
       throw new ForbiddenException("This action requires a user session, not an API key.");

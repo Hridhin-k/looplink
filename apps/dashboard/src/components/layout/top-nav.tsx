@@ -6,13 +6,12 @@ import { usePathname } from "next/navigation";
 import { AuthNavControls } from "@/components/auth/auth-nav-controls";
 import { ConnectionIndicator } from "@/components/layout/connection-indicator";
 import { APP_NAV_ITEMS } from "@/components/layout/nav-items";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { WorkspaceSelector } from "@/components/workspaces/workspace-selector";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/stores/ui-store";
 
 /**
- * Top bar: menu (mobile/tablet), page title, auth, live status, theme.
+ * Top bar: menu (mobile/tablet), page title, workspace, auth, live status.
  */
 export function TopNav() {
   const pathname = usePathname();
@@ -20,23 +19,15 @@ export function TopNav() {
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const setMobileNavOpen = useUiStore((s) => s.setMobileNavOpen);
 
-  const current = APP_NAV_ITEMS.find((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
-  );
+  const current = APP_NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
   let title = current?.label ?? "Overview";
   if (pathname.startsWith("/requests/") && pathname !== "/requests") {
     title = "Request details";
   }
-  if (pathname.startsWith("/account")) {
-    title = "Account";
-  }
-  if (pathname.startsWith("/workspace")) {
-    title = "Workspace settings";
-  }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border/80 bg-background/80 px-3 backdrop-blur-md sm:px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-ash-stroke bg-obsidian-canvas/90 px-3 sm:px-4 md:px-6">
       <Button
         type="button"
         variant="ghost"
@@ -60,13 +51,14 @@ export function TopNav() {
       </Button>
 
       <div className="min-w-0 flex-1">
-        <h1 className="truncate font-heading text-base tracking-tight sm:text-lg">{title}</h1>
+        <p className="font-mono text-[12px] tracking-[-0.02em] text-pale-stone uppercase">
+          {title}
+        </p>
       </div>
 
       <WorkspaceSelector />
       <AuthNavControls />
       <ConnectionIndicator className="hidden sm:inline-flex" />
-      <ThemeToggle />
     </header>
   );
 }

@@ -1,32 +1,31 @@
 import {
   BadRequestException,
   Controller,
-  ForbiddenException,
   Get,
-  Headers,
   Param,
   Post,
   Query,
-  Req,
+  UseGuards,
 } from "@nestjs/common";
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
-import type { FastifyRequest } from "fastify";
 
-import { WorkspaceContextService } from "../access/workspace-context.service.js";
-import { AuthService } from "../auth/auth.service.js";
-import type { AuthUser } from "../auth/auth.types.js";
-import { extractBearerToken } from "../auth/extract-bearer-token.js";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard.js";
+import { CurrentTunnelContext } from "../context/decorators/current-tunnel-context.decorator.js";
+import { ContextAuthGuard } from "../context/guards/context-auth.guard.js";
+import { RequireContextPermission } from "../context/guards/require-context-permission.decorator.js";
+import type { TunnelContext } from "../context/tunnel-context.interface.js";
 import { toReplayHttpException } from "../replay/replay-http.js";
-import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
-import { isApiKeyToken } from "../workspaces/workspace-crypto.js";
 import { InspectorReplayResponseDto } from "./dto/inspector-replay.dto.js";
 import { InspectorRequestDetailDto, InspectorRequestListDto } from "./dto/inspector-request.dto.js";
 import { InspectorStatisticsDto } from "./dto/inspector-statistics.dto.js";
@@ -35,21 +34,19 @@ import { InspectorService } from "./inspector.service.js";
 /**
  * Inspector API for recorded traffic, statistics, and replay.
  *
- * Workspace-scoped reads require authenticated Membership. Unscoped reads
- * remain available for local debugging of legacy untagged traffic.
+ * Controllers resolve {@link TunnelContext} via the Context Engine. The service
+ * never sees JWTs, memberships, or Supabase.
  */
 @ApiTags("inspector")
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ContextAuthGuard)
 @Controller("api/v1/inspector")
 export class InspectorController {
-  constructor(
-    private readonly inspector: InspectorService,
-    private readonly auth: AuthService,
-    private readonly apiKeys: ApiKeyService,
-    private readonly workspaceContext: WorkspaceContextService,
-  ) {}
+  constructor(private readonly inspector: InspectorService) {}
 
   @Get("requests")
-  @ApiOperation({ summary: "List recorded HTTP requests" })
+  @RequireContextPermission("inspector:read")
+  @ApiOperation({ summary: "List recorded HTTP requests for the active workspace" })
   @ApiQuery({ name: "tunnelId", required: false, description: "Filter by tunnel id" })
   @ApiQuery({
     name: "limit",
@@ -64,105 +61,70 @@ export class InspectorController {
       "Full-text search across URL, headers, method, body, response, tunnel, status, and timestamp",
   })
   @ApiOkResponse({ type: InspectorRequestListDto })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid Bearer token" })
+  @ApiForbiddenResponse({ description: "Insufficient inspector permissions" })
   @ApiBadRequestResponse({ description: "Invalid limit query parameter" })
   async listRequests(
-    @Req() request: FastifyRequest,
+    @CurrentTunnelContext() context: TunnelContext,
     @Query("tunnelId") tunnelId?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
-    @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorRequestListDto> {
-    const scopedWorkspaceId = await this.resolveScopedWorkspace(request, workspaceId);
-    return this.inspector.listRequests({
+    return this.inspector.listRequests(context, {
       ...(tunnelId === undefined || tunnelId.trim().length === 0
         ? {}
         : { tunnelId: tunnelId.trim() }),
-      ...(scopedWorkspaceId === undefined ? {} : { workspaceId: scopedWorkspaceId }),
       ...(limit === undefined ? {} : { limit: parseLimit(limit) }),
       ...(q === undefined || q.trim().length === 0 ? {} : { query: q }),
     });
   }
 
   @Get("request/:id")
+  @RequireContextPermission("inspector:read")
   @ApiOperation({ summary: "Get a recorded HTTP request by id" })
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorRequestDetailDto })
-  @ApiNotFoundResponse({ description: "Request not found" })
+  @ApiNotFoundResponse({ description: "Request not found in this workspace" })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid Bearer token" })
   async getRequest(
-    @Req() request: FastifyRequest,
+    @CurrentTunnelContext() context: TunnelContext,
     @Param("id") id: string,
-    @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorRequestDetailDto> {
-    return this.inspector.getRequest(
-      id,
-      await this.resolveScopedWorkspace(request, workspaceId),
-    );
+    return this.inspector.getRequest(context, id);
   }
 
   @Post("replay/:id")
+  @RequireContextPermission("inspector:replay")
   @ApiOperation({ summary: "Replay a recorded HTTP request" })
   @ApiParam({ name: "id", description: "Traffic request id" })
   @ApiOkResponse({ type: InspectorReplayResponseDto })
-  @ApiNotFoundResponse({ description: "Request not found" })
+  @ApiNotFoundResponse({ description: "Request not found in this workspace" })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid Bearer token" })
+  @ApiForbiddenResponse({ description: "Insufficient inspector permissions" })
   async replayRequest(
-    @Req() request: FastifyRequest,
+    @CurrentTunnelContext() context: TunnelContext,
     @Param("id") id: string,
-    @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorReplayResponseDto> {
     try {
-      return await this.inspector.replayRequest(
-        id,
-        await this.resolveScopedWorkspace(request, workspaceId),
-      );
+      return await this.inspector.replayRequest(context, id);
     } catch (error: unknown) {
       throw toReplayHttpException(error);
     }
   }
 
   @Get("statistics")
-  @ApiOperation({ summary: "Get traffic statistics" })
+  @RequireContextPermission("inspector:read")
+  @ApiOperation({ summary: "Get traffic statistics for the active workspace" })
   @ApiQuery({ name: "tunnelId", required: false, description: "Scope to a single tunnel" })
   @ApiOkResponse({ type: InspectorStatisticsDto })
+  @ApiUnauthorizedResponse({ description: "Missing or invalid Bearer token" })
   async getStatistics(
-    @Req() request: FastifyRequest,
+    @CurrentTunnelContext() context: TunnelContext,
     @Query("tunnelId") tunnelId?: string,
-    @Headers("x-workspace-id") workspaceId?: string,
   ): Promise<InspectorStatisticsDto> {
     const scoped =
       tunnelId === undefined || tunnelId.trim().length === 0 ? undefined : tunnelId.trim();
-    return this.inspector.getStatistics(
-      scoped,
-      await this.resolveScopedWorkspace(request, workspaceId),
-    );
-  }
-
-  /**
-   * Never trusts client workspace IDs — verifies ACTIVE membership when scoped.
-   */
-  private async resolveScopedWorkspace(
-    request: FastifyRequest,
-    workspaceHeader: string | undefined,
-  ): Promise<string | undefined> {
-    const requested = sanitizeWorkspaceHeader(workspaceHeader);
-    if (requested === undefined) {
-      return undefined;
-    }
-
-    const authorization =
-      typeof request.headers.authorization === "string"
-        ? request.headers.authorization
-        : undefined;
-    const token = extractBearerToken(authorization);
-    if (token === undefined) {
-      throw new ForbiddenException("Authentication required for workspace-scoped inspector access.");
-    }
-
-    const user: AuthUser = isApiKeyToken(token)
-      ? await this.apiKeys.verifyBearerToken(token)
-      : { ...(await this.auth.verifyAccessToken(token)), authMethod: "jwt" };
-
-    const authorized = await this.workspaceContext.resolve(user, requested);
-    return authorized.request.workspaceId;
+    return this.inspector.getStatistics(context, scoped);
   }
 }
 
@@ -172,9 +134,4 @@ function parseLimit(raw: string): number {
     throw new BadRequestException(`Invalid limit "${raw}": expected a non-negative integer.`);
   }
   return value;
-}
-
-function sanitizeWorkspaceHeader(value: string | undefined): string | undefined {
-  const normalized = value?.trim();
-  return normalized === undefined || normalized.length === 0 ? undefined : normalized;
 }

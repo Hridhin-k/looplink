@@ -21,6 +21,31 @@ export class ApiError extends Error {
 }
 
 /**
+ * User-facing message from an {@link ApiError}, preferring the Nest `message` body.
+ */
+export function formatApiErrorMessage(error: ApiError, fallback?: string): string {
+  if (typeof error.body === "object" && error.body !== null && "message" in error.body) {
+    const message = (error.body as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+    if (Array.isArray(message) && message.length > 0) {
+      return message.map(String).join(", ");
+    }
+  }
+  if (typeof error.body === "string" && error.body.trim().length > 0) {
+    return error.body;
+  }
+  if (fallback !== undefined && fallback.trim().length > 0) {
+    return fallback;
+  }
+  if (error.status === 401) {
+    return "Your session expired. Sign in again and retry.";
+  }
+  return error.message;
+}
+
+/**
  * Network / CORS failure talking to the Badger API (no HTTP response).
  */
 export class NetworkError extends Error {

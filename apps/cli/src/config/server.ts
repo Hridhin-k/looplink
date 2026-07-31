@@ -1,10 +1,12 @@
 import { resolveEnvPreferringBadger } from "@hridhin-k/badger-shared";
 
+import { CliConfigStore } from "../services/cli-config-store.js";
+
 /**
  * Default WebSocket URL for the hosted Badger server.
  *
- * Override with `--server`, {@link SERVER_URL_ENV}, or the deprecated
- * {@link LEGACY_SERVER_URL_ENV} for local development.
+ * Override with `--server`, {@link SERVER_URL_ENV}, the deprecated
+ * {@link LEGACY_SERVER_URL_ENV}, or `badger config` → Server URL.
  */
 export const DEFAULT_SERVER_URL = "wss://looplinkserver-production.up.railway.app";
 
@@ -24,7 +26,8 @@ export const LEGACY_SERVER_URL_ENV = "LOOPLINK_SERVER_URL";
  * Resolves the Badger server WebSocket URL.
  *
  * Precedence: explicit CLI override → `BADGER_SERVER_URL` →
- * `LOOPLINK_SERVER_URL` (deprecated) → {@link DEFAULT_SERVER_URL}.
+ * `LOOPLINK_SERVER_URL` (deprecated) → `badger config` serverUrl →
+ * {@link DEFAULT_SERVER_URL}.
  *
  * @param override - Optional URL from a CLI flag.
  * @returns The WebSocket URL to connect to.
@@ -37,6 +40,11 @@ export function resolveServerUrl(override?: string): string {
   const fromEnv = resolveEnvPreferringBadger(SERVER_URL_ENV, LEGACY_SERVER_URL_ENV);
   if (fromEnv !== undefined) {
     return fromEnv;
+  }
+
+  const fromConfig = new CliConfigStore().load().serverUrl.trim();
+  if (fromConfig.length > 0) {
+    return fromConfig;
   }
 
   return DEFAULT_SERVER_URL;

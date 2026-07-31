@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import type WebSocket from "ws";
 
 import { tunnelSlug } from "./public-url.js";
+import type { TunnelOwnership } from "./tunnel-context.js";
+import { tunnelContextsEqual } from "./tunnel-context.js";
 import type { TunnelRepository } from "./tunnel.repository.js";
 import type { OrphanedTunnel, TunnelRecord } from "./tunnel.types.js";
 
@@ -110,8 +112,12 @@ export class MemoryTunnelRepository implements TunnelRepository {
       id: existing.id,
       port: existing.port,
       disconnectedAt,
+      context: existing.context,
       ...(existing.ownerUserId === undefined ? {} : { ownerUserId: existing.ownerUserId }),
       ...(existing.workspaceId === undefined ? {} : { workspaceId: existing.workspaceId }),
+      ...(existing.anonymousSessionId === undefined
+        ? {}
+        : { anonymousSessionId: existing.anonymousSessionId }),
     };
 
     this.orphans.set(id, orphan);
@@ -127,6 +133,7 @@ export class MemoryTunnelRepository implements TunnelRepository {
    * @param port - Local port the client wants to expose.
    * @param now - Current epoch ms used for expiry checks.
    * @param reclaimWindowMs - Maximum age of an orphan that may still be restored.
+   * @param context - Expected owner; reclaim fails when the orphan belongs elsewhere.
    * @returns The restored active record, or `undefined` when reclaim is not possible.
    */
   reclaim(
@@ -135,6 +142,7 @@ export class MemoryTunnelRepository implements TunnelRepository {
     port: number,
     now: number,
     reclaimWindowMs: number,
+    context: TunnelOwnership,
   ): TunnelRecord | undefined {
     const orphan = this.orphans.get(id);
     if (orphan === undefined) {
@@ -142,6 +150,10 @@ export class MemoryTunnelRepository implements TunnelRepository {
     }
 
     if (orphan.port !== port) {
+      return undefined;
+    }
+
+    if (!tunnelContextsEqual(orphan.context, context)) {
       return undefined;
     }
 
@@ -157,8 +169,12 @@ export class MemoryTunnelRepository implements TunnelRepository {
       id: orphan.id,
       client,
       port: orphan.port,
+      context: orphan.context,
       ...(orphan.ownerUserId === undefined ? {} : { ownerUserId: orphan.ownerUserId }),
       ...(orphan.workspaceId === undefined ? {} : { workspaceId: orphan.workspaceId }),
+      ...(orphan.anonymousSessionId === undefined
+        ? {}
+        : { anonymousSessionId: orphan.anonymousSessionId }),
     };
 
     this.save(tunnel);
@@ -170,10 +186,10 @@ export class MemoryTunnelRepository implements TunnelRepository {
    *
    * @param now - Current epoch ms.
    * @param reclaimWindowMs - Maximum orphan age to retain.
-   * @returns Number of orphans purged.
+   * @returns Orphans that were purged.
    */
-  purgeExpiredOrphans(now: number, reclaimWindowMs: number): number {
-    let purged = 0;
+  purgeExpiredOrphans(now: number, reclaimWindowMs: number): readonly OrphanedTunnel[] {
+    const purged: OrphanedTunnel[] = [];
 
     for (const [id, orphan] of this.orphans) {
       if (now - orphan.disconnectedAt <= reclaimWindowMs) {
@@ -182,7 +198,7 @@ export class MemoryTunnelRepository implements TunnelRepository {
 
       this.orphans.delete(id);
       this.bySlug.delete(tunnelSlug(id));
-      purged += 1;
+      purged.push(orphan);
     }
 
     return purged;

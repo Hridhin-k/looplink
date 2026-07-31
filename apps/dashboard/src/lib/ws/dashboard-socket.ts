@@ -19,6 +19,8 @@ export interface CreateDashboardSocketClientOptions {
   readonly workspaceId?: string;
   /** Access token for Membership-scoped live feed (query param; browsers cannot set WS Authorization). */
   readonly accessToken?: string;
+  /** When false, the caller owns reconnect (e.g. to refresh the access token). Default true. */
+  readonly autoReconnect?: boolean;
 }
 
 /**
@@ -36,7 +38,7 @@ export function createDashboardSocketClient(
   );
   return new DashboardLiveClient({
     url: wsUrl,
-    autoReconnect: true,
+    autoReconnect: options.autoReconnect !== false,
     onOpen: options.onOpen,
     onClose: options.onClose,
     onReconnecting: options.onReconnecting,

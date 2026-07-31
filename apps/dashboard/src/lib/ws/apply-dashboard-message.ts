@@ -33,10 +33,22 @@ export function applyDashboardMessage(queryClient: QueryClient, message: Dashboa
       patchResponseCompleted(queryClient, message);
       return;
     case DashboardMessageType.ReplayCompleted:
-      void queryClient.invalidateQueries({ queryKey: ["inspector"] });
+      if (message.workspaceId === undefined) {
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["inspector"],
+        predicate: (query) => queryBelongsToWorkspace(query.queryKey, message.workspaceId),
+      });
       return;
     case DashboardMessageType.StatisticsUpdated:
-      void queryClient.invalidateQueries({ queryKey: ["inspector", "statistics"] });
+      if (message.workspaceId === undefined) {
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["inspector", "statistics"],
+        predicate: (query) => queryBelongsToWorkspace(query.queryKey, message.workspaceId),
+      });
       return;
     default:
       return;
@@ -119,19 +131,47 @@ function matchingRequestListQueries(
   workspaceId: string | undefined,
   tunnelId: string,
 ) {
+  // Unscoped live events must not mutate any workspace cache.
+  if (workspaceId === undefined) {
+    return [];
+  }
+
   return queryClient
     .getQueryCache()
     .findAll({ queryKey: INSPECTOR_REQUESTS_QUERY_KEY })
     .filter((query) => {
       const params = query.queryKey[2] as RequestsQueryParams | undefined;
       if (params === undefined) {
-        return true;
+        return false;
       }
-      if ((workspaceId ?? null) !== params.workspaceId) {
+      if (params.workspaceId !== workspaceId) {
         return false;
       }
       return params.tunnelId === null || params.tunnelId === tunnelId;
     });
+}
+
+function queryBelongsToWorkspace(
+  queryKey: readonly unknown[],
+  workspaceId: string | undefined,
+): boolean {
+  if (workspaceId === undefined) {
+    return false;
+  }
+  for (const part of queryKey) {
+    if (
+      typeof part === "object" &&
+      part !== null &&
+      "workspaceId" in part &&
+      (part as { workspaceId?: unknown }).workspaceId === workspaceId
+    ) {
+      return true;
+    }
+    if (part === workspaceId) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function hasActiveSearch(params: RequestsQueryParams): boolean {

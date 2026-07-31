@@ -77,7 +77,7 @@ export class ApiKeyService {
     }
 
     const material = generateApiKeyMaterial();
-    const apiKey = await this.apiKeys.rotate(keyId, {
+    const apiKey = await this.apiKeys.rotate(workspaceId, keyId, {
       keyPrefix: material.keyPrefix,
       keyHash: material.keyHash,
     });
@@ -115,7 +115,7 @@ export class ApiKeyService {
         updatedAt: existing.updatedAt,
       };
     }
-    const revoked = await this.apiKeys.revoke(keyId, user.id);
+    const revoked = await this.apiKeys.revoke(workspaceId, keyId, user.id);
     await this.audit.record({
       actorUserId: user.id,
       workspaceId,

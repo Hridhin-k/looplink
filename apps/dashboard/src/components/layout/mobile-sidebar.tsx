@@ -21,11 +21,15 @@ export function MobileSidebar() {
     <Sheet open={open} onOpenChange={setMobileNavOpen}>
       <SheetContent
         side="left"
-        className="w-[min(100%,18rem)] bg-sidebar p-0 text-sidebar-foreground"
+        className="w-[min(100%,18rem)] border-ash-stroke bg-obsidian-canvas p-0 text-bone"
       >
-        <SheetHeader className="border-b border-sidebar-border">
-          <SheetTitle className="font-heading text-left">Badger</SheetTitle>
-          <SheetDescription className="text-left">Navigate the inspector</SheetDescription>
+        <SheetHeader className="border-b border-ash-stroke">
+          <SheetTitle className="text-left font-mono text-[12px] tracking-[0.18em] text-bone uppercase">
+            Badger
+          </SheetTitle>
+          <SheetDescription className="text-left text-warm-granite">
+            Navigate the inspector
+          </SheetDescription>
         </SheetHeader>
         <div className="px-2 py-3">
           <SidebarNav onNavigate={() => setMobileNavOpen(false)} />

@@ -6,6 +6,9 @@ import { MessageType } from "@hridhin-k/badger-shared";
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
+import { ContextFactory } from "../context/context.factory.js";
+import { ContextResolver } from "../context/context.resolver.js";
+import { ContextSessionStore } from "../context/providers/context-session.store.js";
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { TunnelGateway } from "./tunnel.gateway.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
@@ -32,35 +35,43 @@ class FakeSocket extends EventEmitter {
   }
 }
 
+function createContextResolver(): ContextResolver {
+  return new ContextResolver(
+    new ContextFactory(),
+    {
+      verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null, authMethod: "jwt" }),
+    } as never,
+    { verifyBearerToken: vi.fn() } as never,
+    {
+      resolve: vi.fn().mockResolvedValue({
+        workspace: { id: "w1" },
+        request: {
+          accountId: "u1",
+          accountEmail: null,
+          authMethod: "jwt",
+          workspaceId: "w1",
+          membershipId: "m1",
+          role: "owner",
+          permissions: new Set(["tunnel:create", "workspace:read"]),
+        },
+      }),
+    } as never,
+    {
+      validate: vi.fn(),
+      create: vi.fn(),
+      destroyByToken: vi.fn(),
+      isAnonymousToken: vi.fn().mockReturnValue(false),
+    } as never,
+  );
+}
+
 function createGateway(): {
   gateway: TunnelGateway;
   heartbeats: HeartbeatMonitor;
   tunnelManager: TunnelManager;
   security: GatewaySecurityPolicy;
+  contextSessions: ContextSessionStore;
 } {
-  const auth = {
-    verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null, authMethod: "jwt" }),
-  };
-  const apiKeys = {
-    verifyBearerToken: vi.fn(),
-  };
-  const workspaceContext = {
-    resolve: vi.fn().mockResolvedValue({
-      workspace: { id: "w1" },
-      request: {
-        accountId: "u1",
-        accountEmail: null,
-        authMethod: "jwt",
-        workspaceId: "w1",
-        membershipId: "m1",
-        role: "owner",
-        permissions: new Set(["tunnel:create", "workspace:read"]),
-      },
-    }),
-  };
-  const permissions = {
-    require: vi.fn(),
-  };
   const tunnelManager = {
     unregisterClient: vi.fn().mockReturnValue(false),
     detachClient: vi.fn().mockReturnValue(false),
@@ -68,22 +79,20 @@ function createGateway(): {
     create: vi.fn(),
   } as unknown as TunnelManager;
 
-  // Long sweep cadence: these tests never advance timers, they only assert
-  // that the gateway drives the monitor correctly.
   const heartbeats = new HeartbeatMonitor(60_000, 3_600_000);
   const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
+  const contextSessions = new ContextSessionStore();
   const gateway = new TunnelGateway(
-    auth as never,
-    apiKeys as never,
-    workspaceContext as never,
-    permissions as never,
+    createContextResolver(),
+    new ContextFactory(),
+    contextSessions,
     tunnelManager,
     new HttpExchangeCoordinator(),
     heartbeats,
     security,
   );
 
-  return { gateway, heartbeats, tunnelManager, security };
+  return { gateway, heartbeats, tunnelManager, security, contextSessions };
 }
 
 function createUpgradeRequest(ip = "127.0.0.1"): IncomingMessage {
@@ -144,17 +153,19 @@ describe("TunnelGateway heartbeat", () => {
     heartbeats.onModuleDestroy();
   });
 
-  it("stops tracking a client on disconnect", async () => {
-    const { gateway, heartbeats, tunnelManager, security } = createGateway();
+  it("stops tracking a client on disconnect and destroys context", async () => {
+    const { gateway, heartbeats, tunnelManager, security, contextSessions } = createGateway();
     const socket = new FakeSocket();
 
     await gateway.handleConnection(asClient(socket), createUpgradeRequest());
     expect(security.activeConnections()).toBe(1);
+    expect(contextSessions.size()).toBe(1);
 
     gateway.handleDisconnect(asClient(socket));
 
     expect(heartbeats.trackedClientCount()).toBe(0);
     expect(security.activeConnections()).toBe(0);
+    expect(contextSessions.size()).toBe(0);
     expect(tunnelManager.detachClient).toHaveBeenCalledWith(asClient(socket));
   });
 
@@ -198,32 +209,10 @@ describe("TunnelGateway heartbeat", () => {
       const exchanges = new HttpExchangeCoordinator();
       const deliver = vi.spyOn(exchanges, "deliver").mockReturnValue(true);
       const security = new GatewaySecurityPolicy(resolveSecurityConfig(), new OriginValidator());
-      const auth = {
-        verifyAccessToken: vi.fn().mockResolvedValue({ id: "u1", email: null }),
-      };
-      const apiKeys = {
-        verifyBearerToken: vi.fn(),
-      };
-      const workspaceContext = {
-        resolve: vi.fn().mockResolvedValue({
-          workspace: { id: "w1" },
-          request: {
-            accountId: "u1",
-            accountEmail: null,
-            authMethod: "jwt",
-            workspaceId: "w1",
-            membershipId: "m1",
-            role: "owner",
-            permissions: new Set(["tunnel:create"]),
-          },
-        }),
-      };
-      const permissions = { require: vi.fn() };
       const gateway = new TunnelGateway(
-        auth as never,
-        apiKeys as never,
-        workspaceContext as never,
-        permissions as never,
+        createContextResolver(),
+        new ContextFactory(),
+        new ContextSessionStore(),
         tunnelManager,
         exchanges,
         heartbeats,
@@ -236,6 +225,8 @@ describe("TunnelGateway heartbeat", () => {
         id: "tun-1",
         client,
         port: 3000,
+        context: { kind: "workspace", id: "w1" },
+        workspaceId: "w1",
       });
 
       await gateway.handleConnection(client, createUpgradeRequest());

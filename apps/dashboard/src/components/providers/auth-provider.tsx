@@ -44,8 +44,13 @@ export interface AuthContextValue {
   readonly completeOAuth: (code: string) => Promise<void>;
   /** Signs out locally and on the server when possible. */
   readonly logout: () => Promise<void>;
-  /** Returns a valid access token, refreshing when near expiry. */
-  readonly getAccessToken: () => Promise<string | null>;
+  /**
+   * Returns a valid access token, refreshing when near expiry.
+   * Pass `{ forceRefresh: true }` after an API 401 to rotate via refresh token.
+   */
+  readonly getAccessToken: (options?: {
+    readonly forceRefresh?: boolean;
+  }) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,7 +61,8 @@ const REFRESH_SKEW_SECONDS = 60;
 /**
  * Provides auth state with localStorage session persistence.
  *
- * Existing inspector pages remain usable while signed out.
+ * Product routes under `(dashboard)` require a session via {@link RequireAuth}.
+ * The public landing at `/` stays available while signed out.
  */
 export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -150,25 +156,30 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     }
   }, [persist, session?.accessToken]);
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (session === null) {
-      return null;
-    }
+  const getAccessToken = useCallback(
+    async (options?: { readonly forceRefresh?: boolean }): Promise<string | null> => {
+      if (session === null) {
+        return null;
+      }
 
-    const now = Math.floor(Date.now() / 1000);
-    if (session.expiresAt > now + REFRESH_SKEW_SECONDS) {
-      return session.accessToken;
-    }
+      const now = Math.floor(Date.now() / 1000);
+      const needsRefresh =
+        options?.forceRefresh === true || session.expiresAt <= now + REFRESH_SKEW_SECONDS;
+      if (!needsRefresh) {
+        return session.accessToken;
+      }
 
-    try {
-      const next = await refreshRequest(session.refreshToken);
-      persist(next);
-      return next.accessToken;
-    } catch {
-      persist(null);
-      return null;
-    }
-  }, [persist, session]);
+      try {
+        const next = await refreshRequest(session.refreshToken);
+        persist(next);
+        return next.accessToken;
+      } catch {
+        persist(null);
+        return null;
+      }
+    },
+    [persist, session],
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({

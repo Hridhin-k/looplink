@@ -51,6 +51,7 @@ export function mapTunnelClosedToDashboard(
     occurredAt: event.occurredAt,
     tunnelId: event.tunnelId,
     reason: event.reason,
+    ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
   };
 }
 

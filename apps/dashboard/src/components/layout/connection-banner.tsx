@@ -31,23 +31,21 @@ export function ConnectionBanner() {
       role="status"
       aria-live="polite"
       className={cn(
-        "flex items-center justify-between gap-3 border-b px-3 py-2 text-sm sm:px-4 md:px-6",
-        isReconnecting
-          ? "border-amber-500/20 bg-amber-500/10 text-amber-950 dark:text-amber-100"
-          : "border-border bg-muted/60 text-foreground",
+        "flex items-center justify-between gap-3 border-b border-ash-stroke px-3 py-2 text-sm sm:px-4 md:px-6",
+        isReconnecting ? "bg-carbon-lift text-bone" : "bg-carbon-lift text-warm-granite",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
         {isReconnecting ? (
-          <RefreshCwIcon className="size-3.5 shrink-0 animate-spin" aria-hidden />
+          <RefreshCwIcon className="size-3.5 shrink-0 animate-spin text-signal-orange" aria-hidden />
         ) : (
-          <WifiOffIcon className="size-3.5 shrink-0" aria-hidden />
+          <WifiOffIcon className="size-3.5 shrink-0 text-signal-orange" aria-hidden />
         )}
         <p className="truncate text-xs sm:text-sm">
           {lastError ??
             (isReconnecting ? "Reconnecting to live traffic…" : "Live connection unavailable.")}
           {reconnectAttempt > 0 ? (
-            <span className="ml-1 text-muted-foreground">(attempt {String(reconnectAttempt)})</span>
+            <span className="ml-1 text-pale-stone">(attempt {String(reconnectAttempt)})</span>
           ) : null}
         </p>
       </div>

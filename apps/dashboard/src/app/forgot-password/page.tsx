@@ -37,23 +37,24 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-4">
-        <div>
-          <h1 className="font-heading text-2xl tracking-tight">Reset password</h1>
-          <p className="text-sm text-muted-foreground">
+    <main className="flex min-h-svh items-center justify-center bg-obsidian-canvas px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="space-y-2">
+          <p className="font-mono text-[12px] tracking-[0.18em] text-bone uppercase">Badger</p>
+          <h1 className="text-[36px] leading-[1.1] tracking-[-1.12px] text-bone">Reset password</h1>
+          <p className="text-sm text-warm-granite">
             We will email a secure link to choose a new password.
           </p>
         </div>
 
         {done ? (
-          <p className="text-sm text-foreground" role="status">
+          <p className="text-sm text-bone" role="status">
             If an account exists for that email, a reset link is on the way.
           </p>
         ) : (
           <form className="flex flex-col gap-4" onSubmit={(e) => void onSubmit(e)}>
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-sm font-medium">
+              <label htmlFor="email" className="font-mono text-[12px] text-pale-stone uppercase">
                 Email
               </label>
               <Input
@@ -64,21 +65,22 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={submitting}
+                className="rounded-[3px]"
               />
             </div>
             {error !== null ? (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-signal-orange" role="alert">
                 {error}
               </p>
             ) : null}
-            <Button type="submit" disabled={submitting} className="w-full">
+            <Button type="submit" disabled={submitting} className="w-full rounded-[3px]">
               {submitting ? "Sending…" : "Send reset link"}
             </Button>
           </form>
         )}
 
-        <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="underline-offset-4 hover:underline">
+        <p className="text-center text-sm text-warm-granite">
+          <Link href="/login" className="hover:text-bone">
             Back to sign in
           </Link>
         </p>

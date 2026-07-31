@@ -45,6 +45,13 @@ export interface WorkspaceRepository {
   addMember(workspaceId: string, userId: string, role: WorkspaceRole): Promise<WorkspaceMember>;
   updateWorkspace(workspaceId: string, input: UpdateWorkspaceInput): Promise<Workspace>;
   softDeleteWorkspace(workspaceId: string): Promise<Workspace>;
+  /**
+   * All workspace ids owned by the user (including soft-deleted).
+   * Used before auth user deletion — `owner_user_id` is ON DELETE RESTRICT.
+   */
+  listOwnedWorkspaceIds(userId: string): Promise<string[]>;
+  /** Permanently removes a workspace row (cascades members / invites / keys). */
+  hardDeleteWorkspace(workspaceId: string): Promise<void>;
   createInvitation(input: CreateInvitationInput): Promise<WorkspaceInvitation>;
   listInvitations(workspaceId: string): Promise<WorkspaceInvitation[]>;
   findInvitationByTokenHash(tokenHash: string): Promise<WorkspaceInvitation | undefined>;

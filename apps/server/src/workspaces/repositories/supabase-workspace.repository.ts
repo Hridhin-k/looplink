@@ -291,6 +291,20 @@ export class SupabaseWorkspaceRepository implements WorkspaceRepository {
     return mapWorkspace(row);
   }
 
+  async listOwnedWorkspaceIds(userId: string): Promise<string[]> {
+    const encoded = encodeURIComponent(userId);
+    const rows = await this.requestJson<Array<{ id: string }>>(
+      "GET",
+      `/rest/v1/workspaces?select=id&owner_user_id=eq.${encoded}`,
+    );
+    return rows.map((row) => row.id);
+  }
+
+  async hardDeleteWorkspace(workspaceId: string): Promise<void> {
+    const encoded = encodeURIComponent(workspaceId);
+    await this.requestJson("DELETE", `/rest/v1/workspaces?id=eq.${encoded}`);
+  }
+
   async createInvitation(input: CreateInvitationInput): Promise<WorkspaceInvitation> {
     const rows = await this.requestJson<InvitationRow[]>(
       "POST",

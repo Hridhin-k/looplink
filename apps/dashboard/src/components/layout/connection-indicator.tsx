@@ -20,7 +20,7 @@ export function ConnectionIndicator({ className }: { readonly className?: string
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-md border border-border/80 bg-background/60 px-2.5 py-1 text-xs text-muted-foreground",
+        "inline-flex items-center gap-2 rounded-[3px] border border-ash-stroke bg-carbon-lift px-2.5 py-1 text-xs text-warm-granite",
         className,
       )}
       title={`WebSocket: ${statusLabel[status]}`}
@@ -28,13 +28,16 @@ export function ConnectionIndicator({ className }: { readonly className?: string
       <span
         className={cn(
           "size-1.5 rounded-full",
-          status === "connected" && "bg-emerald-500",
-          (status === "connecting" || status === "reconnecting") && "animate-pulse bg-amber-500",
-          (status === "idle" || status === "disconnected") && "bg-muted-foreground/40",
+          status === "connected" && "bg-signal-orange",
+          (status === "connecting" || status === "reconnecting") &&
+            "animate-pulse bg-signal-orange/70",
+          (status === "idle" || status === "disconnected") && "bg-graphite-mid",
         )}
         aria-hidden
       />
-      <span className="font-mono tracking-tight">{statusLabel[status]}</span>
+      <span className="font-mono text-[12px] tracking-[-0.02em] uppercase">
+        {statusLabel[status]}
+      </span>
     </div>
   );
 }

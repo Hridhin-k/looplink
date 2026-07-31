@@ -33,7 +33,11 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
    * Subscribes to traffic / tunnel / replay events that change aggregates.
    */
   onModuleInit(): void {
-    const refresh = (workspaceId?: string): void => {
+    const refresh = (workspaceId: string | undefined): void => {
+      // Anonymous / untagged traffic must never drive global dashboard stats.
+      if (workspaceId === undefined || workspaceId.trim().length === 0) {
+        return;
+      }
       this.enqueueRefresh(workspaceId);
     };
 
@@ -53,8 +57,8 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
       this.eventBus.subscribe(BadgerEventType.TunnelCreated, (event) => {
         refresh(event.workspaceId);
       }),
-      this.eventBus.subscribe(BadgerEventType.TunnelClosed, () => {
-        refresh();
+      this.eventBus.subscribe(BadgerEventType.TunnelClosed, (event) => {
+        refresh(event.workspaceId);
       }),
     );
   }
@@ -69,20 +73,18 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
     this.subscriptions.length = 0;
   }
 
-  private enqueueRefresh(workspaceId?: string): void {
+  private enqueueRefresh(workspaceId: string): void {
     this.chain = this.chain
       .catch(() => {
         // Prior failures must not block later publishes.
       })
       .then(async () => {
-        const stats = await this.statistics.getStatistics(
-          workspaceId === undefined ? {} : { workspaceId },
-        );
+        const stats = await this.statistics.getStatistics({ workspaceId });
         this.publish(stats, workspaceId);
       });
   }
 
-  private publish(stats: TrafficStatistics, workspaceId?: string): void {
+  private publish(stats: TrafficStatistics, workspaceId: string): void {
     this.eventBus.publish(
       BadgerEventType.StatisticsUpdated,
       createEventPayload({
@@ -94,7 +96,7 @@ export class StatisticsNotifier implements OnModuleInit, OnModuleDestroy {
           errorRate: stats.errorRate,
         },
         tunnelId: undefined,
-        ...(workspaceId === undefined ? {} : { workspaceId }),
+        workspaceId,
       }),
     );
   }

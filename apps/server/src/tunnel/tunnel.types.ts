@@ -1,7 +1,12 @@
 import type WebSocket from "ws";
 
+import type { TunnelOwnership } from "./tunnel-context.js";
+
 /**
  * In-memory record for an active tunnel session bound to a WebSocket client.
+ *
+ * Every tunnel belongs to exactly one {@link TunnelOwnership} (engine-level).
+ * Business services use the Context Engine {@link import("../context/tunnel-context.interface.js").TunnelContext}.
  */
 export interface TunnelRecord {
   /** Unique tunnel identifier. */
@@ -10,10 +15,17 @@ export interface TunnelRecord {
   readonly client: WebSocket;
   /** Local TCP port on the client machine that this tunnel exposes. */
   readonly port: number;
-  /** Authenticated user that created the tunnel (legacy: absent). */
-  readonly ownerUserId?: string;
-  /** Workspace that owns this tunnel (legacy: absent). */
+  /** Logical owner (anonymous session or workspace). */
+  readonly context: TunnelOwnership;
+  /**
+   * Workspace id when context is workspace-scoped (traffic / inspector tagging).
+   * Absent for anonymous tunnels.
+   */
   readonly workspaceId?: string;
+  /** Anonymous session id when context is anonymous. */
+  readonly anonymousSessionId?: string;
+  /** Account that created a workspace-scoped tunnel (absent for anonymous). */
+  readonly ownerUserId?: string;
 }
 
 /**
@@ -26,10 +38,14 @@ export interface OrphanedTunnel {
   readonly port: number;
   /** Epoch ms when the client disconnected. */
   readonly disconnectedAt: number;
-  /** Authenticated owner user id (legacy: absent). */
-  readonly ownerUserId?: string;
-  /** Owning workspace id (legacy: absent). */
+  /** Logical owner preserved for reclaim matching. */
+  readonly context: TunnelOwnership;
+  /** Workspace id when context is workspace-scoped. */
   readonly workspaceId?: string;
+  /** Anonymous session id when context is anonymous. */
+  readonly anonymousSessionId?: string;
+  /** Account that created a workspace-scoped tunnel. */
+  readonly ownerUserId?: string;
 }
 
 /**

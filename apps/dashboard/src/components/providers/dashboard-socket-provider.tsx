@@ -13,11 +13,16 @@ import {
 import { createDashboardSocketClient } from "@/lib/ws/dashboard-socket";
 import { useConnectionStore } from "@/stores/connection-store";
 
+const RECONNECT_DELAY_MS = 5_000;
+
 /**
  * Connects to DashboardGateway (`/dashboard/ws`) for the authenticated session.
  *
  * Workspace scope is Membership-resolved server-side from the access token +
  * active workspace preference — never trusted from the client alone.
+ *
+ * Reconnects with a freshly resolved access token so revoked sessions do not
+ * spin forever on a stale Bearer query param.
  */
 export function DashboardSocketProvider({ children }: { readonly children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -35,52 +40,30 @@ export function DashboardSocketProvider({ children }: { readonly children: React
     let hadConnection = false;
     let client: ReturnType<typeof createDashboardSocketClient> | undefined;
     let unsubscribe: (() => void) | undefined;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
     const store = useConnectionStore.getState();
     store.setStatus("connecting");
     store.setError(null);
 
-    void (async () => {
-      const token = await getAccessToken();
-      if (cancelled || token === null) {
-        useConnectionStore.getState().setStatus("idle");
-        return;
+    const clearReconnectTimer = (): void => {
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = undefined;
       }
+    };
 
-      client = createDashboardSocketClient({
-        accessToken: token,
-        workspaceId: activeWorkspace?.id,
-        onOpen: () => {
-          useConnectionStore.getState().setStatus("connected");
-          useConnectionStore.getState().setError(null);
-          if (hadConnection) {
-            resyncInspectorAfterReconnect(queryClient);
-          }
-          hadConnection = true;
-          useConnectionStore.getState().markEverConnected();
-        },
-        onClose: ({ intentional }) => {
-          if (intentionalShutdown || intentional) {
-            return;
-          }
-          useConnectionStore.getState().setStatus("disconnected");
-          useConnectionStore.getState().setError("Live connection lost. Reconnecting…");
-        },
-        onReconnecting: () => {
-          useConnectionStore.getState().bumpReconnectAttempt();
-          useConnectionStore.getState().setStatus("reconnecting");
-        },
-      });
+    const teardownClient = (): void => {
+      unsubscribe?.();
+      unsubscribe = undefined;
+      client?.disconnect();
+      client = undefined;
+    };
 
-      const reconnectNow = (): void => {
-        useConnectionStore.getState().setStatus("connecting");
-        useConnectionStore.getState().setError(null);
-        client?.disconnect();
-        client?.connect();
-      };
-
-      useConnectionStore.getState().setRequestReconnect(reconnectNow);
-
+    const attachClient = (
+      next: ReturnType<typeof createDashboardSocketClient>,
+    ): void => {
+      client = next;
       unsubscribe = client.subscribe((message) => {
         useConnectionStore.getState().markMessage(message.occurredAt);
 
@@ -96,9 +79,86 @@ export function DashboardSocketProvider({ children }: { readonly children: React
 
         applyDashboardMessage(queryClient, message);
       });
-
       client.connect();
-    })();
+    };
+
+    const connect = async (forceRefresh = false): Promise<void> => {
+      if (cancelled || intentionalShutdown) {
+        return;
+      }
+
+      teardownClient();
+      useConnectionStore.getState().setStatus("connecting");
+      useConnectionStore.getState().setError(null);
+
+      try {
+        const token = await getAccessToken(forceRefresh ? { forceRefresh: true } : undefined);
+        if (cancelled || intentionalShutdown) {
+          return;
+        }
+        if (token === null) {
+          useConnectionStore.getState().setStatus("idle");
+          useConnectionStore.getState().setError("Session expired. Sign in again.");
+          return;
+        }
+
+        attachClient(
+          createDashboardSocketClient({
+            accessToken: token,
+            workspaceId: activeWorkspace?.id,
+            autoReconnect: false,
+            onOpen: () => {
+              useConnectionStore.getState().setStatus("connected");
+              useConnectionStore.getState().setError(null);
+              if (hadConnection) {
+                resyncInspectorAfterReconnect(queryClient);
+              }
+              hadConnection = true;
+              useConnectionStore.getState().markEverConnected();
+            },
+            onClose: ({ intentional }) => {
+              if (intentionalShutdown || intentional || cancelled) {
+                return;
+              }
+              useConnectionStore.getState().setStatus("disconnected");
+              useConnectionStore.getState().setError("Live connection lost. Reconnecting…");
+              useConnectionStore.getState().bumpReconnectAttempt();
+              clearReconnectTimer();
+              reconnectTimer = setTimeout(() => {
+                reconnectTimer = undefined;
+                void connect(true);
+              }, RECONNECT_DELAY_MS);
+            },
+          }),
+        );
+      } catch (error: unknown) {
+        if (cancelled || intentionalShutdown) {
+          return;
+        }
+        const message =
+          error instanceof Error && error.message.length > 0
+            ? error.message
+            : "Could not reach the Badger server.";
+        useConnectionStore.getState().setStatus("disconnected");
+        useConnectionStore.getState().setError(message);
+        useConnectionStore.getState().bumpReconnectAttempt();
+        clearReconnectTimer();
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = undefined;
+          void connect(true);
+        }, RECONNECT_DELAY_MS);
+      }
+    };
+
+    const reconnectNow = (): void => {
+      clearReconnectTimer();
+      useConnectionStore.getState().setStatus("connecting");
+      useConnectionStore.getState().setError(null);
+      void connect(true);
+    };
+
+    useConnectionStore.getState().setRequestReconnect(reconnectNow);
+    void connect(false);
 
     const onOffline = (): void => {
       useConnectionStore.getState().setStatus("disconnected");
@@ -106,9 +166,7 @@ export function DashboardSocketProvider({ children }: { readonly children: React
     };
 
     const onOnline = (): void => {
-      useConnectionStore.getState().setStatus("connecting");
-      useConnectionStore.getState().setError(null);
-      client?.connect();
+      reconnectNow();
     };
 
     window.addEventListener("offline", onOffline);
@@ -117,10 +175,10 @@ export function DashboardSocketProvider({ children }: { readonly children: React
     return () => {
       cancelled = true;
       intentionalShutdown = true;
+      clearReconnectTimer();
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
-      unsubscribe?.();
-      client?.disconnect();
+      teardownClient();
       useConnectionStore.getState().setRequestReconnect(() => undefined);
       useConnectionStore.getState().setStatus("idle");
       useConnectionStore.getState().setError(null);

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ReplayApiClient, ReplayClientError } from "./replay-api-client.js";
 
 describe("ReplayApiClient", () => {
-  it("posts to the replay endpoint derived from the websocket URL", async () => {
+  it("posts to the replay endpoint with auth headers", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -23,11 +23,20 @@ describe("ReplayApiClient", () => {
     });
 
     const client = new ReplayApiClient(fetchImpl as unknown as typeof fetch);
-    const result = await client.replay("ws://127.0.0.1:8080", "req-1");
+    const result = await client.replay("ws://127.0.0.1:8080", "req-1", {
+      accessToken: "tok",
+      workspaceId: "w1",
+    });
 
     expect(fetchImpl).toHaveBeenCalledWith(
       "http://127.0.0.1:8080/api/v1/traffic/req-1/replay",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer tok",
+          "X-Workspace-Id": "w1",
+        }),
+      }),
     );
     expect(result.statusCode).toBe(200);
   });
@@ -41,8 +50,8 @@ describe("ReplayApiClient", () => {
 
     const client = new ReplayApiClient(fetchImpl as unknown as typeof fetch);
 
-    await expect(client.replay("ws://127.0.0.1:8080", "missing")).rejects.toBeInstanceOf(
-      ReplayClientError,
-    );
+    await expect(
+      client.replay("ws://127.0.0.1:8080", "missing", { accessToken: "tok" }),
+    ).rejects.toBeInstanceOf(ReplayClientError);
   });
 });

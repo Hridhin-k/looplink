@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
-import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ApiError, formatApiErrorMessage } from "@/lib/api/errors";
+import { withAccessToken } from "@/lib/auth/with-access-token";
 import {
   acceptInvitation,
   createApiKey,
@@ -35,15 +36,21 @@ import {
 } from "@/lib/workspaces/api";
 import type { InviteRole, WorkspaceRole } from "@/lib/workspaces/types";
 
+function workspaceErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    return formatApiErrorMessage(err, fallback);
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return fallback;
+}
+
 /**
  * Workspace collaboration + API key settings for the active workspace.
  */
 export default function WorkspaceSettingsPage() {
-  return (
-    <RequireAuth>
-      <WorkspaceSettingsContent />
-    </RequireAuth>
-  );
+  return <WorkspaceSettingsContent />;
 }
 
 function WorkspaceSettingsContent() {
@@ -56,6 +63,7 @@ function WorkspaceSettingsContent() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [formWorkspaceId, setFormWorkspaceId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("developer");
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -64,6 +72,13 @@ function WorkspaceSettingsContent() {
   const [createdApiToken, setCreatedApiToken] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+
+  if (activeWorkspace !== null && formWorkspaceId !== activeWorkspace.id) {
+    setFormWorkspaceId(activeWorkspace.id);
+    setName(activeWorkspace.name);
+    setDescription(activeWorkspace.description ?? "");
+  }
 
   const workspaceId = activeWorkspace?.id;
 
@@ -105,31 +120,35 @@ function WorkspaceSettingsContent() {
 
   const saveSettings = useMutation({
     mutationFn: async () => {
-      const token = await getAccessToken();
-      if (token === null || workspaceId === undefined) {
+      if (workspaceId === undefined) {
         throw new Error("Not authenticated");
       }
-      return updateWorkspace(token, workspaceId, {
-        name: name.trim().length > 0 ? name.trim() : undefined,
-        description: description.trim().length > 0 ? description.trim() : null,
-      });
+      const id = workspaceId;
+      return withAccessToken(getAccessToken, (token) =>
+        updateWorkspace(token, id, {
+          name: name.trim().length > 0 ? name.trim() : undefined,
+          description: description.trim().length > 0 ? description.trim() : null,
+        }),
+      );
     },
     onSuccess: async () => {
       setError(null);
       await queryClient.invalidateQueries({ queryKey: ["workspace"] });
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : "Failed to save settings");
+      setError(workspaceErrorMessage(err, "Failed to save settings"));
     },
   });
 
   const invite = useMutation({
     mutationFn: async () => {
-      const token = await getAccessToken();
-      if (token === null || workspaceId === undefined) {
+      if (workspaceId === undefined) {
         throw new Error("Not authenticated");
       }
-      return inviteMember(token, workspaceId, inviteEmail, inviteRole);
+      const id = workspaceId;
+      return withAccessToken(getAccessToken, (token) =>
+        inviteMember(token, id, inviteEmail, inviteRole),
+      );
     },
     onSuccess: async (result) => {
       setInviteToken(result.token);
@@ -138,17 +157,19 @@ function WorkspaceSettingsContent() {
       await queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "invitations"] });
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : "Failed to invite");
+      setError(workspaceErrorMessage(err, "Failed to invite"));
     },
   });
 
   const accept = useMutation({
     mutationFn: async () => {
-      const token = await getAccessToken();
-      if (token === null) {
-        throw new Error("Not authenticated");
+      const inviteTokenValue = acceptToken.trim();
+      if (inviteTokenValue.length === 0) {
+        throw new Error("Invitation token is required.");
       }
-      return acceptInvitation(token, acceptToken);
+      return withAccessToken(getAccessToken, (token) =>
+        acceptInvitation(token, inviteTokenValue),
+      );
     },
     onSuccess: async () => {
       setAcceptToken("");
@@ -156,7 +177,7 @@ function WorkspaceSettingsContent() {
       await queryClient.invalidateQueries({ queryKey: ["workspace"] });
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : "Failed to accept invitation");
+      setError(workspaceErrorMessage(err, "Failed to accept invitation"));
     },
   });
 
@@ -175,20 +196,30 @@ function WorkspaceSettingsContent() {
       await queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "api-keys"] });
     },
     onError: (err: unknown) => {
-      setError(err instanceof Error ? err.message : "Failed to create API key");
+      setError(workspaceErrorMessage(err, "Failed to create API key"));
     },
   });
 
   if (isLoading || activeWorkspace === null) {
-    return <p className="text-sm text-muted-foreground">Loading workspace…</p>;
+    return (
+      <div className="space-y-3 py-8" aria-busy="true">
+        <p className="font-mono text-[12px] text-pale-stone uppercase">Workspace</p>
+        <p className="text-sm text-warm-granite">Loading workspace…</p>
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h2 className="font-heading text-xl tracking-tight">{activeWorkspace.name}</h2>
-        <p className="text-sm text-muted-foreground">
-          Role: <Badge variant="outline">{activeRole ?? "—"}</Badge>
+        <p className="font-mono text-[12px] tracking-[-0.02em] text-pale-stone uppercase">
+          Workspace
+        </p>
+        <h2 className="mt-1 text-[36px] leading-[1.1] tracking-[-1.12px] text-bone">
+          {activeWorkspace.name}
+        </h2>
+        <p className="mt-2 text-sm text-warm-granite">
+          Role: <Badge variant="outline" className="rounded-[3px]">{activeRole ?? "—"}</Badge>
         </p>
       </div>
 
@@ -225,9 +256,10 @@ function WorkspaceSettingsContent() {
                   </label>
                   <Input
                     id="ws-name"
-                    defaultValue={activeWorkspace.name}
+                    value={name}
                     disabled={!canManage}
                     onChange={(e) => setName(e.target.value)}
+                    className="rounded-[3px]"
                   />
                 </div>
                 <div className="space-y-1">
@@ -236,9 +268,10 @@ function WorkspaceSettingsContent() {
                   </label>
                   <Input
                     id="ws-desc"
-                    defaultValue={activeWorkspace.description ?? ""}
+                    value={description}
                     disabled={!canManage}
                     onChange={(e) => setDescription(e.target.value)}
+                    className="rounded-[3px]"
                   />
                 </div>
                 {canManage ? (
@@ -258,7 +291,7 @@ function WorkspaceSettingsContent() {
             <CardHeader>
               <CardTitle>Accept invitation</CardTitle>
               <CardDescription>
-                Paste an invite token shared with your email to join a workspace.
+                Sign in as the invited email, then paste the invite token to join that workspace.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -266,7 +299,7 @@ function WorkspaceSettingsContent() {
                 className="flex flex-col gap-2 sm:flex-row"
                 onSubmit={(event: FormEvent) => {
                   event.preventDefault();
-                  void accept.mutateAsync();
+                  accept.mutate();
                 }}
               >
                 <Input
@@ -345,7 +378,14 @@ function WorkspaceSettingsContent() {
               <CardDescription>People with access to this workspace.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(membersQuery.data ?? []).map((member) => (
+              {membersQuery.isPending ? (
+                <p className="text-sm text-warm-granite">Loading members…</p>
+              ) : membersQuery.isError ? (
+                <p className="text-sm text-signal-orange">Could not load members.</p>
+              ) : (membersQuery.data ?? []).length === 0 ? (
+                <p className="text-sm text-warm-granite">No members found.</p>
+              ) : (
+                (membersQuery.data ?? []).map((member) => (
                 <div
                   key={member.id}
                   className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0"
@@ -364,15 +404,21 @@ function WorkspaceSettingsContent() {
                             if (token === null || workspaceId === undefined) {
                               return;
                             }
-                            await updateMemberRole(
-                              token,
-                              workspaceId,
-                              member.userId,
-                              value as Exclude<WorkspaceRole, "owner">,
-                            );
-                            await queryClient.invalidateQueries({
-                              queryKey: ["workspace", workspaceId, "members"],
-                            });
+                            try {
+                              await updateMemberRole(
+                                token,
+                                workspaceId,
+                                member.userId,
+                                value as Exclude<WorkspaceRole, "owner">,
+                              );
+                              await queryClient.invalidateQueries({
+                                queryKey: ["workspace", workspaceId, "members"],
+                              });
+                            } catch (cause: unknown) {
+                              setError(
+                                cause instanceof Error ? cause.message : "Failed to update role",
+                              );
+                            }
                           })();
                         }}
                       >
@@ -395,10 +441,16 @@ function WorkspaceSettingsContent() {
                             if (token === null || workspaceId === undefined) {
                               return;
                             }
-                            await removeMember(token, workspaceId, member.userId);
-                            await queryClient.invalidateQueries({
-                              queryKey: ["workspace", workspaceId, "members"],
-                            });
+                            try {
+                              await removeMember(token, workspaceId, member.userId);
+                              await queryClient.invalidateQueries({
+                                queryKey: ["workspace", workspaceId, "members"],
+                              });
+                            } catch (cause: unknown) {
+                              setError(
+                                cause instanceof Error ? cause.message : "Failed to remove member",
+                              );
+                            }
                           })();
                         }}
                       >
@@ -407,7 +459,8 @@ function WorkspaceSettingsContent() {
                     </div>
                   ) : null}
                 </div>
-              ))}
+              ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -426,7 +479,7 @@ function WorkspaceSettingsContent() {
                   className="flex flex-col gap-2 sm:flex-row"
                   onSubmit={(event: FormEvent) => {
                     event.preventDefault();
-                    void invite.mutateAsync();
+                    void invite.mutate();
                   }}
                 >
                   <Input
@@ -453,9 +506,26 @@ function WorkspaceSettingsContent() {
                   </Button>
                 </form>
                 {inviteToken ? (
-                  <p className="break-all rounded-md bg-muted p-2 font-mono text-xs">
-                    Token (copy now): {inviteToken}
-                  </p>
+                  <div className="space-y-2 rounded-[3px] border border-ash-stroke bg-obsidian-canvas p-3">
+                    <p className="font-mono text-[12px] text-pale-stone uppercase">
+                      Invite token — copy now
+                    </p>
+                    <p className="break-all font-mono text-xs text-bone">{inviteToken}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-[3px]"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(inviteToken).then(() => {
+                          setCopiedInvite(true);
+                          window.setTimeout(() => setCopiedInvite(false), 1500);
+                        });
+                      }}
+                    >
+                      {copiedInvite ? "Copied" : "Copy token"}
+                    </Button>
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
@@ -470,6 +540,13 @@ function WorkspaceSettingsContent() {
                 <p className="text-sm text-muted-foreground">
                   Only owners and admins can manage invitations.
                 </p>
+              ) : invitationsQuery.isPending ? (
+                <p className="text-sm text-warm-granite">Loading invitations…</p>
+              ) : invitationsQuery.isError ? (
+                <p className="text-sm text-signal-orange">Could not load invitations.</p>
+              ) : (invitationsQuery.data ?? []).filter((row) => row.status === "pending").length ===
+                0 ? (
+                <p className="text-sm text-warm-granite">No pending invitations.</p>
               ) : (
                 (invitationsQuery.data ?? [])
                   .filter((row) => row.status === "pending")
@@ -494,10 +571,18 @@ function WorkspaceSettingsContent() {
                             if (token === null || workspaceId === undefined) {
                               return;
                             }
-                            await revokeInvitation(token, workspaceId, invitation.id);
-                            await queryClient.invalidateQueries({
-                              queryKey: ["workspace", workspaceId, "invitations"],
-                            });
+                            try {
+                              await revokeInvitation(token, workspaceId, invitation.id);
+                              await queryClient.invalidateQueries({
+                                queryKey: ["workspace", workspaceId, "invitations"],
+                              });
+                            } catch (cause: unknown) {
+                              setError(
+                                cause instanceof Error
+                                  ? cause.message
+                                  : "Failed to revoke invitation",
+                              );
+                            }
                           })();
                         }}
                       >
@@ -540,9 +625,23 @@ function WorkspaceSettingsContent() {
                   </Button>
                 </form>
                 {createdApiToken ? (
-                  <p className="break-all rounded-md bg-muted p-2 font-mono text-xs">
-                    Secret (copy now): {createdApiToken}
-                  </p>
+                  <div className="space-y-2 rounded-[3px] border border-ash-stroke bg-obsidian-canvas p-3">
+                    <p className="font-mono text-[12px] text-pale-stone uppercase">
+                      Secret — copy now
+                    </p>
+                    <p className="break-all font-mono text-xs text-bone">{createdApiToken}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-[3px]"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(createdApiToken);
+                      }}
+                    >
+                      Copy secret
+                    </Button>
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
@@ -552,7 +651,14 @@ function WorkspaceSettingsContent() {
                 <CardTitle>API keys</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {(apiKeysQuery.data ?? []).map((key) => (
+                {apiKeysQuery.isPending ? (
+                  <p className="text-sm text-warm-granite">Loading API keys…</p>
+                ) : apiKeysQuery.isError ? (
+                  <p className="text-sm text-signal-orange">Could not load API keys.</p>
+                ) : (apiKeysQuery.data ?? []).length === 0 ? (
+                  <p className="text-sm text-warm-granite">No API keys yet.</p>
+                ) : (
+                  (apiKeysQuery.data ?? []).map((key) => (
                   <div
                     key={key.id}
                     className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0"
@@ -579,11 +685,17 @@ function WorkspaceSettingsContent() {
                               if (token === null || workspaceId === undefined) {
                                 return;
                               }
-                              const rotated = await rotateApiKey(token, workspaceId, key.id);
-                              setCreatedApiToken(rotated.token);
-                              await queryClient.invalidateQueries({
-                                queryKey: ["workspace", workspaceId, "api-keys"],
-                              });
+                              try {
+                                const rotated = await rotateApiKey(token, workspaceId, key.id);
+                                setCreatedApiToken(rotated.token);
+                                await queryClient.invalidateQueries({
+                                  queryKey: ["workspace", workspaceId, "api-keys"],
+                                });
+                              } catch (cause: unknown) {
+                                setError(
+                                  cause instanceof Error ? cause.message : "Failed to rotate key",
+                                );
+                              }
                             })();
                           }}
                         >
@@ -599,10 +711,16 @@ function WorkspaceSettingsContent() {
                               if (token === null || workspaceId === undefined) {
                                 return;
                               }
-                              await revokeApiKey(token, workspaceId, key.id);
-                              await queryClient.invalidateQueries({
-                                queryKey: ["workspace", workspaceId, "api-keys"],
-                              });
+                              try {
+                                await revokeApiKey(token, workspaceId, key.id);
+                                await queryClient.invalidateQueries({
+                                  queryKey: ["workspace", workspaceId, "api-keys"],
+                                });
+                              } catch (cause: unknown) {
+                                setError(
+                                  cause instanceof Error ? cause.message : "Failed to revoke key",
+                                );
+                              }
                             })();
                           }}
                         >
@@ -611,7 +729,8 @@ function WorkspaceSettingsContent() {
                       </div>
                     ) : null}
                   </div>
-                ))}
+                ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>

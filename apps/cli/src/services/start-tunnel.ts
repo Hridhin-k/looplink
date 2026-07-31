@@ -50,6 +50,7 @@ export class StartTunnelService {
     options: {
       readonly getAuthToken?: () => Promise<string | undefined>;
       readonly getWorkspaceId?: () => Promise<string | undefined>;
+      readonly getAnonymousSessionToken?: () => Promise<string | undefined>;
     } = {},
   ): Promise<void> {
     this.presenter.starting(port);
@@ -57,6 +58,9 @@ export class StartTunnelService {
     const connection = this.createConnection(serverUrl, {
       ...(options.getAuthToken === undefined ? {} : { getAuthToken: options.getAuthToken }),
       ...(options.getWorkspaceId === undefined ? {} : { getWorkspaceId: options.getWorkspaceId }),
+      ...(options.getAnonymousSessionToken === undefined
+        ? {}
+        : { getAnonymousSessionToken: options.getAnonymousSessionToken }),
       onConnectionLost: () => {
         this.presenter.connectionLost();
       },

@@ -11,23 +11,41 @@ export class ReplayApiClient {
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
   /**
-   * POSTs to `/api/v1/traffic/:requestId/replay`.
+   * POSTs to `/api/v1/traffic/:requestId/replay` with Membership scope.
    *
    * @param serverWebsocketUrl - Badger server `ws://` / `wss://` URL.
    * @param requestId - Traffic record id to replay.
+   * @param options - Bearer token and optional workspace id.
    * @returns Replay response DTO from the server.
    */
-  async replay(serverWebsocketUrl: string, requestId: string): Promise<ReplayResponseDto> {
+  async replay(
+    serverWebsocketUrl: string,
+    requestId: string,
+    options: {
+      readonly accessToken: string;
+      readonly workspaceId?: string;
+    },
+  ): Promise<ReplayResponseDto> {
     const baseUrl = websocketUrlToHttpBaseUrl(serverWebsocketUrl);
     const url = `${baseUrl}/api/v1/traffic/${encodeURIComponent(requestId)}/replay`;
 
+    const headers: Record<string, string> = {
+      accept: "application/json",
+      Authorization: `Bearer ${options.accessToken}`,
+    };
+    if (options.workspaceId !== undefined && options.workspaceId.trim().length > 0) {
+      headers["X-Workspace-Id"] = options.workspaceId.trim();
+    }
+
     const response = await this.fetchImpl(url, {
       method: "POST",
-      headers: { accept: "application/json" },
+      headers,
     });
 
     const payload = (await response.json().catch(() => undefined)) as
-      ReplayResponseDto | { message?: string; code?: string } | undefined;
+      | ReplayResponseDto
+      | { message?: string; code?: string }
+      | undefined;
 
     if (!response.ok) {
       const message =

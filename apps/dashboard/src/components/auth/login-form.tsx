@@ -51,7 +51,7 @@ export function LoginForm() {
     try {
       await login(email, password);
       const next = searchParams.get("next");
-      router.replace(isSafeNext(next) ? next : "/account");
+      router.replace(isSafeNext(next) ? next : "/overview");
     } catch (cause: unknown) {
       if (cause instanceof ApiError) {
         setError(formatApiError(cause));
@@ -134,7 +134,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         <Link href="/" className="underline-offset-4 hover:underline">
-          Back to dashboard
+          Back to home
         </Link>
       </p>
     </div>

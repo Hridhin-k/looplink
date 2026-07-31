@@ -134,6 +134,11 @@ export class CliAuthApiClient {
         typeof payload.message === "string"
           ? payload.message
           : `Auth request failed (${String(response.status)}).`;
+      if (response.status === 404 && url.includes("/api/v1/auth/cli/config")) {
+        throw new Error(
+          `${message} Is the Badger server running the latest build? For local: badger login -s ws://localhost:8080`,
+        );
+      }
       throw new Error(message);
     }
 

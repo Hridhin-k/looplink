@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { AccessModule } from "./access/access.module.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { ContextModule } from "./context/context.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { EventModule } from "./events/event.module.js";
 import { DashboardModule } from "./dashboard/dashboard.module.js";
@@ -30,6 +31,8 @@ import { WorkspaceModule } from "./workspaces/workspace.module.js";
     AccessModule,
     AuthModule,
     WorkspaceModule,
+    TunnelModule,
+    ContextModule,
     EventModule,
     StorageModule,
     TrafficModule,
@@ -39,7 +42,6 @@ import { WorkspaceModule } from "./workspaces/workspace.module.js";
     DashboardModule,
     SecurityModule,
     HealthModule,
-    TunnelModule,
     HttpForwardModule,
     GatewayModule,
   ],

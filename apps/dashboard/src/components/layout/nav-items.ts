@@ -1,10 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
   ActivityIcon,
-  CableIcon,
   LayoutDashboardIcon,
   ListTreeIcon,
   SettingsIcon,
+  UserIcon,
 } from "lucide-react";
 
 export interface AppNavItem {
@@ -12,18 +12,16 @@ export interface AppNavItem {
   readonly label: string;
   readonly href: string;
   readonly icon: LucideIcon;
-  /** When true, item is visible but not navigable yet. */
-  readonly disabled?: boolean;
 }
 
 /**
- * Primary sidebar destinations. Overview, Requests, and Statistics are live.
+ * Primary sidebar destinations — only shipped, working routes.
  */
 export const APP_NAV_ITEMS: readonly AppNavItem[] = [
   {
     id: "overview",
     label: "Overview",
-    href: "/",
+    href: "/overview",
     icon: LayoutDashboardIcon,
   },
   {
@@ -33,22 +31,21 @@ export const APP_NAV_ITEMS: readonly AppNavItem[] = [
     icon: ListTreeIcon,
   },
   {
-    id: "tunnels",
-    label: "Tunnels",
-    href: "/tunnels",
-    icon: CableIcon,
-    disabled: true,
-  },
-  {
     id: "statistics",
     label: "Statistics",
     href: "/statistics",
     icon: ActivityIcon,
   },
   {
-    id: "settings",
+    id: "workspace",
     label: "Workspace",
     href: "/workspace",
     icon: SettingsIcon,
+  },
+  {
+    id: "account",
+    label: "Account",
+    href: "/account",
+    icon: UserIcon,
   },
 ] as const;

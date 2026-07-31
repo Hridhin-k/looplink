@@ -6,31 +6,20 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 
 /**
- * Top-nav auth controls: Sign in, or account link + Sign out.
+ * Top-nav auth controls: account link + Sign out (dashboard is always authenticated).
  */
 export function AuthNavControls() {
   const { isLoading, user, logout } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || user === null) {
     return <div className="hidden h-8 w-20 sm:block" aria-hidden />;
-  }
-
-  if (user === null) {
-    return (
-      <Link
-        href="/login"
-        className="inline-flex h-7 items-center rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted"
-      >
-        Sign in
-      </Link>
-    );
   }
 
   return (
     <div className="flex items-center gap-2">
       <Link
         href="/account"
-        className="hidden max-w-[12rem] truncate text-sm text-muted-foreground hover:text-foreground sm:inline"
+        className="hidden max-w-[12rem] truncate font-mono text-[12px] tracking-[-0.02em] text-warm-granite uppercase hover:text-bone sm:inline"
       >
         {user.email ?? "Account"}
       </Link>
@@ -38,8 +27,11 @@ export function AuthNavControls() {
         type="button"
         variant="outline"
         size="sm"
+        className="rounded-[3px]"
         onClick={() => {
-          void logout();
+          void logout().then(() => {
+            window.location.assign("/login");
+          });
         }}
       >
         Sign out

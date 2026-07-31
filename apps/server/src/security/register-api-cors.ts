@@ -5,7 +5,7 @@ import { OriginValidator } from "./origin-validator.js";
 
 const CORS_METHODS = "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS";
 const CORS_HEADERS =
-  "Content-Type, Accept, Authorization, X-Workspace-Id, X-CSRF-Token";
+  "Content-Type, Accept, Authorization, X-Workspace-Id, X-CSRF-Token, X-Anonymous-Session";
 const CORS_MAX_AGE = "86400";
 
 /**

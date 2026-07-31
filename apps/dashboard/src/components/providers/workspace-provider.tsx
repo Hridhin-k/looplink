@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/providers/auth-provider";
 import {
@@ -63,6 +63,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
   const contextQuery = useQuery({
     queryKey: ["workspace", "context", selectedWorkspaceId],
     enabled: session !== null,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const token = await getAccessToken();
       if (token === null) {
@@ -99,10 +100,14 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     },
   });
 
-  const setActiveWorkspaceId = useCallback((workspaceId: string) => {
-    setSelectedWorkspaceId(workspaceId);
-    writeStoredWorkspaceId(workspaceId);
-  }, []);
+  const setActiveWorkspaceId = useCallback(
+    (workspaceId: string) => {
+      setSelectedWorkspaceId(workspaceId);
+      writeStoredWorkspaceId(workspaceId);
+      void queryClient.invalidateQueries({ queryKey: ["inspector"] });
+    },
+    [queryClient],
+  );
 
   const createSharedWorkspace = useCallback(
     async (name: string): Promise<void> => {
@@ -113,13 +118,13 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
 
   const value = useMemo<WorkspaceContextValue>(() => {
     const active = contextQuery.data?.activeWorkspace ?? null;
-    const memberships = contextQuery.data?.memberships ?? [];
+    const memberships = sortMemberships(contextQuery.data?.memberships ?? []);
     const activeRole =
       active === null
         ? null
         : (memberships.find((m) => m.workspace.id === active.id)?.role ?? null);
     return {
-      isLoading: contextQuery.isLoading || createMutation.isPending,
+      isLoading: (contextQuery.isLoading && !contextQuery.isPlaceholderData) || createMutation.isPending,
       memberships,
       activeWorkspace: active,
       activeRole,
@@ -130,6 +135,7 @@ export function WorkspaceProvider({ children }: { readonly children: ReactNode }
     contextQuery.data?.activeWorkspace,
     contextQuery.data?.memberships,
     contextQuery.isLoading,
+    contextQuery.isPlaceholderData,
     createMutation.isPending,
     setActiveWorkspaceId,
     createSharedWorkspace,
@@ -144,4 +150,13 @@ export function useWorkspace(): WorkspaceContextValue {
     throw new Error("useWorkspace must be used within WorkspaceProvider.");
   }
   return value;
+}
+
+function sortMemberships(memberships: readonly WorkspaceMembership[]): WorkspaceMembership[] {
+  return [...memberships].sort((a, b) => {
+    if (a.workspace.kind !== b.workspace.kind) {
+      return a.workspace.kind === "personal" ? -1 : 1;
+    }
+    return a.workspace.name.localeCompare(b.workspace.name);
+  });
 }

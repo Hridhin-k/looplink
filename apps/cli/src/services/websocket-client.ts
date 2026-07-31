@@ -62,6 +62,11 @@ export interface WebSocketClientOptions {
    * shared workspace instead of the user's personal default.
    */
   readonly getWorkspaceId?: () => Promise<string | undefined>;
+  /**
+   * Optional anonymous session token sent as `X-Anonymous-Session` when the
+   * CLI is not logged in.
+   */
+  readonly getAnonymousSessionToken?: () => Promise<string | undefined>;
 }
 
 /**
@@ -213,6 +218,7 @@ export class BadgerWebSocketClient implements ServerConnection {
 
     const token = await this.options.getAuthToken?.().catch(() => undefined);
     const workspaceId = await this.options.getWorkspaceId?.().catch(() => undefined);
+    const anonymousToken = await this.options.getAnonymousSessionToken?.().catch(() => undefined);
 
     return new Promise<void>((resolve, reject) => {
       const headers: Record<string, string> = {};
@@ -221,6 +227,9 @@ export class BadgerWebSocketClient implements ServerConnection {
       }
       if (workspaceId !== undefined && workspaceId.trim().length > 0) {
         headers["X-Workspace-Id"] = workspaceId.trim();
+      }
+      if (anonymousToken !== undefined && anonymousToken.trim().length > 0) {
+        headers["X-Anonymous-Session"] = anonymousToken.trim();
       }
 
       const socket = new WebSocket(this.options.url, {

@@ -12,8 +12,8 @@ import { ApiError } from "@/lib/api/errors";
  */
 export default function AuthCallbackPage() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background px-4">
-      <p className="font-heading text-2xl tracking-tight">Badger</p>
+    <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-obsidian-canvas px-4">
+      <p className="font-mono text-[12px] tracking-[0.18em] text-bone uppercase">Badger</p>
       <Suspense fallback={<Skeleton className="h-8 w-48" />}>
         <AuthCallbackContent />
       </Suspense>
@@ -55,7 +55,7 @@ function AuthCallbackContent() {
         }
         const next = window.sessionStorage.getItem("badger.auth.next");
         window.sessionStorage.removeItem("badger.auth.next");
-        router.replace(isSafeNext(next) ? next : "/account");
+        router.replace(isSafeNext(next) ? next : "/overview");
       } catch (cause: unknown) {
         if (cancelled) {
           return;

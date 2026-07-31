@@ -25,6 +25,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { SUPABASE_CONFIG } from "../database/database.tokens.js";
 import type { SupabaseConfig } from "../database/supabase.config.js";
 import { ApiKeyService } from "../workspaces/api-keys/api-key.service.js";
+import { WorkspaceService } from "../workspaces/workspace.service.js";
 import {
   clearAuthCookies,
   isAuthCookieEnabled,
@@ -48,6 +49,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly apiKeys: ApiKeyService,
+    private readonly workspaces: WorkspaceService,
     @Inject(SUPABASE_CONFIG) private readonly supabaseConfig: SupabaseConfig,
   ) {}
 
@@ -230,7 +232,10 @@ export class AuthController {
     const confirmation = readRequiredString(json, "confirmation");
     const user = request.authUser;
     if (user !== undefined) {
+      // Clear FK blockers before Supabase auth.admin.deleteUser
+      // (`workspaces.owner_user_id` is ON DELETE RESTRICT).
       await this.apiKeys.revokeAllForUser(user.id);
+      await this.workspaces.purgeOwnedWorkspacesForAccountDeletion(user.id);
     }
     await this.auth.deleteAccount(token, confirmation, requestMeta(request));
     clearAuthCookies(reply);

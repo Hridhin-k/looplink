@@ -1,33 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
-import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, formatApiErrorMessage } from "@/lib/api/errors";
 import {
   deleteAccountRequest,
   emailStatusRequest,
   resendVerificationRequest,
 } from "@/lib/auth/auth-api";
+import { withAccessToken } from "@/lib/auth/with-access-token";
 
 /**
- * Protected account page showing the current user from `/api/v1/me` session.
+ * Account page — identity, verification, and account deletion.
  */
 export default function AccountPage() {
-  return (
-    <RequireAuth>
-      <AccountContent />
-    </RequireAuth>
-  );
-}
-
-function AccountContent() {
   const router = useRouter();
   const { user, logout, getAccessToken } = useAuth();
   const { activeWorkspace } = useWorkspace();
@@ -39,14 +31,26 @@ function AccountContent() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function refreshEmailStatus(): Promise<void> {
-    const token = await getAccessToken();
-    if (token === null) {
-      return;
-    }
-    const status = await emailStatusRequest(token);
-    setEmailVerified(status.emailVerified);
-  }
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const token = await getAccessToken();
+      if (token === null || cancelled) {
+        return;
+      }
+      try {
+        const status = await emailStatusRequest(token);
+        if (!cancelled) {
+          setEmailVerified(status.emailVerified);
+        }
+      } catch {
+        // Keep session-derived value when status endpoint is unavailable.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken]);
 
   async function onResendVerification(): Promise<void> {
     setVerifyMessage(null);
@@ -57,10 +61,19 @@ function AccountContent() {
     try {
       await resendVerificationRequest(user.email, `${window.location.origin}/auth/callback`);
       setVerifyMessage("Verification email sent.");
-      await refreshEmailStatus();
+      const token = await getAccessToken();
+      if (token !== null) {
+        const status = await emailStatusRequest(token);
+        setEmailVerified(status.emailVerified);
+      }
     } catch {
       setVerifyMessage("Unable to resend verification email.");
     }
+  }
+
+  async function onSignOut(): Promise<void> {
+    await logout();
+    router.replace("/login");
   }
 
   async function onDeleteAccount(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -68,16 +81,16 @@ function AccountContent() {
     setDeleteError(null);
     setDeleting(true);
     try {
-      const token = await getAccessToken();
-      if (token === null) {
-        throw new Error("Not authenticated");
-      }
-      await deleteAccountRequest(token, deleteConfirmation);
+      await withAccessToken(getAccessToken, (token) =>
+        deleteAccountRequest(token, deleteConfirmation),
+      );
       await logout();
       router.replace("/login");
     } catch (cause: unknown) {
       if (cause instanceof ApiError) {
-        setDeleteError(`Delete failed (${String(cause.status)}).`);
+        setDeleteError(formatApiErrorMessage(cause, "Unable to delete account."));
+      } else if (cause instanceof Error) {
+        setDeleteError(cause.message);
       } else {
         setDeleteError("Unable to delete account.");
       }
@@ -87,59 +100,69 @@ function AccountContent() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h2 className="font-heading text-xl tracking-tight">Account</h2>
-        <p className="text-sm text-muted-foreground">Signed-in identity from the Badger API.</p>
+        <p className="font-mono text-[12px] tracking-[-0.02em] text-pale-stone uppercase">
+          Account
+        </p>
+        <h2 className="mt-1 text-[36px] leading-[1.1] tracking-[-1.12px] text-bone">
+          Identity
+        </h2>
+        <p className="mt-2 text-sm text-warm-granite">Signed-in identity from the Badger API.</p>
       </div>
 
-      <Card>
+      <Card className="rounded-[10px] border-ash-stroke bg-carbon-lift shadow-none">
         <CardHeader>
           <CardTitle>Current user</CardTitle>
-          <CardDescription>Loaded from the verified JWT via GET /api/v1/me.</CardDescription>
+          <CardDescription>Verified JWT session via GET /api/v1/me.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div>
-            <p className="text-muted-foreground">Email</p>
-            <p className="font-medium">{user?.email ?? "—"}</p>
+            <p className="font-mono text-[12px] text-pale-stone uppercase">Email</p>
+            <p className="text-bone">{user?.email ?? "—"}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Email verified</p>
-            <p className="font-medium">
+            <p className="font-mono text-[12px] text-pale-stone uppercase">Email verified</p>
+            <p className="text-bone">
               {emailVerified === null ? "—" : emailVerified ? "Yes" : "No"}
             </p>
             {emailVerified === false ? (
               <div className="mt-2 space-y-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => void onResendVerification()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-[3px]"
+                  onClick={() => void onResendVerification()}
+                >
                   Resend verification email
                 </Button>
                 {verifyMessage !== null ? (
-                  <p className="text-xs text-muted-foreground">{verifyMessage}</p>
+                  <p className="text-xs text-warm-granite">{verifyMessage}</p>
                 ) : null}
               </div>
             ) : null}
           </div>
           <div>
-            <p className="text-muted-foreground">User id</p>
-            <p className="break-all font-mono text-xs">{user?.id}</p>
+            <p className="font-mono text-[12px] text-pale-stone uppercase">User id</p>
+            <p className="break-all font-mono text-xs text-bone">{user?.id}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Active workspace</p>
-            <p className="font-medium">{activeWorkspace?.name ?? "—"}</p>
+            <p className="font-mono text-[12px] text-pale-stone uppercase">Active workspace</p>
+            <p className="text-bone">{activeWorkspace?.name ?? "—"}</p>
           </div>
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              void logout();
-            }}
+            className="rounded-[3px]"
+            onClick={() => void onSignOut()}
           >
             Sign out
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-[10px] border-ash-stroke bg-carbon-lift shadow-none">
         <CardHeader>
           <CardTitle>Delete account</CardTitle>
           <CardDescription>
@@ -155,13 +178,21 @@ function AccountContent() {
               placeholder="delete my account"
               disabled={deleting}
               autoComplete="off"
+              className="rounded-[3px]"
             />
             {deleteError !== null ? (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-signal-orange" role="alert">
                 {deleteError}
               </p>
             ) : null}
-            <Button type="submit" variant="destructive" disabled={deleting}>
+            <Button
+              type="submit"
+              variant="destructive"
+              className="rounded-[3px]"
+              disabled={
+                deleting || deleteConfirmation.trim().toLowerCase() !== "delete my account"
+              }
+            >
               {deleting ? "Deleting…" : "Delete account"}
             </Button>
           </form>

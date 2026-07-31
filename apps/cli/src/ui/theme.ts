@@ -14,6 +14,8 @@ export interface Theme {
   label(text: string): string;
   /** Public tunnel URLs and other primary values. */
   url(text: string): string;
+  /** Interactive highlight (selected menu rows). */
+  highlight(text: string): string;
   /** Confirmation of a completed step. */
   success(text: string): string;
   /** Recoverable problems such as a dropped connection. */
@@ -22,17 +24,21 @@ export interface Theme {
   error(text: string): string;
   /** Secondary text such as hints and local addresses. */
   muted(text: string): string;
+  /** Informational gray body text. */
+  info(text: string): string;
 }
 
 /**
- * Default Badger color palette.
+ * Default Badger color palette — cyan primary, green success, yellow warn, red error.
  */
 export const theme: Theme = {
   heading: (text) => chalk.bold.cyan(text),
   label: (text) => chalk.dim.bold(text),
-  url: (text) => chalk.bold.green(text),
+  url: (text) => chalk.bold.cyan(text),
+  highlight: (text) => chalk.bold.cyan(text),
   success: (text) => chalk.green(text),
   warning: (text) => chalk.yellow(text),
   error: (text) => chalk.red(text),
   muted: (text) => chalk.dim(text),
+  info: (text) => chalk.gray(text),
 };
