@@ -8,6 +8,8 @@ export {
 } from "./logging.js";
 export { RECONNECT_INTERVAL_MS, TUNNEL_RECLAIM_WINDOW_MS } from "./reconnect.js";
 export {
+  AUTH_RATE_LIMIT_MAX,
+  AUTH_RATE_LIMIT_WINDOW_MS,
   HTTP_CONNECT_TIMEOUT_MS,
   HTTP_RATE_LIMIT_MAX,
   HTTP_RATE_LIMIT_WINDOW_MS,

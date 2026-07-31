@@ -1,16 +1,18 @@
 import { Module } from "@nestjs/common";
 
+import { AuthModule } from "../auth/auth.module.js";
 import { HeartbeatMonitor } from "./heartbeat.monitor.js";
 import { TunnelGateway } from "./tunnel.gateway.js";
 import { HttpForwardModule } from "../http-forward/http-forward.module.js";
 import { SecurityModule } from "../security/security.module.js";
 import { TunnelModule } from "../tunnel/tunnel.module.js";
+import { WorkspaceModule } from "../workspaces/workspace.module.js";
 
 /**
  * Owns the WebSocket gateway that Badger clients connect to.
  */
 @Module({
-  imports: [TunnelModule, HttpForwardModule, SecurityModule],
+  imports: [AuthModule, WorkspaceModule, TunnelModule, HttpForwardModule, SecurityModule],
   providers: [
     TunnelGateway,
     {

@@ -6,13 +6,15 @@ import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 const geistSans = Geist({
-  variable: "--font-sans",
+  variable: "--font-geist",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -28,8 +30,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <AppProviders>{children}</AppProviders>

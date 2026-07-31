@@ -1,0 +1,1 @@
+export const API_KEY_REPOSITORY = Symbol("API_KEY_REPOSITORY");

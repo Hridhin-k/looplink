@@ -42,6 +42,7 @@ export class SecurityModule implements NestModule {
       .apply(OriginMiddleware)
       .exclude(
         { path: "health", method: RequestMethod.GET },
+        { path: "health/ready", method: RequestMethod.GET },
         { path: "api/v1/(.*)", method: RequestMethod.ALL },
         { path: "api/docs", method: RequestMethod.ALL },
         { path: "api/docs/(.*)", method: RequestMethod.ALL },

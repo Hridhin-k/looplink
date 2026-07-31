@@ -7,10 +7,13 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
+import { createAnonymousTunnelContext } from "../tunnel/tunnel-context.js";
 import type { TunnelRecord } from "../tunnel/tunnel.types.js";
 import { encodeBodyChunk } from "./body-codec.js";
 import { HttpExchangeCoordinator } from "./http-exchange.coordinator.js";
 import { HttpForwardingService } from "./http-forwarding.service.js";
+
+const ANON = createAnonymousTunnelContext("anon-session-1");
 
 describe("HttpForwardingService", () => {
   it("sends request frames and returns the streamed CLI response", async () => {
@@ -41,10 +44,11 @@ describe("HttpForwardingService", () => {
         }
 
         if (parsed.value.type === MessageType.HttpRequestEnd) {
+          const end = parsed.value;
           queueMicrotask(() => {
             const startDelivered = coordinator.deliver({
               type: MessageType.HttpResponseStart,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
               statusCode: 201,
               headers: { "x-test": "1" },
@@ -56,7 +60,7 @@ describe("HttpForwardingService", () => {
             const encoded = encodeBodyChunk(Buffer.from("ok"));
             coordinator.deliver({
               type: MessageType.HttpResponseChunk,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
               sequence: 0,
               encoding: encoded.encoding,
@@ -64,7 +68,7 @@ describe("HttpForwardingService", () => {
             });
             coordinator.deliver({
               type: MessageType.HttpResponseEnd,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
             });
           });
@@ -76,6 +80,8 @@ describe("HttpForwardingService", () => {
       id: "tun-1",
       client,
       port: 3000,
+      context: ANON,
+      anonymousSessionId: ANON.id,
     };
 
     const response = await service.forward({
@@ -126,6 +132,8 @@ describe("HttpForwardingService", () => {
       id: "tun-1",
       client: { readyState: WebSocket.CLOSED, send: vi.fn() } as unknown as WebSocket,
       port: 3000,
+      context: ANON,
+      anonymousSessionId: ANON.id,
     };
 
     await expect(

@@ -1,13 +1,26 @@
 import { randomBytes } from "node:crypto";
 
-import { Inject, Injectable } from "@nestjs/common";
-import { TUNNEL_ID_BYTES, TUNNEL_RECLAIM_WINDOW_MS } from "@hridhin-k/badger-shared";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import {
+  BadgerEventType,
+  createEventPayload,
+  EVENT_BUS,
+  TUNNEL_ID_BYTES,
+  TUNNEL_RECLAIM_WINDOW_MS,
+  type EventBus,
+} from "@hridhin-k/badger-shared";
 import type WebSocket from "ws";
 
 import { buildPublicUrl } from "./public-url.js";
+import {
+  contextAnonymousSessionId,
+  contextWorkspaceId,
+  type TunnelOwnership,
+} from "./tunnel-context.js";
 import { TUNNEL_REPOSITORY } from "./tunnel.constants.js";
 import type { TunnelRepository } from "./tunnel.repository.js";
 import type { CreatedTunnel, TunnelRecord } from "./tunnel.types.js";
+import { TunnelOwnershipStore } from "./tunnel-ownership.store.js";
 
 /** Inclusive lower bound of a valid TCP port. */
 const MIN_PORT = 1;
@@ -19,58 +32,46 @@ const MAX_PORT = 65_535;
  * Options for {@link TunnelManager.create}.
  */
 export interface CreateTunnelOptions {
+  /** Required logical owner of the tunnel (engine ownership ref). */
+  readonly context: TunnelOwnership;
   /** Preferred tunnel id to reclaim after a reconnect. */
   readonly preferredTunnelId?: string;
   /** Epoch ms used for reclaim expiry checks. Defaults to `Date.now()`. */
   readonly now?: number;
   /** Override for the shared reclaim window. Intended for tests. */
   readonly reclaimWindowMs?: number;
+  /** Account that created a workspace-scoped tunnel. */
+  readonly ownerUserId?: string;
 }
 
 /**
  * Application service that manages active tunnel sessions and their WebSocket clients.
+ *
+ * Publishes TunnelCreated / TunnelClosed on the shared EventBus for dashboard sync
+ * without changing the tunnel protocol or HTTP forward path.
  */
 @Injectable()
 export class TunnelManager {
-  /**
-   * @param repository - Persistence port for tunnel records.
-   */
   constructor(
     @Inject(TUNNEL_REPOSITORY)
     private readonly repository: TunnelRepository,
+    @Inject(EVENT_BUS)
+    private readonly eventBus: EventBus,
+    @Optional()
+    private readonly ownership?: TunnelOwnershipStore,
   ) {}
 
-  /**
-   * Generates a cryptographically secure tunnel identifier.
-   *
-   * Uses {@link randomBytes} (not `Math.random`) so public URL slugs derived
-   * from the id are not predictable.
-   *
-   * @returns A hex string of length `TUNNEL_ID_BYTES * 2`.
-   */
   generateTunnelId(): string {
     return randomBytes(TUNNEL_ID_BYTES).toString("hex");
   }
 
-  /**
-   * Creates a tunnel for a connected client and local port.
-   *
-   * When `preferredTunnelId` is provided, the manager first tries to reclaim an
-   * orphaned tunnel so the public URL survives a brief network interruption.
-   *
-   * @param client - Connected Badger client socket.
-   * @param port - Local TCP port on the client to expose.
-   * @param options - Optional reclaim preference and clock overrides.
-   * @returns The persisted tunnel and its public URL.
-   * @throws Error When `port` is outside the valid TCP range.
-   */
-  create(client: WebSocket, port: number, options: CreateTunnelOptions = {}): CreatedTunnel {
+  create(client: WebSocket, port: number, options: CreateTunnelOptions): CreatedTunnel {
     this.assertValidPort(port);
 
     const now = options.now ?? Date.now();
     const reclaimWindowMs = options.reclaimWindowMs ?? TUNNEL_RECLAIM_WINDOW_MS;
 
-    this.repository.purgeExpiredOrphans(now, reclaimWindowMs);
+    this.purgeExpired(now, reclaimWindowMs);
 
     if (options.preferredTunnelId !== undefined) {
       const restored = this.repository.reclaim(
@@ -79,92 +80,122 @@ export class TunnelManager {
         port,
         now,
         reclaimWindowMs,
+        options.context,
       );
 
       if (restored !== undefined) {
+        this.ownership?.upsert(restored.id, restored.port, restored.context);
+        const publicUrl = buildPublicUrl(restored.id);
+        this.publishCreated(restored, publicUrl, true);
         return {
           tunnel: restored,
-          publicUrl: buildPublicUrl(restored.id),
+          publicUrl,
           restored: true,
         };
       }
     }
 
-    const tunnel = this.register(client, port);
+    const tunnel = this.register(client, port, options);
     const publicUrl = buildPublicUrl(tunnel.id);
+    this.publishCreated(tunnel, publicUrl, false);
 
     return { tunnel, publicUrl, restored: false };
   }
 
-  /**
-   * Registers a WebSocket client as a new tunnel session.
-   *
-   * @param client - Connected Badger client socket.
-   * @param port - Local TCP port on the client to expose.
-   * @returns The persisted tunnel record, including its generated id.
-   */
-  register(client: WebSocket, port: number): TunnelRecord {
+  register(client: WebSocket, port: number, options: CreateTunnelOptions): TunnelRecord {
+    const workspaceId = contextWorkspaceId(options.context);
+    const anonymousSessionId = contextAnonymousSessionId(options.context);
+
     const tunnel: TunnelRecord = {
       id: this.generateTunnelId(),
       client,
       port,
+      context: options.context,
+      ...(workspaceId === undefined ? {} : { workspaceId }),
+      ...(anonymousSessionId === undefined ? {} : { anonymousSessionId }),
+      ...(options.ownerUserId === undefined ? {} : { ownerUserId: options.ownerUserId }),
     };
 
     this.repository.save(tunnel);
+    this.ownership?.upsert(tunnel.id, tunnel.port, tunnel.context);
     return tunnel;
   }
 
-  /**
-   * Unregisters a tunnel by id.
-   *
-   * @param id - Tunnel identifier.
-   * @returns `true` when a tunnel was removed.
-   */
   unregister(id: string): boolean {
-    return this.repository.remove(id);
+    const existing = this.repository.findById(id);
+    const removed = this.repository.remove(id);
+    if (removed) {
+      this.ownership?.remove(id);
+      if (existing !== undefined) {
+        this.publishClosed(existing.id, existing.workspaceId, "unregistered");
+      }
+    }
+    return removed;
   }
 
-  /**
-   * Unregisters the tunnel associated with a WebSocket client.
-   *
-   * Prefer {@link detachClient} on unexpected disconnects so the tunnel can be
-   * reclaimed after a reconnect.
-   *
-   * @param client - Connected client socket.
-   * @returns `true` when a tunnel was removed.
-   */
   unregisterClient(client: WebSocket): boolean {
-    return this.repository.removeByClient(client);
+    const existing = this.repository.findByClient(client);
+    const removed = this.repository.removeByClient(client);
+    if (removed && existing !== undefined) {
+      this.ownership?.remove(existing.id);
+      this.publishClosed(existing.id, existing.workspaceId, "unregistered");
+    }
+    return removed;
   }
 
-  /**
-   * Parks the client's tunnel as reclaimable instead of deleting it.
-   *
-   * @param client - Disconnecting client socket.
-   * @returns `true` when a tunnel was orphaned.
-   */
   detachClient(client: WebSocket): boolean {
-    return this.repository.orphanByClient(client, Date.now()) !== undefined;
+    const orphan = this.repository.orphanByClient(client, Date.now());
+    if (orphan === undefined) {
+      return false;
+    }
+    this.publishClosed(orphan.id, orphan.workspaceId, "unregistered");
+    return true;
   }
 
-  /**
-   * Looks up a tunnel by id.
-   *
-   * @param id - Tunnel identifier.
-   * @returns The matching record, or `undefined` when absent.
-   */
   lookup(id: string): TunnelRecord | undefined {
     return this.repository.findById(id);
   }
 
-  /**
-   * Looks up a tunnel by its public subdomain slug.
-   *
-   * @param slug - Public URL slug.
-   * @returns The matching record, or `undefined` when absent.
-   */
   lookupBySlug(slug: string): TunnelRecord | undefined {
     return this.repository.findBySlug(slug);
+  }
+
+  private purgeExpired(now: number, reclaimWindowMs: number): void {
+    const purged = this.repository.purgeExpiredOrphans(now, reclaimWindowMs);
+    for (const orphan of purged) {
+      this.ownership?.remove(orphan.id);
+      this.publishClosed(orphan.id, orphan.workspaceId, "expired");
+    }
+  }
+
+  private publishCreated(tunnel: TunnelRecord, publicUrl: string, restored: boolean): void {
+    this.eventBus.publish(
+      BadgerEventType.TunnelCreated,
+      createEventPayload({
+        tunnelId: tunnel.id,
+        publicUrl,
+        port: tunnel.port,
+        restored,
+        correlationId: tunnel.id,
+        ...(tunnel.workspaceId === undefined ? {} : { workspaceId: tunnel.workspaceId }),
+      }),
+    );
+  }
+
+  private publishClosed(
+    tunnelId: string,
+    workspaceId: string | undefined,
+    reason: "unregistered" | "expired",
+  ): void {
+    this.eventBus.publish(
+      BadgerEventType.TunnelClosed,
+      createEventPayload({
+        tunnelId,
+        reason,
+        correlationId: tunnelId,
+        ...(workspaceId === undefined ? {} : { workspaceId }),
+      }),
+    );
   }
 
   private assertValidPort(port: number): void {

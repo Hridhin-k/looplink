@@ -22,56 +22,31 @@ export function SidebarNav({ collapsed = false, onNavigate, className }: Sidebar
     <nav aria-label="Primary" className={cn("flex flex-col gap-1", className)}>
       {APP_NAV_ITEMS.map((item) => {
         const Icon = item.icon;
-        const active =
-          !item.disabled && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
-
-        const itemClass = cn(
-          "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors",
-          collapsed && "justify-center px-0",
-          active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-          item.disabled && "pointer-events-none cursor-not-allowed opacity-45 hover:bg-transparent",
-        );
-
-        const title = collapsed ? `${item.label}${item.disabled ? " (soon)" : ""}` : undefined;
-
-        const label = (
-          <>
-            <Icon className="size-4 shrink-0" aria-hidden />
-            {collapsed ? (
-              <span className="sr-only">{item.label}</span>
-            ) : (
-              <span className="truncate">
-                {item.label}
-                {item.disabled ? (
-                  <span className="ml-2 text-[10px] tracking-wide text-muted-foreground uppercase">
-                    Soon
-                  </span>
-                ) : null}
-              </span>
-            )}
-          </>
-        );
-
-        if (item.disabled) {
-          return (
-            <span key={item.id} className={itemClass} aria-disabled="true" title={title}>
-              {label}
-            </span>
-          );
-        }
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
         return (
           <Link
             key={item.id}
             href={item.href}
-            className={itemClass}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-[3px] px-2.5 py-2 text-sm transition-colors duration-150",
+              collapsed && "justify-center px-0",
+              active
+                ? "bg-carbon-lift text-bone"
+                : "text-warm-granite hover:bg-carbon-lift/70 hover:text-bone",
+            )}
             aria-current={active ? "page" : undefined}
-            title={title}
+            title={collapsed ? item.label : undefined}
             onClick={onNavigate}
           >
-            {label}
+            <Icon className="size-4 shrink-0" aria-hidden />
+            {collapsed ? (
+              <span className="sr-only">{item.label}</span>
+            ) : (
+              <span className="truncate font-mono text-[12px] tracking-[-0.02em] uppercase">
+                {item.label}
+              </span>
+            )}
           </Link>
         );
       })}

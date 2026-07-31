@@ -1,5 +1,6 @@
 import type WebSocket from "ws";
 
+import type { TunnelOwnership } from "./tunnel-context.js";
 import type { OrphanedTunnel, TunnelRecord } from "./tunnel.types.js";
 
 /**
@@ -51,6 +52,7 @@ export interface TunnelRepository {
    * @param port - Local port the client wants to expose.
    * @param now - Current epoch ms used for expiry checks.
    * @param reclaimWindowMs - Maximum age of an orphan that may still be restored.
+   * @param context - Expected owner; reclaim fails when the orphan belongs elsewhere.
    * @returns The restored active record, or `undefined` when reclaim is not possible.
    */
   reclaim(
@@ -59,6 +61,7 @@ export interface TunnelRepository {
     port: number,
     now: number,
     reclaimWindowMs: number,
+    context: TunnelOwnership,
   ): TunnelRecord | undefined;
 
   /**
@@ -66,9 +69,9 @@ export interface TunnelRepository {
    *
    * @param now - Current epoch ms.
    * @param reclaimWindowMs - Maximum orphan age to retain.
-   * @returns Number of orphans purged.
+   * @returns Orphans that were purged (for ownership cleanup / events).
    */
-  purgeExpiredOrphans(now: number, reclaimWindowMs: number): number;
+  purgeExpiredOrphans(now: number, reclaimWindowMs: number): readonly OrphanedTunnel[];
 
   /**
    * Looks up a tunnel by id.

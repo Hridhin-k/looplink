@@ -21,7 +21,7 @@ export async function registerHttpRateLimit(
     hook: "onRequest",
     allowList: (request) => {
       const path = request.url.split("?")[0] ?? "/";
-      return path === "/health";
+      return path === "/health" || path === "/health/ready";
     },
     errorResponseBuilder: (_request, context) => ({
       statusCode: 429,

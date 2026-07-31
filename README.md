@@ -50,6 +50,66 @@ The deprecated `looplink` command is installed as an alias and prints a warning.
 
 See [docs/publishing.md](docs/publishing.md) to publish new versions.
 
+## Commands
+
+Copy-paste commands for local run, production CLI use, package install/publish,
+and Railway/Cloudflare deploys: [COMMANDS.md](COMMANDS.md).
+
+## Authentication
+
+Badger uses browser-based OAuth via Supabase Auth. After installing the CLI, log
+in once:
+
+```bash
+badger login
+```
+
+A browser window opens, you complete OAuth with your provider (Google by
+default), and the session is saved to `~/.config/badger/auth.json` with
+permissions `0600`. The access token is transparently refreshed on expiry — you
+never need to log in again unless you explicitly log out.
+
+For CI/CD, create a workspace API key in the dashboard and authenticate without
+a browser:
+
+```bash
+badger login --token bgk_...
+```
+
+API keys are stored hashed server-side; only a public prefix is retained for
+display. The CLI never receives a refreshable JWT for key-based login.
+
+### Commands
+
+| Command                        | Description                                      |
+| ------------------------------ | ------------------------------------------------ |
+| `badger login`                 | Authenticate via browser OAuth                   |
+| `badger login --token <key>`   | Authenticate with a workspace API key (CI/CD)    |
+| `badger logout`                | Revoke refresh tokens and clear local session    |
+| `badger whoami`                | Print the current authenticated user             |
+| `badger <port> -w <workspace>` | Open a tunnel in a specific workspace (id/name)  |
+
+### Token lifecycle
+
+- The CLI stores `accessToken`, `refreshToken`, and `expiresAt` locally.
+- Before each tunnel connection (and on reconnect), the CLI checks expiry and
+  silently refreshes the token via `POST /api/v1/auth/refresh`.
+- The access token is attached to the WebSocket upgrade as
+  `Authorization: Bearer <token>`.
+- The server validates the token before admitting the tunnel connection.
+
+### Backward compatibility
+
+Connecting without an `Authorization` header is still allowed. The server only
+rejects connections that supply a malformed or invalid token. Existing
+unauthenticated setups continue to work.
+
+### Server environment variable
+
+| Variable                    | Default  | Description                              |
+| --------------------------- | -------- | ---------------------------------------- |
+| `BADGER_CLI_OAUTH_PROVIDER` | `google` | Supabase OAuth provider offered to the CLI |
+
 ## Getting started (monorepo)
 
 ```bash

@@ -36,6 +36,9 @@ export function toInspectorRequestSummary(
     requestBodyByteLength: record.body.byteLength,
     responseBodyByteLength: record.responseBody.byteLength,
   };
+  if (record.workspaceId !== undefined) {
+    dto.workspaceId = record.workspaceId;
+  }
 
   if (record.status !== undefined) {
     dto.status = record.status;
@@ -72,6 +75,9 @@ export function toInspectorRequestDetail(record: TrafficRecord): InspectorReques
     responseBody: toTrafficBodyDto(record.responseBody),
     tunnelId: record.tunnelId,
   };
+  if (record.workspaceId !== undefined) {
+    dto.workspaceId = record.workspaceId;
+  }
 
   if (record.status !== undefined) {
     dto.status = record.status;

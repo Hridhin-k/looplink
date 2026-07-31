@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   matchTrafficRecordFields,
   normalizeQuery,
@@ -7,6 +7,7 @@ import {
   type TrafficSearchField,
 } from "@hridhin-k/badger-shared";
 
+import type { TunnelContext } from "../context/tunnel-context.interface.js";
 import { RequestReplayService } from "../replay/request-replay.service.js";
 import { StatisticsService } from "../statistics/statistics.service.js";
 import { TrafficRecorderService } from "../traffic/traffic-recorder.service.js";
@@ -24,7 +25,7 @@ import {
 } from "./inspector.mapper.js";
 
 /**
- * Options for listing inspector requests.
+ * Options for listing inspector requests (workspace comes from TunnelContext).
  */
 export interface ListInspectorRequestsOptions {
   readonly tunnelId?: string;
@@ -36,15 +37,10 @@ export interface ListInspectorRequestsOptions {
 /**
  * Application service for the inspector management API.
  *
- * Composes traffic listing, statistics, and replay — never touches forwarding.
+ * Consumes only {@link TunnelContext} — never authentication or membership APIs.
  */
 @Injectable()
 export class InspectorService {
-  /**
-   * @param traffic - Recorded traffic access.
-   * @param statistics - Aggregate metrics.
-   * @param replay - Request replay through the existing forward pipeline.
-   */
   constructor(
     private readonly traffic: TrafficRecorderService,
     private readonly statistics: StatisticsService,
@@ -53,21 +49,18 @@ export class InspectorService {
 
   /**
    * Lists recorded requests as summary DTOs (newest first).
-   *
-   * When {@link ListInspectorRequestsOptions.query} is set, bodies are loaded so
-   * full-text search can cover request/response payloads; matching field ids are
-   * returned on each summary.
-   *
-   * @param options - Optional tunnel filter, limit, and search query.
-   * @returns List DTO without body payloads in the response.
    */
-  async listRequests(options: ListInspectorRequestsOptions = {}): Promise<InspectorRequestListDto> {
+  async listRequests(
+    context: TunnelContext,
+    options: ListInspectorRequestsOptions = {},
+  ): Promise<InspectorRequestListDto> {
+    const workspaceId = requireWorkspaceId(context);
     const query = options.query === undefined ? undefined : normalizeQuery(options.query);
     const searching = query !== undefined;
 
     const records = await this.traffic.list({
+      workspaceId,
       ...(options.tunnelId === undefined ? {} : { tunnelId: options.tunnelId }),
-      // When searching, load all candidates (bodies included) then apply limit after filter.
       ...(searching || options.limit === undefined ? {} : { limit: options.limit }),
       includeBodies: searching,
     });
@@ -96,14 +89,11 @@ export class InspectorService {
 
   /**
    * Returns a single recorded request with bodies.
-   *
-   * @param id - Traffic request id.
-   * @returns Detail DTO.
-   * @throws NotFoundException When the record is missing.
    */
-  async getRequest(id: string): Promise<InspectorRequestDetailDto> {
+  async getRequest(context: TunnelContext, id: string): Promise<InspectorRequestDetailDto> {
+    const workspaceId = requireWorkspaceId(context);
     const record = await this.traffic.findById(id);
-    if (record === undefined) {
+    if (record === undefined || record.workspaceId !== workspaceId) {
       throw new NotFoundException(`No traffic record found for id "${id}".`);
     }
 
@@ -112,23 +102,32 @@ export class InspectorService {
 
   /**
    * Replays a recorded request through the live tunnel.
-   *
-   * @param id - Traffic request id.
-   * @returns Replay response DTO.
    */
-  async replayRequest(id: string): Promise<InspectorReplayResponseDto> {
-    const result = await this.replay.replay(id);
+  async replayRequest(context: TunnelContext, id: string): Promise<InspectorReplayResponseDto> {
+    const workspaceId = requireWorkspaceId(context);
+    const result = await this.replay.replay(id, workspaceId);
     return toInspectorReplayResponseDto(toReplayResponseDto(result));
   }
 
   /**
    * Computes traffic statistics DTOs.
-   *
-   * @param tunnelId - Optional tunnel scope.
-   * @returns Statistics DTO.
    */
-  async getStatistics(tunnelId?: string): Promise<InspectorStatisticsDto> {
-    const stats = await this.statistics.getStatistics(tunnelId === undefined ? {} : { tunnelId });
+  async getStatistics(
+    context: TunnelContext,
+    tunnelId: string | undefined,
+  ): Promise<InspectorStatisticsDto> {
+    const workspaceId = requireWorkspaceId(context);
+    const stats = await this.statistics.getStatistics({
+      workspaceId,
+      ...(tunnelId === undefined ? {} : { tunnelId }),
+    });
     return toInspectorStatisticsDto(stats);
   }
+}
+
+function requireWorkspaceId(context: TunnelContext): string {
+  if (context.workspaceId === null || context.workspaceId.length === 0) {
+    throw new ForbiddenException("Inspector requires a workspace-scoped TunnelContext.");
+  }
+  return context.workspaceId;
 }

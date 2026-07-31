@@ -151,6 +151,7 @@ export class TrafficRecorder {
       responseBody: EMPTY_TRAFFIC_BODY,
       latencyMs: undefined,
       tunnelId: event.tunnelId,
+      ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
       error: undefined,
     });
   }
@@ -181,6 +182,7 @@ export class TrafficRecorder {
       responseBody: event.responseBody,
       latencyMs: event.latencyMs,
       tunnelId: event.tunnelId,
+      ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
       error: undefined,
     });
   }
@@ -211,6 +213,7 @@ export class TrafficRecorder {
       responseBody: EMPTY_TRAFFIC_BODY,
       latencyMs: undefined,
       tunnelId: event.tunnelId,
+      ...(event.workspaceId === undefined ? {} : { workspaceId: event.workspaceId }),
       error: event.error,
     });
   }

@@ -8,6 +8,10 @@ export interface TunnelPresentation {
   readonly port: number;
   /** `true` when a previous tunnel id was reclaimed after a reconnect. */
   readonly restored: boolean;
+  /** Optional workspace display name (presentation only). */
+  readonly workspaceLabel?: string;
+  /** Tunnel ownership mode for the banner. */
+  readonly mode?: "workspace" | "anonymous";
 }
 
 /**

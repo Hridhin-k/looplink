@@ -52,6 +52,21 @@ export interface WebSocketClientOptions {
    * @param error - Failure from the latest attempt.
    */
   readonly onReconnectFailed?: (error: Error) => void;
+  /**
+   * Optional async supplier for a bearer access token attached to the
+   * WebSocket upgrade request.
+   */
+  readonly getAuthToken?: () => Promise<string | undefined>;
+  /**
+   * Optional workspace id sent as `X-Workspace-Id` so tunnels attach to a
+   * shared workspace instead of the user's personal default.
+   */
+  readonly getWorkspaceId?: () => Promise<string | undefined>;
+  /**
+   * Optional anonymous session token sent as `X-Anonymous-Session` when the
+   * CLI is not logged in.
+   */
+  readonly getAnonymousSessionToken?: () => Promise<string | undefined>;
 }
 
 /**
@@ -189,7 +204,7 @@ export class BadgerWebSocketClient implements ServerConnection {
    * @returns A promise that resolves on a successful handshake.
    * @throws Error When the handshake fails or the socket closes before opening.
    */
-  connect(): Promise<void> {
+  async connect(): Promise<void> {
     if (this.state === ConnectionState.Connected) {
       return Promise.resolve();
     }
@@ -201,8 +216,25 @@ export class BadgerWebSocketClient implements ServerConnection {
     this.intentionalClose = false;
     this.setState(ConnectionState.Connecting);
 
+    const token = await this.options.getAuthToken?.().catch(() => undefined);
+    const workspaceId = await this.options.getWorkspaceId?.().catch(() => undefined);
+    const anonymousToken = await this.options.getAnonymousSessionToken?.().catch(() => undefined);
+
     return new Promise<void>((resolve, reject) => {
-      const socket = new WebSocket(this.options.url);
+      const headers: Record<string, string> = {};
+      if (token !== undefined) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      if (workspaceId !== undefined && workspaceId.trim().length > 0) {
+        headers["X-Workspace-Id"] = workspaceId.trim();
+      }
+      if (anonymousToken !== undefined && anonymousToken.trim().length > 0) {
+        headers["X-Anonymous-Session"] = anonymousToken.trim();
+      }
+
+      const socket = new WebSocket(this.options.url, {
+        ...(Object.keys(headers).length === 0 ? {} : { headers }),
+      });
       this.socket = socket;
 
       const onOpen = (): void => {
@@ -219,11 +251,11 @@ export class BadgerWebSocketClient implements ServerConnection {
         reject(error);
       };
 
-      const onClose = (): void => {
+      const onClose = (code: number, reason: Buffer): void => {
         cleanup();
         this.disposeSocket();
         this.setState(ConnectionState.Disconnected);
-        reject(new Error(`Failed to connect to ${this.options.url}.`));
+        reject(new Error(formatSocketCloseError(code, reason, this.options.url)));
       };
 
       const onMessage = (data: WebSocket.RawData): void => {
@@ -402,9 +434,9 @@ export class BadgerWebSocketClient implements ServerConnection {
     }, this.options.heartbeatIntervalMs);
     this.heartbeat.start();
 
-    socket.on("close", () => {
+    socket.on("close", (code: number, reason: Buffer) => {
       const wasIntentional = this.intentionalClose;
-      this.failWaiter(new Error("Connection closed while waiting for a protocol message."));
+      this.failWaiter(new Error(formatSocketCloseError(code, reason)));
       this.disposeSocket();
       this.setState(ConnectionState.Disconnected);
 
@@ -579,4 +611,15 @@ function isInboundForwardingMessage(message: ProtocolMessage): message is Inboun
     message.type === MessageType.HttpRequestEnd ||
     message.type === MessageType.HttpCancel
   );
+}
+
+function formatSocketCloseError(code: number, reason: Buffer, url?: string): string {
+  const detail = reason.toString("utf8").trim();
+  if (detail.length > 0) {
+    return detail;
+  }
+  if (url !== undefined) {
+    return `Connection closed (${String(code)}) while connecting to ${url}.`;
+  }
+  return `Connection closed (${String(code)}) while waiting for a protocol message.`;
 }

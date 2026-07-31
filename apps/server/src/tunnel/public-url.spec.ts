@@ -48,6 +48,24 @@ describe("buildPublicUrl", () => {
       }),
     ).toBe("https://abcd1234567890ab.example.test");
   });
+
+  it("uses http for localhost path tunnels including port", () => {
+    expect(
+      buildPublicUrl("abcd1234567890abcdef1234567890ab", {
+        baseDomain: "localhost:8080",
+        mode: "path",
+      }),
+    ).toBe("http://localhost:8080/tunnel/abcd1234567890abcdef1234567890ab");
+  });
+
+  it("prefers an explicit baseUrl origin for path mode", () => {
+    expect(
+      buildPublicUrl("abcd1234567890abcdef1234567890ab", {
+        baseUrl: "http://127.0.0.1:8080",
+        mode: "path",
+      }),
+    ).toBe("http://127.0.0.1:8080/tunnel/abcd1234567890abcdef1234567890ab");
+  });
 });
 
 describe("parseTunnelPath", () => {

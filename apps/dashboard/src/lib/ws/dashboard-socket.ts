@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  buildDashboardWebSocketUrl,
   DashboardLiveClient,
   DashboardMessageType,
   type DashboardMessage,
@@ -15,6 +16,11 @@ export interface CreateDashboardSocketClientOptions {
   readonly onOpen?: () => void;
   readonly onClose?: (info: { readonly intentional: boolean }) => void;
   readonly onReconnecting?: () => void;
+  readonly workspaceId?: string;
+  /** Access token for Membership-scoped live feed (query param; browsers cannot set WS Authorization). */
+  readonly accessToken?: string;
+  /** When false, the caller owns reconnect (e.g. to refresh the access token). Default true. */
+  readonly autoReconnect?: boolean;
 }
 
 /**
@@ -23,9 +29,16 @@ export interface CreateDashboardSocketClientOptions {
 export function createDashboardSocketClient(
   options: CreateDashboardSocketClientOptions = {},
 ): DashboardLiveClient {
+  // Normalize to `/dashboard/ws` first, then attach auth query params so they
+  // are not dropped by path rewriting.
+  const wsUrl = withAuthAndWorkspaceScope(
+    buildDashboardWebSocketUrl(getDashboardWebSocketUrl()),
+    options.accessToken,
+    options.workspaceId,
+  );
   return new DashboardLiveClient({
-    url: getDashboardWebSocketUrl(),
-    autoReconnect: true,
+    url: wsUrl,
+    autoReconnect: options.autoReconnect !== false,
     onOpen: options.onOpen,
     onClose: options.onClose,
     onReconnecting: options.onReconnecting,
@@ -43,3 +56,18 @@ export function subscribeDashboardMessages(
 }
 
 export { DashboardMessageType };
+
+function withAuthAndWorkspaceScope(
+  url: string,
+  accessToken?: string,
+  workspaceId?: string,
+): string {
+  const parsed = new URL(url);
+  if (accessToken !== undefined && accessToken.trim().length > 0) {
+    parsed.searchParams.set("access_token", accessToken.trim());
+  }
+  if (workspaceId !== undefined && workspaceId.trim().length > 0) {
+    parsed.searchParams.set("workspaceId", workspaceId.trim());
+  }
+  return parsed.toString();
+}

@@ -14,6 +14,7 @@ export interface InspectorRequestSummary {
   readonly status?: number;
   readonly latencyMs?: number;
   readonly tunnelId: string;
+  readonly workspaceId?: string;
   readonly error?: string;
   readonly requestBodyByteLength: number;
   readonly responseBodyByteLength: number;
@@ -41,6 +42,7 @@ export interface InspectorRequestDetail {
   readonly responseBody: TrafficBody;
   readonly latencyMs?: number;
   readonly tunnelId: string;
+  readonly workspaceId?: string;
   readonly error?: string;
 }
 

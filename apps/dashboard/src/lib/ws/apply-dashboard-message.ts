@@ -11,6 +11,7 @@ import { INSPECTOR_REQUESTS_QUERY_KEY } from "@/hooks/use-inspector-requests";
 import type { InspectorRequestList, InspectorRequestSummary } from "@/lib/api";
 
 type RequestsQueryParams = {
+  readonly workspaceId: string | null;
   readonly tunnelId: string | null;
   readonly limit: number;
   readonly q?: string | null;
@@ -32,10 +33,22 @@ export function applyDashboardMessage(queryClient: QueryClient, message: Dashboa
       patchResponseCompleted(queryClient, message);
       return;
     case DashboardMessageType.ReplayCompleted:
-      void queryClient.invalidateQueries({ queryKey: ["inspector"] });
+      if (message.workspaceId === undefined) {
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["inspector"],
+        predicate: (query) => queryBelongsToWorkspace(query.queryKey, message.workspaceId),
+      });
       return;
     case DashboardMessageType.StatisticsUpdated:
-      void queryClient.invalidateQueries({ queryKey: ["inspector", "statistics"] });
+      if (message.workspaceId === undefined) {
+        return;
+      }
+      void queryClient.invalidateQueries({
+        queryKey: ["inspector", "statistics"],
+        predicate: (query) => queryBelongsToWorkspace(query.queryKey, message.workspaceId),
+      });
       return;
     default:
       return;
@@ -55,7 +68,7 @@ function upsertRequestReceived(
 ): void {
   const summary = toPendingSummary(message);
 
-  for (const query of matchingRequestListQueries(queryClient, message.tunnelId)) {
+  for (const query of matchingRequestListQueries(queryClient, message.workspaceId, message.tunnelId)) {
     const params = query.queryKey[2] as RequestsQueryParams;
     if (hasActiveSearch(params)) {
       void queryClient.invalidateQueries({ queryKey: query.queryKey });
@@ -75,7 +88,7 @@ function patchResponseCompleted(
   queryClient: QueryClient,
   message: DashboardResponseCompletedMessage,
 ): void {
-  for (const query of matchingRequestListQueries(queryClient, message.tunnelId)) {
+  for (const query of matchingRequestListQueries(queryClient, message.workspaceId, message.tunnelId)) {
     const params = query.queryKey[2] as RequestsQueryParams;
     if (hasActiveSearch(params)) {
       void queryClient.invalidateQueries({ queryKey: query.queryKey });
@@ -113,17 +126,52 @@ function patchResponseCompleted(
   });
 }
 
-function matchingRequestListQueries(queryClient: QueryClient, tunnelId: string) {
+function matchingRequestListQueries(
+  queryClient: QueryClient,
+  workspaceId: string | undefined,
+  tunnelId: string,
+) {
+  // Unscoped live events must not mutate any workspace cache.
+  if (workspaceId === undefined) {
+    return [];
+  }
+
   return queryClient
     .getQueryCache()
     .findAll({ queryKey: INSPECTOR_REQUESTS_QUERY_KEY })
     .filter((query) => {
       const params = query.queryKey[2] as RequestsQueryParams | undefined;
       if (params === undefined) {
-        return true;
+        return false;
+      }
+      if (params.workspaceId !== workspaceId) {
+        return false;
       }
       return params.tunnelId === null || params.tunnelId === tunnelId;
     });
+}
+
+function queryBelongsToWorkspace(
+  queryKey: readonly unknown[],
+  workspaceId: string | undefined,
+): boolean {
+  if (workspaceId === undefined) {
+    return false;
+  }
+  for (const part of queryKey) {
+    if (
+      typeof part === "object" &&
+      part !== null &&
+      "workspaceId" in part &&
+      (part as { workspaceId?: unknown }).workspaceId === workspaceId
+    ) {
+      return true;
+    }
+    if (part === workspaceId) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function hasActiveSearch(params: RequestsQueryParams): boolean {
@@ -137,6 +185,7 @@ function toPendingSummary(message: DashboardRequestReceivedMessage): InspectorRe
     method: message.method,
     path: message.path,
     tunnelId: message.tunnelId,
+    ...(message.workspaceId === undefined ? {} : { workspaceId: message.workspaceId }),
     requestBodyByteLength: 0,
     responseBodyByteLength: 0,
   };
@@ -149,6 +198,7 @@ function toCompletedSummary(message: DashboardResponseCompletedMessage): Inspect
     method: message.method,
     path: message.path,
     tunnelId: message.tunnelId,
+    ...(message.workspaceId === undefined ? {} : { workspaceId: message.workspaceId }),
     status: message.statusCode,
     latencyMs: message.latencyMs,
     requestBodyByteLength: 0,

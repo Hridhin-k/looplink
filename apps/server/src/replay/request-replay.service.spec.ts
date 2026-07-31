@@ -18,9 +18,12 @@ import { encodeBodyChunk } from "../http-forward/body-codec.js";
 import { HttpExchangeCoordinator } from "../http-forward/http-exchange.coordinator.js";
 import { HttpForwardingService } from "../http-forward/http-forwarding.service.js";
 import { MemoryTunnelRepository } from "../tunnel/memory-tunnel.repository.js";
+import { createAnonymousTunnelContext } from "../tunnel/tunnel-context.js";
 import { TunnelManager } from "../tunnel/tunnel.manager.js";
 import type { TunnelRecord } from "../tunnel/tunnel.types.js";
 import { RequestReplayService } from "./request-replay.service.js";
+
+const ANON = createAnonymousTunnelContext("anon-session-1");
 
 /**
  * Builds a stored traffic record.
@@ -55,7 +58,7 @@ describe("RequestReplayService", () => {
     const coordinator = new HttpExchangeCoordinator();
     const eventBus = createEventBus();
     const forwarding = new HttpForwardingService(coordinator, eventBus);
-    const tunnelManager = new TunnelManager(new MemoryTunnelRepository());
+    const tunnelManager = new TunnelManager(new MemoryTunnelRepository(), createEventBus());
 
     const sent: string[] = [];
     const client = {
@@ -68,10 +71,11 @@ describe("RequestReplayService", () => {
         }
 
         if (parsed.value.type === MessageType.HttpRequestEnd) {
+          const end = parsed.value;
           queueMicrotask(() => {
             coordinator.deliver({
               type: MessageType.HttpResponseStart,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
               statusCode: 201,
               headers: { "x-replay": "1" },
@@ -81,7 +85,7 @@ describe("RequestReplayService", () => {
             const encoded = encodeBodyChunk(Buffer.from("pong"));
             coordinator.deliver({
               type: MessageType.HttpResponseChunk,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
               sequence: 0,
               encoding: encoded.encoding,
@@ -89,7 +93,7 @@ describe("RequestReplayService", () => {
             });
             coordinator.deliver({
               type: MessageType.HttpResponseEnd,
-              requestId: parsed.value.requestId,
+              requestId: end.requestId,
               tunnelId: "tun-1",
             });
           });
@@ -97,7 +101,13 @@ describe("RequestReplayService", () => {
       },
     } as unknown as WebSocket;
 
-    const tunnel: TunnelRecord = { id: "tun-1", client, port: 3000 };
+    const tunnel: TunnelRecord = {
+      id: "tun-1",
+      client,
+      port: 3000,
+      context: ANON,
+      anonymousSessionId: ANON.id,
+    };
     vi.spyOn(tunnelManager, "lookup").mockReturnValue(tunnel);
 
     const replayCompleted = vi.fn();
@@ -130,7 +140,7 @@ describe("RequestReplayService", () => {
   it("throws NOT_FOUND when the traffic record is missing", async () => {
     const service = new RequestReplayService(
       new StorageTrafficRecordStore(new MemoryStorage()),
-      new TunnelManager(new MemoryTunnelRepository()),
+      new TunnelManager(new MemoryTunnelRepository(), createEventBus()),
       new HttpForwardingService(new HttpExchangeCoordinator(), createEventBus()),
       createEventBus(),
     );
@@ -146,7 +156,7 @@ describe("RequestReplayService", () => {
 
     const service = new RequestReplayService(
       store,
-      new TunnelManager(new MemoryTunnelRepository()),
+      new TunnelManager(new MemoryTunnelRepository(), createEventBus()),
       new HttpForwardingService(new HttpExchangeCoordinator(), createEventBus()),
       createEventBus(),
     );

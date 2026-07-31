@@ -8,6 +8,8 @@ import type { ComputeTrafficStatisticsOptions, TrafficStatistics } from "./traff
 export interface GetStatisticsOptions extends ComputeTrafficStatisticsOptions {
   /** When set, only records for this tunnel are included. */
   readonly tunnelId?: string;
+  /** When set, only records for this workspace are included. */
+  readonly workspaceId?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export class StatisticsService {
   async getStatistics(options: GetStatisticsOptions = {}): Promise<TrafficStatistics> {
     const records = await this.store.list({
       ...(options.tunnelId === undefined ? {} : { tunnelId: options.tunnelId }),
+      ...(options.workspaceId === undefined ? {} : { workspaceId: options.workspaceId }),
       includeBodies: false,
     });
 

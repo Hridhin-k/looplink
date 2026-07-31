@@ -30,6 +30,12 @@ export class InspectorRequestSummaryDto {
   @ApiProperty({ description: "Tunnel that handled the exchange.", example: "tun-1" })
   tunnelId!: string;
 
+  @ApiPropertyOptional({
+    description: "Workspace that owned the tunnel when this exchange was recorded.",
+    example: "2fd2d870-0f20-4f6b-9cf6-8ee4d6a36235",
+  })
+  workspaceId?: string;
+
   @ApiPropertyOptional({ description: "Failure reason when the exchange failed." })
   error?: string;
 
@@ -100,6 +106,12 @@ export class InspectorRequestDetailDto {
 
   @ApiProperty({ description: "Tunnel that handled the exchange.", example: "tun-1" })
   tunnelId!: string;
+
+  @ApiPropertyOptional({
+    description: "Workspace that owned the tunnel when this exchange was recorded.",
+    example: "2fd2d870-0f20-4f6b-9cf6-8ee4d6a36235",
+  })
+  workspaceId?: string;
 
   @ApiPropertyOptional({ description: "Failure reason when the exchange failed." })
   error?: string;

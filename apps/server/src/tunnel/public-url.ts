@@ -46,24 +46,77 @@ export interface BuildPublicUrlOptions {
   readonly baseDomain?: string;
   /** URL shape. Defaults to {@link resolvePublicUrlMode}. */
   readonly mode?: PublicUrlMode;
+  /**
+   * Full public origin for path mode (e.g. `http://localhost:8080`).
+   * When set, overrides scheme/host/port from {@link baseDomain}.
+   */
+  readonly baseUrl?: string;
 }
 
 /**
- * Builds the public HTTPS URL for a tunnel id.
+ * Builds the public URL for a tunnel id.
+ *
+ * Path mode uses HTTPS for normal domains. Local loopback hosts (`localhost`,
+ * `127.0.0.1`, with optional port) use HTTP so local servers on `:8080` work.
+ * Prefer `BADGER_PUBLIC_BASE_URL` when you need an explicit origin.
  *
  * @param tunnelId - Unique tunnel identifier.
  * @param options - Optional domain and URL mode overrides.
  * @returns A public URL in the configured mode.
  */
 export function buildPublicUrl(tunnelId: string, options: BuildPublicUrlOptions = {}): string {
-  const baseDomain = options.baseDomain ?? resolvePublicBaseDomain();
   const mode = options.mode ?? resolvePublicUrlMode();
+  const baseUrl = options.baseUrl ?? resolvePublicBaseUrl();
 
   if (mode === "path") {
-    return `https://${baseDomain}${TUNNEL_PATH_PREFIX}/${tunnelId}`;
+    if (baseUrl !== undefined) {
+      return `${trimTrailingSlash(baseUrl)}${TUNNEL_PATH_PREFIX}/${tunnelId}`;
+    }
+    const baseDomain = options.baseDomain ?? resolvePublicBaseDomain();
+    return `${originForBaseDomain(baseDomain)}${TUNNEL_PATH_PREFIX}/${tunnelId}`;
   }
 
-  return `https://${tunnelSlug(tunnelId)}.${baseDomain}`;
+  const baseDomain = options.baseDomain ?? resolvePublicBaseDomain();
+  const host = baseDomain.includes(":") ? baseDomain.split(":")[0]! : baseDomain;
+  return `${schemeForHost(host)}://${tunnelSlug(tunnelId)}.${baseDomain}`;
+}
+
+/**
+ * Resolves an optional full public origin from `BADGER_PUBLIC_BASE_URL`.
+ */
+export function resolvePublicBaseUrl(): string | undefined {
+  const raw = process.env["BADGER_PUBLIC_BASE_URL"]?.trim();
+  if (raw === undefined || raw.length === 0) {
+    return undefined;
+  }
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("expected http(s)");
+    }
+    return trimTrailingSlash(url.origin);
+  } catch {
+    throw new Error(
+      `Invalid BADGER_PUBLIC_BASE_URL "${raw}": expected an absolute http(s) origin.`,
+    );
+  }
+}
+
+function originForBaseDomain(baseDomain: string): string {
+  const host = baseDomain.includes(":") ? (baseDomain.split(":")[0] ?? baseDomain) : baseDomain;
+  return `${schemeForHost(host)}://${baseDomain}`;
+}
+
+function schemeForHost(host: string): "http" | "https" {
+  const normalized = host.toLowerCase();
+  if (normalized === "localhost" || normalized === "127.0.0.1" || normalized === "[::1]") {
+    return "http";
+  }
+  return "https";
+}
+
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/u, "");
 }
 
 /**

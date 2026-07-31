@@ -22,8 +22,8 @@ export function buildDashboardWebSocketUrl(serverBaseUrl: string): string {
     throw new Error(`Unsupported server URL protocol: ${url.protocol}`);
   }
 
+  // Preserve query params (e.g. access_token / workspaceId for browser WS auth).
   url.pathname = DASHBOARD_WS_PATH;
-  url.search = "";
   url.hash = "";
   return url.toString();
 }

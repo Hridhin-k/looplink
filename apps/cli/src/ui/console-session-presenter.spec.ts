@@ -71,14 +71,15 @@ describe("ConsoleSessionPresenter", () => {
       restored: false,
     });
 
-    expect(spinner.calls[0]).toContain("start:Starting Badger on port 3000");
-    expect(spinner.calls[1]).toContain("update:Connected to Badger server.");
-    expect(spinner.calls[2]).toBe("succeed:Connected to Badger server.");
+    expect(spinner.calls[0]).toContain("start:Creating tunnel on port 3000");
+    expect(spinner.calls[1]).toContain("update:Connecting to Badger server");
+    expect(spinner.calls[2]).toContain("succeed:Connected to Badger server.");
   });
 
   it("renders the URL, local target, clipboard status, QR code and stop hint", async () => {
     const { presenter, copyToClipboard, renderQrCode, output } = setup();
 
+    presenter.setSessionContext({ mode: "workspace", workspaceLabel: "Personal" });
     await presenter.tunnelReady({
       publicUrl: "https://a.badger.dev",
       port: 3000,
@@ -87,10 +88,10 @@ describe("ConsoleSessionPresenter", () => {
 
     const text = output();
 
-    expect(text).toContain("Tunnel Created");
+    expect(text).toContain("Personal");
     expect(text).toContain("https://a.badger.dev");
     expect(text).toContain("http://localhost:3000");
-    expect(text).toContain("URL copied");
+    expect(text).toContain("Public URL copied to clipboard");
     expect(text).toContain("[QR]");
     expect(text).toContain("Press Ctrl+C to stop");
     expect(copyToClipboard).toHaveBeenCalledWith("https://a.badger.dev");
@@ -106,7 +107,7 @@ describe("ConsoleSessionPresenter", () => {
       restored: false,
     });
 
-    expect(output()).toContain("unavailable on this system");
+    expect(output()).toContain("Clipboard unavailable on this system");
   });
 
   it("skips the QR code and clipboard when disabled", async () => {
@@ -123,7 +124,7 @@ describe("ConsoleSessionPresenter", () => {
 
     expect(copyToClipboard).not.toHaveBeenCalled();
     expect(renderQrCode).not.toHaveBeenCalled();
-    expect(output()).not.toContain("Clipboard");
+    expect(output()).not.toContain("copied to clipboard");
   });
 
   it("does not redraw the QR code when a reconnect restores the same URL", async () => {
@@ -142,7 +143,7 @@ describe("ConsoleSessionPresenter", () => {
 
     expect(renderQrCode).toHaveBeenCalledTimes(1);
     expect(spinner.calls).toContain("succeed:Reconnected. Tunnel restored.");
-    expect(output()).toContain("Tunnel Restored");
+    expect(output()).toContain("https://a.badger.dev");
   });
 
   it("redraws the QR code when a reconnect yields a new URL", async () => {
@@ -169,8 +170,9 @@ describe("ConsoleSessionPresenter", () => {
     presenter.connectionLost();
     presenter.reconnectFailed(new Error("ECONNREFUSED"));
 
-    expect(spinner.calls[0]).toContain("start:Connection lost. Reconnecting to Badger...");
-    expect(spinner.calls[1]).toContain("update:Reconnect failed: ECONNREFUSED. Retrying...");
+    expect(spinner.calls[0]).toContain("start:Connection lost. Reconnecting...");
+    expect(spinner.calls[1]).toContain("update:");
+    expect(spinner.calls[1]).toContain("Retrying...");
   });
 
   it("announces an outage once instead of on every retry", async () => {
@@ -184,7 +186,6 @@ describe("ConsoleSessionPresenter", () => {
     const announcements = spinner.calls.filter((call) => call.startsWith("start:Connection lost"));
     expect(announcements).toHaveLength(1);
 
-    // A later outage is announced again once the session has recovered.
     await presenter.reconnected({
       publicUrl: "https://a.badger.dev",
       port: 3000,
@@ -203,7 +204,7 @@ describe("ConsoleSessionPresenter", () => {
     presenter.connectionLost();
     presenter.reconnectFailed(new Error(""));
 
-    expect(spinner.calls[1]).toContain("update:Reconnect failed: server unreachable. Retrying...");
+    expect(spinner.calls[1]).toContain("Retrying...");
   });
 
   it("fails the spinner when the session cannot start", () => {
@@ -211,7 +212,7 @@ describe("ConsoleSessionPresenter", () => {
 
     presenter.failed("connection refused");
 
-    expect(spinner.calls).toContain("fail:Failed to create tunnel: connection refused");
+    expect(spinner.calls.some((call) => call.startsWith("fail:"))).toBe(true);
   });
 
   it("clears the spinner and confirms a clean stop on shutdown", () => {

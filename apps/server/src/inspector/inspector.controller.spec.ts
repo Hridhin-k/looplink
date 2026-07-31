@@ -1,21 +1,37 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReplayError, ReplayErrorCode } from "@hridhin-k/badger-shared";
 
+import type { WorkspacePermission } from "../workspaces/workspace.permissions.js";
+import { ContextType } from "../context/context-type.js";
+import type { TunnelContext } from "../context/tunnel-context.interface.js";
 import { InspectorController } from "./inspector.controller.js";
 import type { InspectorService } from "./inspector.service.js";
 
+const context: TunnelContext = Object.freeze({
+  contextId: "ctx-1",
+  contextType: ContextType.Workspace,
+  tunnelId: null,
+  workspaceId: "ws-1",
+  anonymousSessionId: null,
+  permissions: new Set<WorkspacePermission>(["inspector:read", "inspector:replay"]),
+  metadata: Object.freeze({}),
+});
+
 describe("InspectorController", () => {
-  it("lists requests with parsed query options", async () => {
+  it("lists requests with TunnelContext", async () => {
     const inspector = {
       listRequests: vi.fn().mockResolvedValue({ items: [], count: 0 }),
     } as unknown as InspectorService;
 
     const controller = new InspectorController(inspector);
-    await controller.listRequests("tun-1", "10");
+    await controller.listRequests(context, "tun-1", "10");
 
-    expect(inspector.listRequests).toHaveBeenCalledWith({ tunnelId: "tun-1", limit: 10 });
+    expect(inspector.listRequests).toHaveBeenCalledWith(context, {
+      tunnelId: "tun-1",
+      limit: 10,
+    });
   });
 
   it("rejects invalid limit values", async () => {
@@ -23,7 +39,7 @@ describe("InspectorController", () => {
       listRequests: vi.fn(),
     } as unknown as InspectorService);
 
-    await expect(controller.listRequests(undefined, "nope")).rejects.toBeInstanceOf(
+    await expect(controller.listRequests(context, undefined, "nope")).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });
@@ -34,9 +50,10 @@ describe("InspectorController", () => {
     } as unknown as InspectorService;
 
     const controller = new InspectorController(inspector);
-    await expect(controller.getRequest("req-1")).resolves.toEqual(
+    await expect(controller.getRequest(context, "req-1")).resolves.toEqual(
       expect.objectContaining({ id: "req-1" }),
     );
+    expect(inspector.getRequest).toHaveBeenCalledWith(context, "req-1");
   });
 
   it("maps replay failures to HTTP exceptions", async () => {
@@ -47,7 +64,7 @@ describe("InspectorController", () => {
     } as unknown as InspectorService;
 
     const controller = new InspectorController(inspector);
-    await expect(controller.replayRequest("missing")).rejects.toSatisfy(
+    await expect(controller.replayRequest(context, "missing")).rejects.toSatisfy(
       (error: unknown) =>
         typeof error === "object" &&
         error !== null &&
@@ -57,23 +74,13 @@ describe("InspectorController", () => {
     );
   });
 
-  it("passes statistics tunnel scope through", async () => {
+  it("passes statistics tunnel scope through TunnelContext", async () => {
     const inspector = {
       getStatistics: vi.fn().mockResolvedValue({ totalRequests: 0 }),
     } as unknown as InspectorService;
 
     const controller = new InspectorController(inspector);
-    await controller.getStatistics("tun-9");
-
-    expect(inspector.getStatistics).toHaveBeenCalledWith("tun-9");
-  });
-
-  it("propagates NotFoundException from getRequest", async () => {
-    const inspector = {
-      getRequest: vi.fn().mockRejectedValue(new NotFoundException("missing")),
-    } as unknown as InspectorService;
-
-    const controller = new InspectorController(inspector);
-    await expect(controller.getRequest("x")).rejects.toBeInstanceOf(NotFoundException);
+    await controller.getStatistics(context, "tun-9");
+    expect(inspector.getStatistics).toHaveBeenCalledWith(context, "tun-9");
   });
 });

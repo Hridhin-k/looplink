@@ -27,6 +27,14 @@ export async function apiClient<T>(path: string, init: ApiRequestInit = {}): Pro
     body = JSON.stringify(json);
   }
 
+  const method = (rest.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const csrf = readBrowserCookie("badger_csrf");
+    if (csrf !== undefined && !headers.has("X-CSRF-Token")) {
+      headers.set("X-CSRF-Token", csrf);
+    }
+  }
+
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${getApiBaseUrl()}${normalizedPath}`;
 
@@ -36,6 +44,9 @@ export async function apiClient<T>(path: string, init: ApiRequestInit = {}): Pro
       ...rest,
       headers,
       body,
+      // Cookie sessions need `include` + server `Access-Control-Allow-Credentials`.
+      // Bearer SPA mode must use `omit` — otherwise browsers fail CORS as "Failed to fetch".
+      credentials: rest.credentials ?? defaultCredentialsMode(),
     });
   } catch (cause: unknown) {
     throw new NetworkError(normalizedPath, cause);
@@ -55,6 +66,37 @@ export async function apiClient<T>(path: string, init: ApiRequestInit = {}): Pro
   }
 
   return (await response.text()) as T;
+}
+
+function defaultCredentialsMode(): RequestCredentials {
+  const raw = process.env["NEXT_PUBLIC_BADGER_AUTH_COOKIE_ENABLED"]?.trim().toLowerCase();
+  if (raw === "1" || raw === "true" || raw === "yes") {
+    return "include";
+  }
+  return "omit";
+}
+
+function readBrowserCookie(name: string): string | undefined {
+  if (typeof document === "undefined") {
+    return undefined;
+  }
+  const parts = document.cookie.split(";");
+  for (const part of parts) {
+    const trimmed = part.trim();
+    const idx = trimmed.indexOf("=");
+    if (idx <= 0) {
+      continue;
+    }
+    if (trimmed.slice(0, idx) !== name) {
+      continue;
+    }
+    try {
+      return decodeURIComponent(trimmed.slice(idx + 1));
+    } catch {
+      return trimmed.slice(idx + 1);
+    }
+  }
+  return undefined;
 }
 
 async function readErrorBody(response: Response): Promise<unknown> {

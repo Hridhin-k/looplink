@@ -98,6 +98,7 @@ export class HttpForwardingService {
     if (tunnel.client.readyState !== WebSocket.OPEN) {
       this.publishRequestFailed({
         tunnelId: tunnel.id,
+        ...(tunnel.workspaceId === undefined ? {} : { workspaceId: tunnel.workspaceId }),
         requestId: undefined,
         method: request.method,
         path: request.path,
@@ -142,6 +143,7 @@ export class HttpForwardingService {
         setCookies: start.setCookies,
         body: this.observeBody(exchange.body, start.hasBody, {
           tunnelId: tunnel.id,
+          ...(tunnel.workspaceId === undefined ? {} : { workspaceId: tunnel.workspaceId }),
           requestId,
           method: request.method,
           path: request.path,
@@ -155,6 +157,7 @@ export class HttpForwardingService {
       const message = error instanceof Error ? error.message : String(error);
       this.publishRequestFailed({
         tunnelId: tunnel.id,
+        ...(tunnel.workspaceId === undefined ? {} : { workspaceId: tunnel.workspaceId }),
         requestId,
         method: request.method,
         path: request.path,
@@ -218,6 +221,7 @@ export class HttpForwardingService {
     hasBody: boolean,
     meta: {
       readonly tunnelId: string;
+      readonly workspaceId?: string;
       readonly requestId: string;
       readonly method: HttpMethod;
       readonly path: string;
@@ -254,6 +258,7 @@ export class HttpForwardingService {
       const message = error instanceof Error ? error.message : String(error);
       this.publishRequestFailed({
         tunnelId: meta.tunnelId,
+        ...(meta.workspaceId === undefined ? {} : { workspaceId: meta.workspaceId }),
         requestId: meta.requestId,
         method: meta.method,
         path: meta.path,
@@ -270,6 +275,9 @@ export class HttpForwardingService {
       BadgerEventType.RequestReceived,
       createEventPayload({
         tunnelId: request.tunnel.id,
+        ...(request.tunnel.workspaceId === undefined
+          ? {}
+          : { workspaceId: request.tunnel.workspaceId }),
         requestId,
         method: request.method,
         path: request.path,
@@ -284,6 +292,9 @@ export class HttpForwardingService {
       BadgerEventType.RequestForwarded,
       createEventPayload({
         tunnelId: request.tunnel.id,
+        ...(request.tunnel.workspaceId === undefined
+          ? {}
+          : { workspaceId: request.tunnel.workspaceId }),
         requestId,
         method: request.method,
         path: request.path,
@@ -294,6 +305,7 @@ export class HttpForwardingService {
 
   private publishResponseReturned(input: {
     readonly tunnelId: string;
+    readonly workspaceId?: string;
     readonly requestId: string;
     readonly method: HttpMethod;
     readonly path: string;
@@ -306,6 +318,7 @@ export class HttpForwardingService {
       BadgerEventType.ResponseReturned,
       createEventPayload({
         tunnelId: input.tunnelId,
+        ...(input.workspaceId === undefined ? {} : { workspaceId: input.workspaceId }),
         requestId: input.requestId,
         method: input.method,
         path: input.path,
@@ -320,6 +333,7 @@ export class HttpForwardingService {
 
   private publishRequestFailed(input: {
     readonly tunnelId: string;
+    readonly workspaceId?: string;
     readonly requestId: string | undefined;
     readonly method: HttpMethod;
     readonly path: string;
@@ -329,6 +343,7 @@ export class HttpForwardingService {
       BadgerEventType.RequestFailed,
       createEventPayload({
         tunnelId: input.tunnelId,
+        ...(input.workspaceId === undefined ? {} : { workspaceId: input.workspaceId }),
         requestId: input.requestId,
         method: input.method,
         path: input.path,

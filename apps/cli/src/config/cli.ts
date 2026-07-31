@@ -28,7 +28,7 @@ export function loadCliConfig(): CliConfig {
   return {
     name: APP_NAME,
     displayName: APP_DISPLAY_NAME,
-    description: "Expose localhost through a secure public URL.",
+    description: "Developer networking platform — tunnels, workspaces, and observability.",
     version: packageJson.version,
   };
 }

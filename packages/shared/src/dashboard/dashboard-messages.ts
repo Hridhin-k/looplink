@@ -63,6 +63,7 @@ export interface DashboardTunnelConnectedMessage extends DashboardMessageBase {
   readonly publicUrl: string;
   readonly port: number;
   readonly restored: boolean;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -72,6 +73,7 @@ export interface DashboardTunnelDisconnectedMessage extends DashboardMessageBase
   readonly type: typeof DashboardMessageType.TunnelDisconnected;
   readonly tunnelId: string;
   readonly reason: string;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -83,6 +85,7 @@ export interface DashboardRequestReceivedMessage extends DashboardMessageBase {
   readonly tunnelId: string;
   readonly method: HttpMethod;
   readonly path: string;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -96,6 +99,7 @@ export interface DashboardResponseCompletedMessage extends DashboardMessageBase 
   readonly path: string;
   readonly statusCode: number;
   readonly latencyMs: number;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -108,6 +112,7 @@ export interface DashboardReplayCompletedMessage extends DashboardMessageBase {
   readonly method: HttpMethod;
   readonly path: string;
   readonly statusCode: number;
+  readonly workspaceId?: string;
 }
 
 /**
@@ -117,6 +122,7 @@ export interface DashboardStatisticsUpdatedMessage extends DashboardMessageBase 
   readonly type: typeof DashboardMessageType.StatisticsUpdated;
   readonly statistics: StatisticsUpdatedSnapshot;
   readonly tunnelId: string | undefined;
+  readonly workspaceId?: string;
 }
 
 /**

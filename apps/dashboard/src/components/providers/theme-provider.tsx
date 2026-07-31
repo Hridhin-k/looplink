@@ -4,14 +4,15 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ReactNode } from "react";
 
 /**
- * Class-based dark mode via `next-themes` (`.dark` on `<html>`).
+ * Forces Factory dark canvas. Light mode is intentionally disabled.
  */
 export function ThemeProvider({ children }: { readonly children: ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      forcedTheme="dark"
+      defaultTheme="dark"
+      enableSystem={false}
       disableTransitionOnChange
     >
       {children}
