@@ -31,7 +31,7 @@ export function ConnectionBanner() {
       role="status"
       aria-live="polite"
       className={cn(
-        "flex items-center justify-between gap-3 border-b border-ash-stroke px-3 py-2 text-sm sm:px-4 md:px-6",
+        "flex items-center justify-between gap-3 border-b border-ash-stroke px-4 py-2.5 text-sm sm:px-6 md:px-8",
         isReconnecting ? "bg-carbon-lift text-bone" : "bg-carbon-lift text-warm-granite",
       )}
     >

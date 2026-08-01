@@ -78,7 +78,7 @@ export function CodeBlock({
     return (
       <div
         className={cn(
-          "rounded-lg border border-dashed border-border/80 px-3 py-8 text-center text-sm text-muted-foreground",
+          "rounded-[10px] border border-dashed border-ash-stroke px-3 py-8 text-center text-sm text-warm-granite",
           className,
         )}
       >
@@ -89,16 +89,19 @@ export function CodeBlock({
 
   return (
     <div
-      className={cn("overflow-hidden rounded-lg border border-border/80 bg-muted/20", className)}
+      className={cn(
+        "overflow-hidden rounded-[10px] border border-ash-stroke bg-obsidian-canvas/60",
+        className,
+      )}
     >
       <ScrollArea className={cn(maxHeightClassName)}>
         {html === null ? (
-          <pre className="overflow-x-auto p-3 font-mono text-[12px] leading-relaxed whitespace-pre-wrap">
+          <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-bone">
             {code}
           </pre>
         ) : (
           <div
-            className="code-block text-[12px] leading-relaxed [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:p-3 [&_code]:font-mono"
+            className="code-block text-[12px] leading-relaxed [&_pre]:m-0 [&_pre]:bg-transparent! [&_pre]:p-4 [&_code]:font-mono"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}

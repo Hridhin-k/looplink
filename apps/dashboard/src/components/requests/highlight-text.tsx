@@ -24,7 +24,7 @@ export function HighlightText({ text, query, className }: HighlightTextProps) {
         part.highlight ? (
           <mark
             key={`${part.value}-${String(index)}`}
-            className="rounded-sm bg-amber-200/90 px-0.5 text-inherit dark:bg-amber-400/35"
+            className="rounded-sm bg-signal-orange/25 px-0.5 text-inherit"
           >
             {part.value}
           </mark>
@@ -102,7 +102,7 @@ export function MatchFieldBadges({ matches, className }: MatchFieldBadgesProps) 
       {matches.map((field) => (
         <span
           key={field}
-          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] tracking-wide text-amber-900 uppercase dark:text-amber-200"
+          className="rounded-[3px] border border-signal-orange/30 bg-signal-orange/10 px-1.5 py-0.5 text-[10px] tracking-wide text-signal-orange uppercase"
         >
           {SEARCH_FIELD_LABELS[field] ?? field}
         </span>

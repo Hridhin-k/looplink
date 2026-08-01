@@ -1,5 +1,6 @@
 "use client";
 
+import { MotionConfig } from "framer-motion";
 import type { ReactNode } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,13 +19,15 @@ import { WorkspaceProvider } from "./workspace-provider";
 export function AppProviders({ children }: { readonly children: ReactNode }) {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <QueryProvider>
-          <WorkspaceProvider>
-            <TooltipProvider>{children}</TooltipProvider>
-          </WorkspaceProvider>
-        </QueryProvider>
-      </AuthProvider>
+      <MotionConfig reducedMotion="user">
+        <AuthProvider>
+          <QueryProvider>
+            <WorkspaceProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </WorkspaceProvider>
+          </QueryProvider>
+        </AuthProvider>
+      </MotionConfig>
     </ThemeProvider>
   );
 }

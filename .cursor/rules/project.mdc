@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Badger Phase 3 Engineering Rules
 
 Badger is an AI-native developer networking platform.

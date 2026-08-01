@@ -23,15 +23,15 @@ export function MobileSidebar() {
         side="left"
         className="w-[min(100%,18rem)] border-ash-stroke bg-obsidian-canvas p-0 text-bone"
       >
-        <SheetHeader className="border-b border-ash-stroke">
-          <SheetTitle className="text-left font-mono text-[12px] tracking-[0.18em] text-bone uppercase">
+        <SheetHeader className="border-b border-ash-stroke px-4 py-4">
+          <SheetTitle className="text-left font-mono text-[12px] tracking-[0.2em] text-bone uppercase">
             Badger
           </SheetTitle>
-          <SheetDescription className="text-left text-warm-granite">
-            Navigate the inspector
+          <SheetDescription className="text-left text-sm text-warm-granite">
+            Mission Control
           </SheetDescription>
         </SheetHeader>
-        <div className="px-2 py-3">
+        <div className="px-2 py-4">
           <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
         </div>
       </SheetContent>

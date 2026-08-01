@@ -1,9 +1,21 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { ChartPanel } from "@/components/statistics/chart-panel";
+import {
+  ChartPanel,
+  chartGridStroke,
+  chartTickStyle,
+  chartTooltipStyle,
+} from "@/components/statistics/chart-panel";
 import type { MethodCount } from "@/lib/api";
 
 /**
@@ -18,37 +30,38 @@ export function MethodsChart({ counts }: { readonly counts: readonly MethodCount
   return (
     <ChartPanel
       title="Methods"
-      description="Request volume by HTTP method"
+      description="Supporting view · volume by HTTP method"
       empty={data.length === 0}
     >
-      <div className="h-56 w-full">
+      <div className="h-52 w-full sm:h-60">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
+            <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
               allowDecimals={false}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <YAxis
               type="category"
               dataKey="method"
-              width={56}
+              width={60}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={{ ...chartTickStyle, fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
             />
             <Tooltip
-              contentStyle={tooltipStyle}
-              labelStyle={{ color: "var(--foreground)" }}
+              contentStyle={chartTooltipStyle}
+              labelStyle={{ color: "#b8b3b0" }}
               formatter={(value) => [String(value ?? 0), "Count"]}
             />
             <Bar
               dataKey="count"
-              fill="var(--chart-2)"
-              radius={[0, 6, 6, 0]}
+              name="Count"
+              fill="#eeeeee"
+              radius={[0, 3, 3, 0]}
               isAnimationActive
               animationDuration={500}
             />
@@ -58,10 +71,3 @@ export function MethodsChart({ counts }: { readonly counts: readonly MethodCount
     </ChartPanel>
   );
 }
-
-const tooltipStyle: CSSProperties = {
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 12,
-};

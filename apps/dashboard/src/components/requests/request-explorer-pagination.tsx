@@ -28,7 +28,7 @@ export function RequestExplorerPagination({ table }: RequestExplorerPaginationPr
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-warm-granite">
         {filtered === 0
           ? "No matching requests"
           : `Showing ${String(pageIndex * pageSize + 1)}–${String(
@@ -38,7 +38,7 @@ export function RequestExplorerPagination({ table }: RequestExplorerPaginationPr
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Rows</span>
+          <span className="text-caption text-warm-granite">Per page</span>
           <Select
             value={String(pageSize)}
             onValueChange={(value) => {
@@ -60,7 +60,7 @@ export function RequestExplorerPagination({ table }: RequestExplorerPaginationPr
           </Select>
         </div>
 
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p className="text-xs tabular-nums text-warm-granite">
           Page {String(pageIndex + 1)} / {String(pageCount)}
         </p>
 
