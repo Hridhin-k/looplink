@@ -58,6 +58,10 @@
   --radius-2xl: 20px;
   --radius-3xl: 20px;
   --radius-4xl: 20px;
+
+  /* Mission Control spacing */
+  --spacing-page-x: 1.5rem;
+  --spacing-page-y: 2rem;
 }
 
 :root,
@@ -95,6 +99,18 @@
   --sidebar-accent-foreground: #eeeeee;
   --sidebar-border: #3d3a39;
   --sidebar-ring: #8a8380;
+
+  /* Elevation — hairline only (Factory: contrast over blur) */
+  --shadow-hairline: 0 0 0 1px #3d3a39;
+  --shadow-panel: 0 0 0 1px #3d3a39, 0 1px 0 0 rgb(250 250 250 / 0.04);
+  --shadow-lift: 0 0 0 1px #3d3a39, 0 8px 24px -12px rgb(0 0 0 / 0.55);
+
+  /* Motion — mechanical, CLI-like, subtle */
+  --ease-machine: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 280ms;
 }
 
 @layer base {
@@ -108,15 +124,212 @@
   html {
     @apply font-sans;
   }
+
+  /* Keyboard focus — high-contrast ring, never rely on mouse-only outlines */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 2px solid #8a8380;
+    outline-offset: 2px;
+  }
+  :focus-visible:not(input):not(textarea):not([role="textbox"]) {
+    border-radius: 3px;
+  }
+
+  /* Scroll — smooth only when motion is allowed */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+@layer utilities {
+  .shadow-hairline {
+    box-shadow: var(--shadow-hairline);
+  }
+  .shadow-panel {
+    box-shadow: var(--shadow-panel);
+  }
+  .shadow-lift {
+    box-shadow: var(--shadow-lift);
+  }
+  .transition-machine {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-machine);
+  }
+  .text-caption {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .text-heading-page {
+    font-size: 36px;
+    line-height: 1.1;
+    letter-spacing: -1.12px;
+    font-weight: 400;
+  }
+
+  /* Interactive surface — subtle hover lift (cards, panels, links-as-cards) */
+  .surface-interactive {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-machine);
+  }
+  .surface-interactive:hover {
+    border-color: color-mix(in srgb, #b8b3b0 70%, #3d3a39);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .surface-interactive:hover {
+      transform: translateY(-1px);
+    }
+    .surface-interactive:active {
+      transform: translateY(0);
+    }
+  }
+
+  /* Skip link — keyboard-first entry to main content */
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    z-index: 100;
+    transform: translateY(-120%);
+    border-radius: 3px;
+    border: 1px solid #3d3a39;
+    background: #1d1a18;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #eeeeee;
+    transition: transform var(--duration-fast) var(--ease-machine);
+  }
+  .skip-link:focus {
+    transform: translateY(0.75rem);
+    outline: 2px solid #8a8380;
+    outline-offset: 2px;
+  }
 }
 
 @keyframes sfDashboardFrameIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes mcShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes mcPulseLive {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes mcCopyPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes mcSuccessFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgb(160 202 146 / 0);
+  }
+  40% {
+    box-shadow: 0 0 0 1px rgb(160 202 146 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(160 202 146 / 0);
+  }
+}
+
+@keyframes mcEmptyFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-mc-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    #1d1a18 0%,
+    #2a2624 40%,
+    #1d1a18 80%
+  );
+  background-size: 200% 100%;
+  animation: mcShimmer 1.4s var(--ease-machine) infinite;
+}
+
+.animate-mc-live {
+  animation: mcPulseLive 1.6s var(--ease-machine) infinite;
+}
+
+.animate-mc-copy-pop {
+  animation: mcCopyPop var(--duration-fast) var(--ease-out-soft) both;
+}
+
+.animate-mc-success-flash {
+  animation: mcSuccessFlash 0.7s var(--ease-machine) both;
+}
+
+.animate-mc-empty-float {
+  animation: mcEmptyFloat 3.2s var(--ease-machine) infinite;
+}
+
+.animate-page-enter {
+  animation: sfDashboardFrameIn var(--duration-base) var(--ease-machine) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-mc-shimmer,
+  .animate-mc-live,
+  .animate-mc-copy-pop,
+  .animate-mc-success-flash,
+  .animate-mc-empty-float,
+  .animate-page-enter {
+    animation: none !important;
+  }
+
+  .animate-mc-shimmer {
+    background-image: none;
+    background-color: #1d1a18;
+  }
+
+  .transition-machine,
+  .surface-interactive {
+    transition-duration: 0.01ms !important;
+  }
+
+  .surface-interactive:hover,
+  .surface-interactive:active {
+    transform: none !important;
   }
 }

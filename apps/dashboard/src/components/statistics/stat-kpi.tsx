@@ -1,10 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
  * Compact KPI tile for overview and statistics.
+ * Designed for MetricBand grids (hairline dividers, no individual card chrome).
  */
 export function StatKpi({
   label,
@@ -18,20 +18,19 @@ export function StatKpi({
   readonly className?: string;
 }) {
   return (
-    <Card size="sm" className={cn("min-w-0 shadow-none", className)}>
-      <CardHeader className="gap-1 p-5">
-        <CardDescription className="font-mono text-[12px] tracking-[-0.24px] text-pale-stone uppercase">
-          {label}
-        </CardDescription>
-        <CardTitle className="text-[36px] leading-[1.1] font-normal tracking-[-1.12px] text-bone tabular-nums">
-          {value}
-        </CardTitle>
-      </CardHeader>
+    <div
+      className={cn(
+        "min-w-0 bg-transparent px-5 py-5 transition-machine hover:bg-carbon-lift/50",
+        className,
+      )}
+    >
+      <p className="text-caption text-pale-stone">{label}</p>
+      <p className="mt-3 text-[32px] leading-[1.1] tracking-[-1.12px] text-bone tabular-nums sm:text-[36px]">
+        {value}
+      </p>
       {hint !== undefined ? (
-        <CardContent className="pt-0 pb-5">
-          <p className="text-xs text-warm-granite">{hint}</p>
-        </CardContent>
+        <p className="mt-2 text-xs leading-normal text-warm-granite">{hint}</p>
       ) : null}
-    </Card>
+    </div>
   );
 }

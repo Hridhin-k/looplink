@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import {
   Area,
   AreaChart,
@@ -11,7 +10,12 @@ import {
   YAxis,
 } from "recharts";
 
-import { ChartPanel } from "@/components/statistics/chart-panel";
+import {
+  ChartPanel,
+  chartGridStroke,
+  chartTickStyle,
+  chartTooltipStyle,
+} from "@/components/statistics/chart-panel";
 import type { StatsTimeBucket } from "@/lib/statistics/time-series";
 
 /**
@@ -22,43 +26,44 @@ export function RequestsOverTimeChart({ series }: { readonly series: readonly St
 
   return (
     <ChartPanel
-      title="Requests over time"
-      description="Last 30 minutes · 1-minute buckets"
+      title="Traffic over time"
+      description="Supporting view · last 30 minutes · 1-minute buckets"
       empty={!hasData}
     >
-      <div className="h-56 w-full">
+      <div className="h-52 w-full sm:h-60">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={[...series]} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="requestsFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="#a0ca92" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#a0ca92" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               minTickGap={28}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <YAxis
               allowDecimals={false}
-              width={32}
+              width={36}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <Tooltip
-              contentStyle={tooltipStyle}
-              labelStyle={{ color: "var(--foreground)" }}
+              contentStyle={chartTooltipStyle}
+              labelStyle={{ color: "#b8b3b0" }}
               formatter={(value) => [String(value ?? 0), "Requests"]}
             />
             <Area
               type="monotone"
               dataKey="requests"
-              stroke="var(--chart-2)"
+              name="Requests"
+              stroke="#a0ca92"
               fill="url(#requestsFill)"
               strokeWidth={2}
               isAnimationActive
@@ -70,10 +75,3 @@ export function RequestsOverTimeChart({ series }: { readonly series: readonly St
     </ChartPanel>
   );
 }
-
-const tooltipStyle: CSSProperties = {
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 12,
-};

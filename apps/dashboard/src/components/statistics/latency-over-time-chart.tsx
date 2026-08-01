@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import {
   CartesianGrid,
   Line,
@@ -11,7 +10,12 @@ import {
   YAxis,
 } from "recharts";
 
-import { ChartPanel } from "@/components/statistics/chart-panel";
+import {
+  ChartPanel,
+  chartGridStroke,
+  chartTickStyle,
+  chartTooltipStyle,
+} from "@/components/statistics/chart-panel";
 import type { StatsTimeBucket } from "@/lib/statistics/time-series";
 
 /**
@@ -26,31 +30,31 @@ export function LatencyOverTimeChart({ series }: { readonly series: readonly Sta
 
   return (
     <ChartPanel
-      title="Latency over time"
-      description="Average latency per minute (ms)"
+      title="Latency trend"
+      description="Supporting view · average latency per minute"
       empty={!hasData}
     >
-      <div className="h-56 w-full">
+      <div className="h-52 w-full sm:h-60">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               minTickGap={28}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <YAxis
-              width={40}
+              width={44}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
               unit="ms"
             />
             <Tooltip
-              contentStyle={tooltipStyle}
-              labelStyle={{ color: "var(--foreground)" }}
+              contentStyle={chartTooltipStyle}
+              labelStyle={{ color: "#b8b3b0" }}
               formatter={(value) =>
                 value === null || value === undefined
                   ? ["—", "Avg latency"]
@@ -60,7 +64,8 @@ export function LatencyOverTimeChart({ series }: { readonly series: readonly Sta
             <Line
               type="monotone"
               dataKey="avgLatencyMs"
-              stroke="var(--chart-3)"
+              name="Avg latency"
+              stroke="#ee6018"
               strokeWidth={2}
               dot={false}
               connectNulls={false}
@@ -73,10 +78,3 @@ export function LatencyOverTimeChart({ series }: { readonly series: readonly Sta
     </ChartPanel>
   );
 }
-
-const tooltipStyle: CSSProperties = {
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 12,
-};

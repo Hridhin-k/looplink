@@ -9,6 +9,7 @@ import {
 import { INSPECTOR_REQUEST_QUERY_KEY } from "@/hooks/use-inspector-request";
 import { INSPECTOR_REQUESTS_QUERY_KEY } from "@/hooks/use-inspector-requests";
 import type { InspectorRequestList, InspectorRequestSummary } from "@/lib/api";
+import { useTunnelStore } from "@/stores/tunnel-store";
 
 type RequestsQueryParams = {
   readonly workspaceId: string | null;
@@ -26,6 +27,19 @@ type RequestsQueryParams = {
  */
 export function applyDashboardMessage(queryClient: QueryClient, message: DashboardMessage): void {
   switch (message.type) {
+    case DashboardMessageType.TunnelConnected:
+      useTunnelStore.getState().upsertConnected({
+        tunnelId: message.tunnelId,
+        publicUrl: message.publicUrl,
+        port: message.port,
+        workspaceId: message.workspaceId,
+        connectedAt: message.occurredAt,
+        restored: message.restored,
+      });
+      return;
+    case DashboardMessageType.TunnelDisconnected:
+      useTunnelStore.getState().markDisconnected(message.tunnelId);
+      return;
     case DashboardMessageType.RequestReceived:
       upsertRequestReceived(queryClient, message);
       return;

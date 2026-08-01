@@ -7,7 +7,7 @@ export const RECONNECT_INTERVAL_MS = 5_000;
 /**
  * How long the server keeps a disconnected tunnel reclaimable.
  *
- * Sized to cover several reconnect attempts so a brief network blip does not
- * force a new public URL.
+ * Sized to cover brief outages (sleep, Wi‑Fi blips) so reconnect can keep the
+ * same public URL without forcing a new tunnel.
  */
-export const TUNNEL_RECLAIM_WINDOW_MS = 60_000;
+export const TUNNEL_RECLAIM_WINDOW_MS = 600_000;

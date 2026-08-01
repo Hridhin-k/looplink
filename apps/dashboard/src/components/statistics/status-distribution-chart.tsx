@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import {
   Bar,
   BarChart,
@@ -12,7 +11,12 @@ import {
   YAxis,
 } from "recharts";
 
-import { ChartPanel } from "@/components/statistics/chart-panel";
+import {
+  ChartPanel,
+  chartGridStroke,
+  chartTickStyle,
+  chartTooltipStyle,
+} from "@/components/statistics/chart-panel";
 import type { StatusCodeCount } from "@/lib/api";
 
 /**
@@ -27,37 +31,41 @@ export function StatusDistributionChart({
     label: String(entry.statusCode),
     count: entry.count,
     statusCode: entry.statusCode,
+    classLabel: `${String(Math.floor(entry.statusCode / 100))}xx`,
   }));
 
   return (
     <ChartPanel
-      title="Status code distribution"
-      description="Across retained traffic"
+      title="Status mix"
+      description="Supporting view · retained status codes"
       empty={data.length === 0}
     >
-      <div className="h-56 w-full">
+      <div className="h-52 w-full sm:h-60">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <YAxis
               allowDecimals={false}
-              width={32}
+              width={36}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={chartTickStyle}
             />
             <Tooltip
-              contentStyle={tooltipStyle}
-              labelStyle={{ color: "var(--foreground)" }}
-              formatter={(value) => [String(value ?? 0), "Count"]}
+              contentStyle={chartTooltipStyle}
+              labelStyle={{ color: "#b8b3b0" }}
+              formatter={(value, _name, item) => {
+                const payload = item?.payload as { classLabel?: string } | undefined;
+                return [String(value ?? 0), payload?.classLabel ?? "Count"];
+              }}
             />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={500}>
+            <Bar dataKey="count" name="Count" radius={[3, 3, 0, 0]} isAnimationActive animationDuration={500}>
               {data.map((entry) => (
                 <Cell key={entry.label} fill={statusFill(entry.statusCode)} />
               ))}
@@ -65,6 +73,20 @@ export function StatusDistributionChart({
           </BarChart>
         </ResponsiveContainer>
       </div>
+      <ul className="mt-3 flex flex-wrap gap-3 text-[11px] text-warm-granite">
+        <li className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-[2px] bg-metric-green" aria-hidden />
+          2xx
+        </li>
+        <li className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-[2px] bg-pale-stone" aria-hidden />
+          3xx
+        </li>
+        <li className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-[2px] bg-signal-orange" aria-hidden />
+          4xx / 5xx
+        </li>
+      </ul>
     </ChartPanel>
   );
 }
@@ -72,23 +94,13 @@ export function StatusDistributionChart({
 function statusFill(statusCode: number): string {
   const classCode = Math.floor(statusCode / 100);
   if (classCode === 2) {
-    return "oklch(0.62 0.14 150)";
+    return "#a0ca92";
   }
   if (classCode === 3) {
-    return "oklch(0.72 0.12 85)";
+    return "#b8b3b0";
   }
-  if (classCode === 4) {
-    return "oklch(0.68 0.15 45)";
+  if (classCode === 4 || classCode === 5) {
+    return "#ee6018";
   }
-  if (classCode === 5) {
-    return "oklch(0.62 0.18 25)";
-  }
-  return "var(--chart-2)";
+  return "#8a8380";
 }
-
-const tooltipStyle: CSSProperties = {
-  background: "var(--card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 12,
-};

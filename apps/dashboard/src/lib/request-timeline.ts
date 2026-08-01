@@ -7,7 +7,12 @@
  * {@link RequestTimelineInput.phases}.
  */
 
-export type RequestTimelinePhaseId = "received" | "tunnel" | "forward" | "application" | "response";
+export type RequestTimelinePhaseId =
+  | "browser"
+  | "tunnel"
+  | "badger"
+  | "application"
+  | "response";
 
 export interface RequestTimelinePhaseTiming {
   readonly id: RequestTimelinePhaseId;
@@ -50,29 +55,39 @@ export interface RequestTimelineModel {
   readonly ticks: readonly number[];
 }
 
+export type JourneyStepId = RequestTimelinePhaseId | "complete";
+
+export interface JourneyStep {
+  readonly id: JourneyStepId;
+  readonly label: string;
+  readonly description: string;
+  readonly state: "complete" | "active" | "pending";
+  readonly durationMs?: number;
+}
+
 const PHASE_META: Record<
   RequestTimelinePhaseId,
   { readonly label: string; readonly description: string }
 > = {
-  received: {
-    label: "Received",
-    description: "Public request accepted by the Badger server",
+  browser: {
+    label: "Browser",
+    description: "Client issues the HTTP request to the public URL",
   },
   tunnel: {
     label: "Tunnel",
-    description: "Queued and delivered to the CLI over the tunnel WebSocket",
+    description: "Request traverses the Badger public edge into the tunnel",
   },
-  forward: {
-    label: "Forward",
-    description: "CLI forwarded the request to the local application",
+  badger: {
+    label: "Badger",
+    description: "Platform accepts, routes, and delivers to the CLI session",
   },
   application: {
     label: "Application",
-    description: "Waiting on the local application (TTFB)",
+    description: "Local application handles the request (TTFB)",
   },
   response: {
     label: "Response",
-    description: "Response streamed back through the tunnel to the client",
+    description: "Response streams back through the tunnel to the client",
   },
 };
 
@@ -81,20 +96,31 @@ const PHASE_META: Record<
  * Application waiting dominates, matching typical DevTools “Waiting (TTFB)”.
  */
 const ESTIMATED_WEIGHTS: Record<RequestTimelinePhaseId, number> = {
-  received: 0.02,
-  tunnel: 0.08,
-  forward: 0.1,
-  application: 0.65,
+  browser: 0.04,
+  tunnel: 0.1,
+  badger: 0.08,
+  application: 0.63,
   response: 0.15,
 };
 
 const PHASE_ORDER: readonly RequestTimelinePhaseId[] = [
-  "received",
+  "browser",
   "tunnel",
-  "forward",
+  "badger",
   "application",
   "response",
 ];
+
+/** Legacy phase ids from earlier timeline versions. */
+const LEGACY_PHASE_MAP: Record<string, RequestTimelinePhaseId> = {
+  received: "browser",
+  forward: "badger",
+  tunnel: "tunnel",
+  application: "application",
+  response: "response",
+  browser: "browser",
+  badger: "badger",
+};
 
 /**
  * Builds a waterfall timeline model for the request details Timing panel.
@@ -111,6 +137,43 @@ export function buildRequestTimeline(input: RequestTimelineInput): RequestTimeli
   }
 
   return fromEstimatedLatency(startedAt, Math.max(0, input.latencyMs));
+}
+
+/**
+ * Journey steps for Browser → Tunnel → Badger → Application → Response → Complete.
+ */
+export function buildRequestJourney(model: RequestTimelineModel): readonly JourneyStep[] {
+  const steps: JourneyStep[] = model.spans.map((span, index) => {
+    let state: JourneyStep["state"] = "pending";
+    if (model.completed) {
+      state = "complete";
+    } else if (span.pending) {
+      const firstPending = model.spans.findIndex((item) => item.pending);
+      state = index === firstPending ? "active" : "pending";
+    } else {
+      state = "complete";
+    }
+
+    return {
+      id: span.id,
+      label: span.label,
+      description: span.description,
+      state,
+      ...(span.pending ? {} : { durationMs: span.durationMs }),
+    };
+  });
+
+  steps.push({
+    id: "complete",
+    label: "Complete",
+    description: model.completed
+      ? "Exchange finished and recorded by the inspector"
+      : "Waiting for the response to complete",
+    state: model.completed ? "complete" : "pending",
+    ...(model.completed ? { durationMs: model.totalMs } : {}),
+  });
+
+  return steps;
 }
 
 /**
@@ -150,7 +213,7 @@ function pendingTimeline(startedAt: number): RequestTimelineModel {
     label: PHASE_META[id].label,
     description: PHASE_META[id].description,
     startMs: 0,
-    durationMs: id === "received" ? 0 : 0,
+    durationMs: 0,
     estimated: true,
     pending: index > 0,
   }));
@@ -203,7 +266,12 @@ function fromMeasuredPhases(
   phases: readonly RequestTimelinePhaseTiming[],
   latencyMs: number | undefined,
 ): RequestTimelineModel {
-  const byId = new Map(phases.map((phase) => [phase.id, phase]));
+  const byId = new Map<RequestTimelinePhaseId, RequestTimelinePhaseTiming>();
+  for (const phase of phases) {
+    const mapped = LEGACY_PHASE_MAP[phase.id] ?? phase.id;
+    byId.set(mapped, { ...phase, id: mapped });
+  }
+
   let endMs = 0;
 
   const spans: RequestTimelineSpan[] = PHASE_ORDER.map((id) => {

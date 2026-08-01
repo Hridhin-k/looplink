@@ -12,6 +12,7 @@ import {
 } from "@/lib/ws/apply-dashboard-message";
 import { createDashboardSocketClient } from "@/lib/ws/dashboard-socket";
 import { useConnectionStore } from "@/stores/connection-store";
+import { useTunnelStore } from "@/stores/tunnel-store";
 
 const RECONNECT_DELAY_MS = 5_000;
 
@@ -32,8 +33,11 @@ export function DashboardSocketProvider({ children }: { readonly children: React
   useEffect(() => {
     if (session === null) {
       useConnectionStore.getState().setStatus("idle");
+      useTunnelStore.getState().reset();
       return;
     }
+
+    useTunnelStore.getState().clearWorkspace(activeWorkspace?.id);
 
     let cancelled = false;
     let intentionalShutdown = false;

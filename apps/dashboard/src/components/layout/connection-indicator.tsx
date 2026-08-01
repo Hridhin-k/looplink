@@ -16,28 +16,35 @@ const statusLabel: Record<DashboardConnectionStatus, string> = {
  */
 export function ConnectionIndicator({ className }: { readonly className?: string }) {
   const status = useConnectionStore((s) => s.status);
+  const isLive = status === "connected";
+  const isBusy = status === "connecting" || status === "reconnecting";
 
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-[3px] border border-ash-stroke bg-carbon-lift px-2.5 py-1 text-xs text-warm-granite",
+        "inline-flex items-center gap-2 rounded-[3px] border border-ash-stroke bg-carbon-lift px-2.5 py-1.5 text-warm-granite transition-machine",
+        isLive && "border-signal-orange/35 text-bone",
+        isBusy && "border-signal-orange/20",
         className,
       )}
       title={`WebSocket: ${statusLabel[status]}`}
+      aria-live="polite"
+      aria-atomic="true"
     >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          status === "connected" && "bg-signal-orange",
-          (status === "connecting" || status === "reconnecting") &&
-            "animate-pulse bg-signal-orange/70",
-          (status === "idle" || status === "disconnected") && "bg-graphite-mid",
-        )}
-        aria-hidden
-      />
-      <span className="font-mono text-[12px] tracking-[-0.02em] uppercase">
-        {statusLabel[status]}
+      <span className="relative flex size-1.5" aria-hidden>
+        {isLive ? (
+          <span className="absolute inset-0 animate-mc-live rounded-full bg-signal-orange/50" />
+        ) : null}
+        <span
+          className={cn(
+            "relative size-1.5 rounded-full",
+            isLive && "bg-signal-orange",
+            isBusy && "animate-pulse motion-reduce:animate-none bg-signal-orange/70",
+            (status === "idle" || status === "disconnected") && "bg-graphite-mid",
+          )}
+        />
       </span>
+      <span className="text-caption">{statusLabel[status]}</span>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function AuthNavControls() {
     <div className="flex items-center gap-2">
       <Link
         href="/account"
-        className="hidden max-w-[12rem] truncate font-mono text-[12px] tracking-[-0.02em] text-warm-granite uppercase hover:text-bone sm:inline"
+        className="hidden max-w-[12rem] truncate text-caption text-warm-granite transition-machine hover:text-bone sm:inline"
       >
         {user.email ?? "Account"}
       </Link>
@@ -27,7 +27,6 @@ export function AuthNavControls() {
         type="button"
         variant="outline"
         size="sm"
-        className="rounded-[3px]"
         onClick={() => {
           void logout().then(() => {
             window.location.assign("/login");
