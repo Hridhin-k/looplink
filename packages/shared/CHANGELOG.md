@@ -1,5 +1,11 @@
 # @hridhin-k/badger-shared
 
+## 1.3.0
+
+### Minor Changes
+
+- 3705e4a: Phase 3 CLI: auth, workspaces, anonymous tunnels, and Context Engine support
+
 ## 1.2.0
 
 ### Minor Changes
