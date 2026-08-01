@@ -1,5 +1,12 @@
 # @hridhin-k/badger-server
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [3705e4a]
+  - @hridhin-k/badger-shared@1.3.0
+
 ## 0.0.1
 
 ### Patch Changes
