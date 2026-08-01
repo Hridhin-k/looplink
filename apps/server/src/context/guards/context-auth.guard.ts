@@ -6,12 +6,17 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 
-import type { AuthUser } from "../../auth/auth.types.js";
+import type { JwtAuthenticatedRequest } from "../../auth/guards/jwt-auth.guard.js";
 import type { WorkspacePermission } from "../../workspaces/workspace.permissions.js";
 import { ContextResolver } from "../context.resolver.js";
 import { TUNNEL_CONTEXT_REQUEST_KEY } from "../decorators/current-tunnel-context.decorator.js";
 
 export const REQUIRED_CONTEXT_PERMISSION_KEY = "badgerRequiredContextPermission";
+
+type ContextAuthRequest = JwtAuthenticatedRequest & {
+  headers: Record<string, string | string[] | undefined>;
+  [TUNNEL_CONTEXT_REQUEST_KEY]?: import("../tunnel-context.interface.js").TunnelContext;
+};
 
 /**
  * Resolves {@link import("../tunnel-context.interface.js").TunnelContext} for
@@ -28,13 +33,9 @@ export class ContextAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<{
-      user?: AuthUser;
-      headers: Record<string, string | string[] | undefined>;
-      [TUNNEL_CONTEXT_REQUEST_KEY]?: import("../tunnel-context.interface.js").TunnelContext;
-    }>();
+    const request = context.switchToHttp().getRequest<ContextAuthRequest>();
 
-    const user = request.user;
+    const user = request.authUser;
     if (user === undefined) {
       throw new UnauthorizedException("Authentication required.");
     }
