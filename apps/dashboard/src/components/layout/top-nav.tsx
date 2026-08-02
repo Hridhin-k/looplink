@@ -39,7 +39,7 @@ export function TopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-ash-stroke bg-obsidian-canvas/95 px-4 backdrop-blur-sm sm:h-16 sm:px-6 md:px-8">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-slate bg-ink/90 px-4 backdrop-blur-[18px] sm:h-16 sm:px-6 md:px-8">
       <Button
         type="button"
         variant="ghost"
@@ -55,7 +55,7 @@ export function TopNav() {
         type="button"
         variant="ghost"
         size="icon"
-        className="hidden text-warm-granite hover:text-bone lg:inline-flex"
+        className="hidden text-ash hover:text-pure-white lg:inline-flex"
         aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         onClick={toggleSidebar}
       >
@@ -63,20 +63,20 @@ export function TopNav() {
       </Button>
 
       <div className="min-w-0 flex-1">
-        <p className="text-caption text-pale-stone">{title}</p>
+        <p className="text-eyebrow">{title}</p>
       </div>
 
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="hidden max-w-[220px] flex-1 justify-start gap-2 border-ash-stroke bg-obsidian-canvas text-warm-granite hover:text-bone sm:inline-flex md:max-w-[260px]"
+        className="hidden max-w-[220px] flex-1 justify-start gap-2 border-slate bg-void-black/40 text-ash hover:text-pure-white sm:inline-flex md:max-w-[260px]"
         onClick={() => setPaletteOpen(true)}
         aria-label="Open command palette"
       >
         <SearchIcon className="size-3.5" />
         <span className="truncate">Search…</span>
-        <kbd className="ml-auto rounded-[3px] border border-ash-stroke px-1.5 py-0.5 font-mono text-[10px] text-pale-stone">
+        <kbd className="ml-auto rounded-sm border border-slate px-1.5 py-0.5 font-mono text-[10px] text-ash">
           {modKey}K
         </kbd>
       </Button>
@@ -85,7 +85,7 @@ export function TopNav() {
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="text-warm-granite hover:text-bone sm:hidden"
+        className="text-ash hover:text-pure-white sm:hidden"
         aria-label="Open command palette"
         onClick={() => setPaletteOpen(true)}
       >

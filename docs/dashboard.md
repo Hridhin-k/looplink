@@ -80,9 +80,9 @@ Anonymous CLI tunnels **do not** appear in the dashboard. Sign-in is required fo
 
 ## 4. Route map (all pages)
 
-**Total routes with `page.tsx`:** **11**
+**Total routes with `page.tsx`:** **13+** (docs index + `[slug]` + product pages)
 
-### Public (4 + landing)
+### Public (4 + landing + docs)
 
 | Path | Auth | Purpose |
 | --- | --- | --- |
@@ -91,13 +91,16 @@ Anonymous CLI tunnels **do not** appear in the dashboard. Sign-in is required fo
 | `/forgot-password` | Public | Request password-reset email |
 | `/auth/callback` | Public | OAuth code exchange → session |
 | `/auth/reset-password` | Public | Set new password from hash token |
+| `/docs` | Public | Documentation hub (A–Z guides) |
+| `/docs/[slug]` | Public | Individual production guide article |
 
-### Authenticated product — `(dashboard)` group (6)
+### Authenticated product — `(dashboard)` group (7)
 
 | Path | Auth | Purpose |
 | --- | --- | --- |
-| `/overview` | Required | KPIs + recent traffic |
-| `/requests` | Required | Request explorer (table) |
+| `/overview` | Required | Live activity + quick links |
+| `/tunnels` | Required | Live tunnel sessions for active workspace |
+| `/requests` | Required | Request explorer (timeline) |
 | `/requests/[id]` | Required | Exchange detail + replay |
 | `/statistics` | Required | Aggregates + charts |
 | `/workspace` | Required | Members, invites, API keys, settings |
@@ -105,7 +108,9 @@ Anonymous CLI tunnels **do not** appear in the dashboard. Sign-in is required fo
 
 All `(dashboard)` routes share one layout: `RequireAuth` → `DashboardSocketProvider` → `AppShell`.
 
-> **There is no** `/signup`, `/tunnels`, `/blog`, `/pricing`, or `/docs` route. “Docs” on the landing page is an in-page anchor (`#start`), not a documentation site.
+Docs use a separate public shell (`DocsShell`) so guides are readable before login. The product sidebar still links to `/docs`.
+
+> **There is no** `/signup`, `/blog`, or `/pricing` route.
 
 ---
 
@@ -113,7 +118,7 @@ All `(dashboard)` routes share one layout: `RequireAuth` → `DashboardSocketPro
 
 ### 5.1 Root layout (`src/app/layout.tsx`)
 
-- Loads **Geist** + **Geist Mono** (`--font-geist`, `--font-geist-mono`)
+- Loads **Inter** + **Geist Mono** (`--font-inter`, `--font-geist-mono`) — Lumen ecosystem
 - Forces `dark` class on `<html>`
 - Document title: `Badger`
 - Wraps the tree in `AppProviders`:
@@ -129,7 +134,7 @@ ThemeProvider (forced dark)
 
 ### 5.2 Marketing layout (landing only)
 
-No AppShell. Sticky `LandingNav` on the obsidian canvas. Sections scroll on a single page.
+No AppShell. Sticky `LandingNav` on the void canvas. Sections scroll on a single page. **Docs** in the nav points to `/docs`.
 
 ### 5.3 Product shell (`AppShell`)
 
@@ -140,10 +145,12 @@ No AppShell. Sticky `LandingNav` on the obsidian canvas. Sections scroll on a si
 ├────────────┬─────────────────────────────────────────────┤
 │ Sidebar    │ ConnectionBanner (when reconnect needed)    │
 │ Overview   ├─────────────────────────────────────────────┤
-│ Requests   │                                             │
-│ Statistics │  main  (max-width 1200px)                   │
+│ Tunnels    │                                             │
+│ Requests   │  main  (max-width 1200px)                   │
+│ Statistics │                                             │
 │ Workspace  │                                             │
 │ Account    │                                             │
+│ Docs       │                                             │
 └────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -154,8 +161,9 @@ No AppShell. Sticky `LandingNav` on the obsidian canvas. Sections scroll on a si
 | **TopNav** | Page title (mono uppercase); workspace switcher; auth controls; connection indicator (`sm+`) |
 | **Connection banner** | Shown after a prior successful connect if the live socket drops — reconnect CTA |
 | **Main** | Scrollable content, max-width **1200px** |
+| **Command palette** | ⌘K — navigate (incl. Tunnels + Docs), search requests, replay, switch workspace |
 
-Live WebSocket is **not** started on landing/login — only inside `(dashboard)` after auth.
+Live WebSocket is **not** started on landing/login/docs — only inside `(dashboard)` after auth.
 
 ---
 
@@ -166,10 +174,12 @@ Live WebSocket is **not** started on landing/login — only inside `(dashboard)`
 | Order | Label | href | Icon |
 | --- | --- | --- | --- |
 | 1 | Overview | `/overview` | `LayoutDashboardIcon` |
-| 2 | Requests | `/requests` | `ListTreeIcon` |
-| 3 | Statistics | `/statistics` | `ActivityIcon` |
-| 4 | Workspace | `/workspace` | `SettingsIcon` |
-| 5 | Account | `/account` | `UserIcon` |
+| 2 | Tunnels | `/tunnels` | `NetworkIcon` |
+| 3 | Requests | `/requests` | `ListTreeIcon` |
+| 4 | Statistics | `/statistics` | `ActivityIcon` |
+| 5 | Workspace | `/workspace` | `SettingsIcon` |
+| 6 | Account | `/account` | `UserIcon` |
+| 7 | Docs | `/docs` | `BookOpenIcon` |
 
 ### Top-nav extras (not sidebar items)
 

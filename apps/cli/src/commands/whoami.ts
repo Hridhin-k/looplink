@@ -11,6 +11,7 @@ import {
 import { WorkspacePreferenceStore } from "../services/workspace-preference-store.js";
 import { createSpinner } from "../ui/spinner.js";
 import { formatFriendlyError } from "../ui/formatters/errors.js";
+import { lumen } from "../ui/lumen.js";
 import { theme } from "../ui/theme.js";
 import type { Writer } from "../utils/output.js";
 
@@ -77,7 +78,7 @@ export class WhoAmICommand {
         boxen(lines, {
           padding: 1,
           borderStyle: "single",
-          borderColor: "cyan",
+          borderColor: lumen.slate,
           dimBorder: true,
         }),
       );

@@ -65,7 +65,7 @@ export class OraSpinner implements Spinner {
    */
   start(text: string): void {
     if (this.instance === undefined) {
-      this.instance = ora({ text, stream: process.stderr });
+      this.instance = ora({ text, stream: process.stderr, color: "red" });
     } else {
       this.instance.text = text;
     }

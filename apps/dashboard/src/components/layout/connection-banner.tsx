@@ -32,20 +32,20 @@ export function ConnectionBanner() {
       aria-live="polite"
       className={cn(
         "flex items-center justify-between gap-3 border-b border-ash-stroke px-4 py-2.5 text-sm sm:px-6 md:px-8",
-        isReconnecting ? "bg-carbon-lift text-bone" : "bg-carbon-lift text-warm-granite",
+        isReconnecting ? "bg-ink text-pure-white" : "bg-ink text-smoke",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
         {isReconnecting ? (
-          <RefreshCwIcon className="size-3.5 shrink-0 animate-spin text-signal-orange" aria-hidden />
+          <RefreshCwIcon className="size-3.5 shrink-0 animate-spin text-info-blue" aria-hidden />
         ) : (
-          <WifiOffIcon className="size-3.5 shrink-0 text-signal-orange" aria-hidden />
+          <WifiOffIcon className="size-3.5 shrink-0 text-coral-pulse" aria-hidden />
         )}
         <p className="truncate text-xs sm:text-sm">
           {lastError ??
             (isReconnecting ? "Reconnecting to live traffic…" : "Live connection unavailable.")}
           {reconnectAttempt > 0 ? (
-            <span className="ml-1 text-pale-stone">(attempt {String(reconnectAttempt)})</span>
+            <span className="ml-1 text-ash">(attempt {String(reconnectAttempt)})</span>
           ) : null}
         </p>
       </div>

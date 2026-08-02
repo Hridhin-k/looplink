@@ -17,7 +17,7 @@ import { PageEnter } from "@/components/motion/page-enter";
  */
 export function AppShell({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="flex min-h-svh w-full bg-obsidian-canvas">
+    <div className="flex min-h-svh w-full bg-void-black">
       <a href="#dashboard-main" className="skip-link">
         Skip to content
       </a>
@@ -25,7 +25,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
       <MobileSidebar />
       <CommandPaletteHost />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-void-black">
         <TopNav />
         <ConnectionBanner />
         <main

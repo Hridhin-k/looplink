@@ -2,6 +2,8 @@
  * Lightweight terminal animations. Skipped on non-TTY / NO_COLOR / CI.
  */
 
+import { cli } from "./lumen.js";
+
 let userAnimationsPref: boolean | undefined;
 
 /**
@@ -61,7 +63,6 @@ export async function playFrames(
         stream.write(padded);
         stream.write("\n");
         await sleep(intervalMs);
-        // Move up and clear for next frame
         stream.write(`\x1b[${String(lineCount)}A`);
         stream.write("\x1b[0J");
       }
@@ -95,7 +96,7 @@ export async function typewrite(
 }
 
 /**
- * One-shot shimmer line under a banner.
+ * One-shot shimmer line under a banner — ash bar with coral pulse.
  */
 export async function playShimmerLine(
   label: string,
@@ -109,10 +110,11 @@ export async function playShimmerLine(
   const width = Math.min(options.width ?? 28, 40);
   const frames: string[] = [];
   for (let i = 0; i < width; i += 1) {
-    const bar = "─".repeat(width);
-    const idx = i % width;
-    const lit = `${bar.slice(0, idx)}━${bar.slice(idx + 1)}`;
-    frames.push(`  ${label} ${lit}`);
+    const chars: string[] = [];
+    for (let j = 0; j < width; j += 1) {
+      chars.push(j === i ? cli.brand("━") : cli.muted("─"));
+    }
+    frames.push(`  ${cli.brand(label)} ${chars.join("")}`);
   }
 
   await playFrames(frames, { intervalMs: 18, loops: 1, stream });

@@ -26,21 +26,21 @@ import type { InspectorRequestSummary } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const ACCENT_BORDER: Record<ReturnType<typeof statusAccent>, string> = {
-  pending: "border-l-signal-orange/70",
-  ok: "border-l-metric-green",
-  redirect: "border-l-pale-stone",
-  client: "border-l-signal-orange",
-  server: "border-l-signal-orange",
-  unknown: "border-l-ash-stroke",
+  pending: "border-l-info-blue/70",
+  ok: "border-l-success-green",
+  redirect: "border-l-ash",
+  client: "border-l-coral-pulse",
+  server: "border-l-coral-pulse",
+  unknown: "border-l-slate",
 };
 
 const ACCENT_DOT: Record<ReturnType<typeof statusAccent>, string> = {
-  pending: "bg-signal-orange animate-mc-live",
-  ok: "bg-metric-green",
-  redirect: "bg-pale-stone",
-  client: "bg-signal-orange",
-  server: "bg-signal-orange",
-  unknown: "bg-graphite-mid",
+  pending: "bg-info-blue animate-mc-live",
+  ok: "bg-success-green",
+  redirect: "bg-ash",
+  client: "bg-coral-pulse",
+  server: "bg-coral-pulse",
+  unknown: "bg-smoke",
 };
 
 interface ExplorerRequestCardProps {
@@ -103,11 +103,11 @@ export function ExplorerRequestCard({
       onClick={onFocus}
       onKeyDown={onCardKeyDown}
       className={cn(
-        "group relative scroll-mt-44 rounded-[10px] border border-ash-stroke border-l-[3px] bg-carbon-lift shadow-hairline outline-none transition-machine sm:scroll-mt-48",
+        "group relative scroll-mt-44 rounded-lg border border-slate border-l-[2px] bg-ink shadow-hairline outline-none transition-machine sm:scroll-mt-48",
         ACCENT_BORDER[accent],
-        "surface-interactive hover:bg-[color-mix(in_srgb,#1d1a18_92%,#eeeeee)] hover:shadow-panel",
-        focused && "border-pale-stone shadow-panel ring-1 ring-pale-stone/25",
-        expanded && "shadow-panel",
+        "surface-interactive hover:bg-obsidian/80",
+        focused && "row-active border-slate",
+        expanded && "shadow-key",
       )}
     >
       <div className="flex gap-3 p-3 sm:gap-4 sm:p-3.5">

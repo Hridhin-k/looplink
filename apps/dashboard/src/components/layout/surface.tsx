@@ -8,13 +8,13 @@ interface SurfaceProps {
 }
 
 /**
- * Instrument panel — carbon surface with hairline elevation.
+ * Instrument panel — ink surface with Lumen hairline elevation.
  */
 export function Panel({ children, className }: SurfaceProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[10px] border border-ash-stroke bg-carbon-lift shadow-panel transition-machine",
+        "overflow-hidden rounded-lg bg-ink shadow-hairline transition-machine",
         className,
       )}
     >
@@ -30,7 +30,7 @@ export function MetricBand({ children, className }: SurfaceProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[10px] border border-ash-stroke shadow-panel",
+        "overflow-hidden rounded-lg shadow-hairline",
         "grid gap-0 sm:grid-cols-2 xl:grid-cols-4",
         className,
       )}
@@ -47,7 +47,7 @@ export function Frame({ children, className }: SurfaceProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[10px] border border-ash-stroke bg-transparent shadow-hairline",
+        "overflow-hidden rounded-lg bg-transparent shadow-hairline",
         className,
       )}
     >
@@ -73,14 +73,14 @@ export function LiveMeta({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 text-caption text-warm-granite",
+        "inline-flex items-center gap-2 text-caption text-ash",
         className,
       )}
     >
       <span
         className={cn(
           "size-1.5 rounded-full",
-          live ? "animate-mc-live bg-signal-orange" : "bg-graphite-mid",
+          live ? "animate-mc-live bg-success-green" : "bg-smoke",
         )}
         aria-hidden
       />

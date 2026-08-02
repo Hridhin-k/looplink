@@ -103,10 +103,13 @@ export class HelpCommand {
   constructor(private readonly writer: Writer) {}
 
   async execute(): Promise<void> {
+    this.writer.writeLine(theme.brandLine("help"));
+    this.writer.writeLine("");
+
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       for (const section of HELP_SECTIONS) {
         this.writer.writeLine(theme.heading(section.title));
-        this.writer.writeLine(section.body);
+        this.writer.writeLine(theme.muted(section.body));
         this.writer.writeLine("");
       }
       return;
@@ -135,7 +138,7 @@ export class HelpCommand {
 
       this.writer.writeLine("");
       this.writer.writeLine(theme.heading(section.title));
-      this.writer.writeLine(section.body);
+      this.writer.writeLine(theme.muted(section.body));
       this.writer.writeLine("");
     }
   }

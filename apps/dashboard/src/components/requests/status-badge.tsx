@@ -9,7 +9,7 @@ export function StatusBadge({ status }: { readonly status?: number }) {
     return (
       <Badge
         variant="outline"
-        className="rounded-[3px] font-mono text-[11px] text-warm-granite"
+        className="rounded-sm font-mono text-[11px] text-smoke"
       >
         —
       </Badge>
@@ -19,17 +19,17 @@ export function StatusBadge({ status }: { readonly status?: number }) {
   const bucket = Math.floor(status / 100);
   const tone =
     bucket === 2
-      ? "border-metric-green/35 bg-metric-green/10 text-metric-green"
+      ? "border-success-green/35 bg-success-green/10 text-success-green"
       : bucket === 3
-        ? "border-pale-stone/40 bg-carbon-lift text-pale-stone"
+        ? "border-ash/40 bg-ink text-ash"
         : bucket === 4
-          ? "border-signal-orange/40 bg-signal-orange/10 text-signal-orange"
+          ? "border-coral-pulse/40 bg-ember-hush text-coral-pulse"
           : bucket === 5
-            ? "border-signal-orange/50 bg-signal-orange/15 text-signal-orange"
-            : "border-ash-stroke bg-carbon-lift text-warm-granite";
+            ? "border-coral-pulse/50 bg-ember-hush text-coral-pulse"
+            : "border-slate bg-ink text-smoke";
 
   return (
-    <Badge variant="outline" className={cn("rounded-[3px] font-mono text-[11px]", tone)}>
+    <Badge variant="outline" className={cn("rounded-sm font-mono text-[11px]", tone)}>
       {status}
     </Badge>
   );

@@ -1,8 +1,8 @@
 import boxen from "boxen";
-import gradient from "gradient-string";
 import logSymbols from "log-symbols";
 
 import { theme } from "../theme.js";
+import { cli, lumen } from "../lumen.js";
 import { colorizeDrawing } from "../drawings/mascot.js";
 
 /**
@@ -10,7 +10,7 @@ import { colorizeDrawing } from "../drawings/mascot.js";
  */
 export function formatTunnelLiveArt(): string {
   const art = [
-    "  [local]──▷──( 🦡 )──▷──[public]",
+    "  [local]──▷──( ◆ )──▷──[public]",
     "     dig         tunnel",
   ].join("\n");
   return colorizeDrawing(art);
@@ -38,7 +38,7 @@ export function formatTunnelBox(input: {
   return boxen(lines, {
     padding: 1,
     borderStyle: "single",
-    borderColor: "cyan",
+    borderColor: lumen.slate,
     dimBorder: true,
   });
 }
@@ -73,7 +73,7 @@ export function formatAnonymousModeNotice(): string {
   return boxen(body, {
     padding: 1,
     borderStyle: "single",
-    borderColor: "yellow",
+    borderColor: lumen.slate,
     dimBorder: true,
   });
 }
@@ -86,13 +86,13 @@ export function formatSuccessLine(message: string): string {
 }
 
 /**
- * Optional branded gradient helper for banners.
+ * Brand text paint — coral, not rainbow gradient.
  */
 export function brandGradient(text: string): string {
   if (!process.stdout.isTTY || process.env["NO_COLOR"] !== undefined) {
     return text;
   }
-  return gradient(["#22d3ee", "#3b82f6"])(text);
+  return cli.brand(text);
 }
 
 export function cliSymbol(kind: "success" | "error" | "warning" | "info"): string {
