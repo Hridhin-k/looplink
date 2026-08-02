@@ -1,5 +1,6 @@
 /**
- * Lightweight terminal animations. Skipped on non-TTY / NO_COLOR / CI.
+ * Lightweight terminal animations — Lumen rhythm (coral pulse, ash field).
+ * Skipped on non-TTY / NO_COLOR / CI / BADGER_CLI_ANIMATIONS=0.
  */
 
 import { cli } from "./lumen.js";
@@ -51,7 +52,8 @@ export async function playFrames(
     return;
   }
 
-  const intervalMs = options.intervalMs ?? 80;
+  // ~150ms machine feel from ecosystem motion, slightly faster for CLI feedback.
+  const intervalMs = options.intervalMs ?? 70;
   const loops = options.loops ?? 1;
   const lineCount = Math.max(...frames.map((frame) => frame.split("\n").length));
 
@@ -96,7 +98,7 @@ export async function typewrite(
 }
 
 /**
- * One-shot shimmer line under a banner — ash bar with coral pulse.
+ * Coral pulse traveling across an ash hairline — welcome / brand beat.
  */
 export async function playShimmerLine(
   label: string,
@@ -107,17 +109,46 @@ export async function playShimmerLine(
     return;
   }
 
-  const width = Math.min(options.width ?? 28, 40);
+  const width = Math.min(options.width ?? 32, 48);
   const frames: string[] = [];
   for (let i = 0; i < width; i += 1) {
     const chars: string[] = [];
     for (let j = 0; j < width; j += 1) {
-      chars.push(j === i ? cli.brand("━") : cli.muted("─"));
+      const dist = Math.abs(j - i);
+      if (dist === 0) {
+        chars.push(cli.brand("━"));
+      } else if (dist === 1) {
+        chars.push(cli.warn("─"));
+      } else {
+        chars.push(cli.muted("─"));
+      }
     }
     frames.push(`  ${cli.brand(label)} ${chars.join("")}`);
   }
 
-  await playFrames(frames, { intervalMs: 18, loops: 1, stream });
+  await playFrames(frames, { intervalMs: 22, loops: 1, stream });
+}
+
+/**
+ * Soft coral ◆ breathing pulse (connect / idle brand moment).
+ */
+export async function playCoralPulse(
+  options: { readonly stream?: NodeJS.WriteStream; readonly beats?: number } = {},
+): Promise<void> {
+  const stream = options.stream ?? process.stderr;
+  if (!animationsEnabled(stream)) {
+    return;
+  }
+
+  const beats = options.beats ?? 3;
+  const frames = [
+    `  ${cli.muted("·")} ${cli.brand("◆")} ${cli.muted("·")}`,
+    `  ${cli.warn("·")} ${cli.brand("◆")} ${cli.warn("·")}`,
+    `  ${cli.brand("·")} ${cli.strong("◆")} ${cli.brand("·")}`,
+    `  ${cli.warn("·")} ${cli.brand("◆")} ${cli.warn("·")}`,
+  ];
+
+  await playFrames(frames, { intervalMs: 90, loops: beats, stream });
 }
 
 function padFrame(frame: string, lineCount: number): string {

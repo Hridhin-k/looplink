@@ -1,5 +1,3 @@
-import chalk from "chalk";
-
 import { brandPrefix, cli, lumen } from "./lumen.js";
 
 /**
@@ -22,7 +20,7 @@ export interface Theme {
   highlight(text: string): string;
   /** Confirmation of a completed step. */
   success(text: string): string;
-  /** Recoverable problems — coral light / ash, not yellow rainbow. */
+  /** Recoverable problems — soft coral, never yellow rainbow. */
   warning(text: string): string;
   /** Failures that end or degrade the session. */
   error(text: string): string;
@@ -36,7 +34,7 @@ export interface Theme {
 
 /**
  * Lumen-mapped Badger CLI palette — coral brand, green ok, cyan info, ash labels.
- * No rainbow terminal theme.
+ * Source: `styles/ECOSYSTEM_DESIGN.md` §7.
  */
 export const theme: Theme = {
   heading: (text) => cli.strong(text),
@@ -45,7 +43,7 @@ export const theme: Theme = {
   text: (text) => cli.text(text),
   highlight: (text) => cli.brand(text),
   success: (text) => cli.ok(text),
-  warning: (text) => chalk.hex("#ff8f8f")(text),
+  warning: (text) => cli.warn(text),
   error: (text) => cli.err(text),
   muted: (text) => cli.muted(text),
   info: (text) => cli.info(text),
