@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DocsArticleView } from "@/components/docs/docs-article-view";
-import { getDocsArticle, listDocsArticles } from "@/lib/docs/articles";
+import { getDocsArticle } from "@/lib/docs/articles";
+import { listDocsManifest } from "@/lib/docs/manifest";
 
 interface DocsSlugPageProps {
   readonly params: Promise<{ readonly slug: string }>;
 }
 
 export function generateStaticParams(): { slug: string }[] {
-  return listDocsArticles().map((article) => ({ slug: article.slug }));
+  return listDocsManifest().map((article) => ({ slug: article.slug }));
 }
 
 export async function generateMetadata({
