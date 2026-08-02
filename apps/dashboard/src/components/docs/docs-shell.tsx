@@ -4,14 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { listDocsArticles } from "@/lib/docs/articles";
 import { DOCS_SECTIONS } from "@/lib/docs/sections";
+import type { DocsArticleMeta } from "@/lib/docs/types";
 import { cn } from "@/lib/utils";
 
 /**
  * Public documentation chrome — void canvas, ink sidebar, article column.
+ * Receives metadata from the server layout so article bodies stay out of the client graph.
  */
-export function DocsShell({ children }: { readonly children: ReactNode }) {
+export function DocsShell({
+  articles,
+  children,
+}: {
+  readonly articles: readonly DocsArticleMeta[];
+  readonly children: ReactNode;
+}) {
   return (
     <div className="min-h-svh bg-void-black text-pure-white">
       <header className="sticky top-0 z-40 border-b border-slate/80 bg-ink/85 backdrop-blur-[18px]">
@@ -44,16 +51,15 @@ export function DocsShell({ children }: { readonly children: ReactNode }) {
       </header>
 
       <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:py-10">
-        <DocsSidebar />
+        <DocsSidebar articles={articles} />
         <div className="min-w-0">{children}</div>
       </div>
     </div>
   );
 }
 
-function DocsSidebar() {
+function DocsSidebar({ articles }: { readonly articles: readonly DocsArticleMeta[] }) {
   const pathname = usePathname();
-  const articles = listDocsArticles();
 
   return (
     <nav aria-label="Documentation" className="lg:sticky lg:top-20 lg:self-start">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { listDocsArticles } from "@/lib/docs/articles";
+import { listDocsManifest } from "@/lib/docs/manifest";
 import { DOCS_SECTIONS } from "@/lib/docs/sections";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default function DocsHomePage() {
-  const articles = listDocsArticles();
+  const articles = listDocsManifest();
 
   return (
     <div>

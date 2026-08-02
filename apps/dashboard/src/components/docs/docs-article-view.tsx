@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { listDocsArticles } from "@/lib/docs/articles";
+import { listDocsManifest } from "@/lib/docs/manifest";
 import type { DocsArticle } from "@/lib/docs/types";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ export function DocsArticleView({
   readonly article: DocsArticle;
   readonly children?: ReactNode;
 }) {
-  const all = listDocsArticles();
+  const all = listDocsManifest();
   const index = all.findIndex((item) => item.slug === article.slug);
   const prev = index > 0 ? all[index - 1] : undefined;
   const next = index >= 0 && index < all.length - 1 ? all[index + 1] : undefined;
