@@ -36,34 +36,39 @@ export const BADGER_BLINK_FRAMES: readonly string[] = [
 ];
 
 /**
- * Tunnel “digging” frames — coral mark, ash trail (no emoji / rainbow).
+ * Tunnel dig — coral ◆ advances through ash trail into slate brackets.
  */
 export const TUNNEL_DIG_FRAMES: readonly string[] = [
-  "  ◆·······[  ]",
-  "  ◆·>·····[  ]",
-  "  ·◆··>···[  ]",
-  "  ··◆···>·[  ]",
-  "  ···◆····[=>]",
-  "  ····◆···[══]",
+  "  ◆········[    ]",
+  "  ·◆·······[    ]",
+  "  ··◆······[    ]",
+  "  ···◆·····[    ]",
+  "  ····◆····[ >  ]",
+  "  ·····◆···[ => ]",
+  "  ······◆··[==> ]",
+  "  ·······◆·[═══>]",
+  "  ········◆[═══◆]",
 ];
 
 /**
- * Spark / celebrate frames after success — soft green pulse.
+ * Success spark — soft green pulse on ash field.
  */
 export const SPARKLE_FRAMES: readonly string[] = [
   "  ·  ✦  ·",
   " ✦  ·  ✦ ",
   "·  ✦✦  ·",
   "  ✦  ·  ✦",
+  "  ·  ✦  ·",
 ];
 
 /**
- * Wave goodbye frames — coral brand mark.
+ * Wave goodbye — coral brand mark.
  */
 export const WAVE_FRAMES: readonly string[] = [
   "  ◆  ···",
   "  ◆ ··· ",
   "  ◆  ···",
+  "  ◆ ··· ",
 ];
 
 /**
@@ -81,7 +86,7 @@ export function colorizeDrawing(drawing: string): string {
 }
 
 /**
- * Dig / tunnel progress strip — coral diamond, ash trail.
+ * Dig / tunnel progress strip — coral diamond, ash trail, slate brackets.
  */
 export function colorizeDigFrame(frame: string): string {
   if (!process.stdout.isTTY || process.env["NO_COLOR"] !== undefined) {
@@ -94,7 +99,7 @@ export function colorizeDigFrame(frame: string): string {
         return cli.brand(ch);
       }
       if (ch === "[" || ch === "]") {
-        return cli.label(ch);
+        return cli.border(ch);
       }
       return cli.muted(ch);
     })
@@ -121,7 +126,15 @@ function colorizeMascotLine(line: string): string {
       if (ch === "o" || ch === ">" || ch === "◆") {
         return cli.brand(ch);
       }
-      if (ch === "-" || ch === "_" || ch === "/" || ch === "\\" || ch === "|" || ch === "(" || ch === ")") {
+      if (
+        ch === "-" ||
+        ch === "_" ||
+        ch === "/" ||
+        ch === "\\" ||
+        ch === "|" ||
+        ch === "(" ||
+        ch === ")"
+      ) {
         return cli.label(ch);
       }
       return cli.muted(ch);

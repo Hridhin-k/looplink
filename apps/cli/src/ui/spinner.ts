@@ -1,5 +1,6 @@
 import ora, { type Ora } from "ora";
 
+import { cli } from "./lumen.js";
 import type { Writer } from "../utils/output.js";
 
 /**
@@ -50,6 +51,21 @@ export interface Spinner {
   stop(): void;
 }
 
+/** Coral ◆ orbit — Lumen brand spinner (ora named colors can't do hex). */
+const LUMEN_SPINNER: { interval: number; frames: string[] } = {
+  interval: 80,
+  frames: [
+    cli.brand("◆····"),
+    cli.brand("·◆···"),
+    cli.brand("··◆··"),
+    cli.brand("···◆·"),
+    cli.brand("····◆"),
+    cli.brand("···◆·"),
+    cli.brand("··◆··"),
+    cli.brand("·◆···"),
+  ],
+};
+
 /**
  * {@link Spinner} backed by `ora`, for interactive terminals.
  *
@@ -65,7 +81,13 @@ export class OraSpinner implements Spinner {
    */
   start(text: string): void {
     if (this.instance === undefined) {
-      this.instance = ora({ text, stream: process.stderr, color: "red" });
+      this.instance = ora({
+        text,
+        stream: process.stderr,
+        spinner: LUMEN_SPINNER,
+        // Frames already include coral ANSI; disable ora's named color wash.
+        color: "white",
+      });
     } else {
       this.instance.text = text;
     }

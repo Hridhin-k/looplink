@@ -466,10 +466,11 @@ export const cli = {
 - [ ] Selected/active rows use ember + coral edge
 
 ### CLI
-- [ ] Add `lumen` color module from §7
-- [ ] Restyle help, tables, spinners, errors
-- [ ] Brand prefix in coral
-- [ ] Truecolor with ANSI fallback
+- [x] Add `lumen` color module from §7
+- [x] Restyle help, tables, spinners, errors
+- [x] Brand prefix in coral
+- [x] Truecolor with ANSI fallback
+- [x] Animations — coral pulse / dig / shimmer (ash field, no rainbow)
 
 ### Sync
 - [ ] Keep this file + `styles/design-tokens.json` in sync when Lumen tokens change

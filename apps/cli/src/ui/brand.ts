@@ -1,7 +1,7 @@
 import boxen from "boxen";
 
 import type { CliConfig } from "../config/cli.js";
-import { animationsEnabled, playFrames, playShimmerLine } from "./animations.js";
+import { animationsEnabled, playCoralPulse, playFrames, playShimmerLine } from "./animations.js";
 import {
   BADGER_BLINK_FRAMES,
   BADGER_IDLE,
@@ -14,17 +14,18 @@ import type { Writer } from "../utils/output.js";
 /**
  * Prints a branded Badger welcome with a short mascot blink (TTY only).
  *
- * Kept under ~600ms so interactive menus still feel instant.
+ * Kept under ~800ms so interactive menus still feel instant.
  */
 export async function printWelcomeBanner(writer: Writer, config: CliConfig): Promise<void> {
   if (animationsEnabled(process.stderr)) {
     await playFrames(
       BADGER_BLINK_FRAMES.map((frame) => colorizeDrawing(frame)),
-      { intervalMs: 120, loops: 2 },
+      { intervalMs: 110, loops: 2 },
     );
     writer.writeLine(colorizeDrawing(BADGER_IDLE));
     writer.writeLine("");
     await playShimmerLine("◆");
+    await playCoralPulse({ beats: 1 });
   } else {
     writer.writeLine(colorizeDrawing(BADGER_IDLE));
     writer.writeLine("");
@@ -49,7 +50,7 @@ export async function printWelcomeBanner(writer: Writer, config: CliConfig): Pro
 }
 
 /**
- * Formats a coral-accented shimmer label for banners.
+ * Formats a coral-accented brand mark for banners.
  */
 export function brandMark(): string {
   return cli.brand("◆");
