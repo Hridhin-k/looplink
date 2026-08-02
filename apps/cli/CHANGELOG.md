@@ -1,5 +1,11 @@
 # @hridhin-k/badger-cli
 
+## 1.4.0
+
+### Minor Changes
+
+- align CLI theme and animations with Lumen styles
+
 ## 1.3.0
 
 ### Minor Changes
