@@ -1,0 +1,35 @@
+{
+  "color": {
+    "void-black": { "$value": "#040506", "$type": "color" },
+    "ink": { "$value": "#07080a", "$type": "color" },
+    "obsidian": { "$value": "#111214", "$type": "color" },
+    "graphite": { "$value": "#1b1c1e", "$type": "color" },
+    "smoke": { "$value": "#6a6b6c", "$type": "color" },
+    "ash": { "$value": "#9c9c9d", "$type": "color" },
+    "mist": { "$value": "#e6e6e6", "$type": "color" },
+    "iron": { "$value": "#454647", "$type": "color" },
+    "slate": { "$value": "#2f3031", "$type": "color" },
+    "pure-white": { "$value": "#ffffff", "$type": "color" },
+    "coral-pulse": { "$value": "#ff6363", "$type": "color" },
+    "ember-hush": { "$value": "#452324", "$type": "color" },
+    "electric-sky": { "$value": "#63a1ff", "$type": "color" },
+    "cobalt-edge": { "$value": "#143ca3", "$type": "color" },
+    "deep-space": { "$value": "#02193b", "$type": "color" },
+    "info-blue": { "$value": "#56c2ff", "$type": "color" },
+    "success-green": { "$value": "#59d499", "$type": "color" }
+  },
+  "surface": {
+    "canvas": { "$value": "#040506", "$type": "color" },
+    "card": { "$value": "#07080a", "$type": "color" },
+    "recessed": { "$value": "#111214", "$type": "color" },
+    "badge": { "$value": "#1b1c1e", "$type": "color" },
+    "accent-tint": { "$value": "#452324", "$type": "color" }
+  },
+  "font": {
+    "inter": { "$value": "Inter", "$type": "fontFamily" },
+    "geistmono": { "$value": "Geist Mono", "$type": "fontFamily" }
+  },
+  "$extensions": {
+    "source": "User-provided design tokens (Raycast-style reference adapted for Lumen IT consultancy)"
+  }
+}

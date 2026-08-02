@@ -5,7 +5,9 @@ import {
   SPARKLE_FRAMES,
   TUNNEL_DIG_FRAMES,
   WAVE_FRAMES,
+  colorizeDigFrame,
   colorizeDrawing,
+  colorizeSparkleFrame,
 } from "./drawings/mascot.js";
 import { formatTunnelBox, formatTunnelLiveArt, formatSuccessLine } from "./formatters/boxes.js";
 import { formatFriendlyError } from "./formatters/errors.js";
@@ -85,11 +87,11 @@ export class ConsoleSessionPresenter implements SessionPresenter {
     this.spinner.succeed(theme.success(`Connected to ${APP_DISPLAY_NAME} server.`));
     if (animationsEnabled()) {
       await playFrames(
-        TUNNEL_DIG_FRAMES.map((frame) => theme.highlight(frame)),
+        TUNNEL_DIG_FRAMES.map((frame) => colorizeDigFrame(frame)),
         { intervalMs: 70, loops: 1 },
       );
       await playFrames(
-        SPARKLE_FRAMES.map((frame) => theme.success(frame)),
+        SPARKLE_FRAMES.map((frame) => colorizeSparkleFrame(frame)),
         { intervalMs: 60, loops: 1 },
       );
     }

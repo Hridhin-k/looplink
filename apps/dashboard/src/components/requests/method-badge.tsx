@@ -1,15 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-/** Factory-constrained method tones — monochrome + functional accents only. */
+/** Lumen method tones — monochrome + functional accents only. */
 const METHOD_STYLES: Record<string, string> = {
-  GET: "border-ash-stroke bg-obsidian-canvas text-bone",
-  POST: "border-metric-green/35 bg-metric-green/10 text-metric-green",
-  PUT: "border-pale-stone/40 bg-carbon-lift text-pale-stone",
-  PATCH: "border-signal-orange/35 bg-signal-orange/10 text-signal-orange",
-  DELETE: "border-signal-orange/50 bg-signal-orange/15 text-signal-orange",
-  HEAD: "border-ash-stroke bg-transparent text-warm-granite",
-  OPTIONS: "border-ash-stroke bg-transparent text-warm-granite",
+  GET: "border-slate bg-void-black text-pure-white",
+  POST: "border-success-green/35 bg-success-green/10 text-success-green",
+  PUT: "border-ash/40 bg-ink text-ash",
+  PATCH: "border-coral-pulse/35 bg-ember-hush text-coral-pulse",
+  DELETE: "border-coral-pulse/50 bg-ember-hush text-coral-pulse",
+  HEAD: "border-slate bg-transparent text-smoke",
+  OPTIONS: "border-slate bg-transparent text-smoke",
 };
 
 /**
@@ -20,8 +20,8 @@ export function MethodBadge({ method }: { readonly method: string }) {
     <Badge
       variant="outline"
       className={cn(
-        "rounded-[3px] font-mono text-[11px] tracking-wide uppercase",
-        METHOD_STYLES[method.toUpperCase()] ?? "border-ash-stroke bg-carbon-lift text-bone",
+        "rounded-sm font-mono text-[11px] tracking-wide uppercase",
+        METHOD_STYLES[method.toUpperCase()] ?? "border-slate bg-ink text-pure-white",
       )}
     >
       {method}

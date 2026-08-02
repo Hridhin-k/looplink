@@ -7,7 +7,7 @@ import {
   BADGER_IDLE,
   colorizeDrawing,
 } from "./drawings/mascot.js";
-import { brandGradient } from "./formatters/boxes.js";
+import { cli, lumen } from "./lumen.js";
 import { theme } from "./theme.js";
 import type { Writer } from "../utils/output.js";
 
@@ -22,20 +22,19 @@ export async function printWelcomeBanner(writer: Writer, config: CliConfig): Pro
       BADGER_BLINK_FRAMES.map((frame) => colorizeDrawing(frame)),
       { intervalMs: 120, loops: 2 },
     );
-    // Leave the idle face on screen
     writer.writeLine(colorizeDrawing(BADGER_IDLE));
     writer.writeLine("");
-    await playShimmerLine("link");
+    await playShimmerLine("◆");
   } else {
-    writer.writeLine(theme.muted(BADGER_IDLE));
+    writer.writeLine(colorizeDrawing(BADGER_IDLE));
     writer.writeLine("");
   }
 
-  const title = brandGradient("Badger CLI");
   const body = [
-    theme.heading(`🦡  ${title}`),
-    theme.info("Developer Networking Platform"),
-    theme.muted(`Version ${config.version}`),
+    theme.brandLine("badger"),
+    theme.heading("Badger CLI"),
+    theme.muted("Developer Networking Platform"),
+    theme.label(`Version ${config.version}`),
   ].join("\n");
 
   writer.writeLine(
@@ -43,8 +42,15 @@ export async function printWelcomeBanner(writer: Writer, config: CliConfig): Pro
       padding: { top: 0, bottom: 0, left: 1, right: 1 },
       margin: { top: 0, bottom: 1, left: 0, right: 0 },
       borderStyle: "single",
-      borderColor: "cyan",
+      borderColor: lumen.slate,
       dimBorder: true,
     }),
   );
+}
+
+/**
+ * Formats a coral-accented shimmer label for banners.
+ */
+export function brandMark(): string {
+  return cli.brand("◆");
 }

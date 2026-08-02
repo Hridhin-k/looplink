@@ -26,14 +26,20 @@ export function ActivityEmptyState({ workspaceName }: ActivityEmptyStateProps) {
       actions={
         <>
           <Link
-            href="/workspace"
-            className="inline-flex h-8 items-center rounded-[3px] bg-chalk px-3.5 text-sm text-obsidian-canvas transition-machine hover:bg-bone"
+            href="/docs/getting-started"
+            className="inline-flex h-8 items-center rounded-md bg-mist px-3 text-[13px] font-medium text-iron transition-colors duration-150 hover:bg-pure-white"
           >
-            Workspace settings
+            Getting started
+          </Link>
+          <Link
+            href="/tunnels"
+            className="inline-flex h-8 items-center rounded-md border border-slate px-3 text-[13px] font-medium text-ash transition-colors duration-150 hover:border-ash hover:text-pure-white"
+          >
+            Open tunnels
           </Link>
           <Link
             href="/requests"
-            className="inline-flex h-8 items-center rounded-[3px] border border-ash-stroke px-3.5 text-sm text-bone transition-machine hover:border-pale-stone hover:bg-carbon-lift"
+            className="inline-flex h-8 items-center rounded-md border border-slate px-3 text-[13px] font-medium text-ash transition-colors duration-150 hover:border-ash hover:text-pure-white"
           >
             Open requests
           </Link>

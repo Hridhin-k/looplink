@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 
+import { selectFromMenu } from "../select-menu.js";
 import { theme } from "../theme.js";
 
 export interface PromptChoice<T> {
@@ -17,6 +18,9 @@ export function isPromptCancel(value: unknown): value is symbol {
 
 /**
  * Interactive single-select menu (arrow keys + Enter). Esc cancels.
+ *
+ * Uses the Lumen-styled Badger menu on TTY (coral focus, ash idle) instead of
+ * Clack’s hardcoded cyan theme.
  */
 export async function promptSelect<T>(options: {
   readonly message: string;
@@ -31,22 +35,24 @@ export async function promptSelect<T>(options: {
     return undefined;
   }
 
-  const result = await clack.select({
-    message: options.message,
-    options: options.choices.map((choice) => ({
-      label: choice.label,
-      value: choice.value,
-      hint: choice.hint,
-    })) as Parameters<typeof clack.select<T>>[0]["options"],
-    ...(options.initialValue !== undefined ? { initialValue: options.initialValue } : {}),
-  });
-
-  if (clack.isCancel(result)) {
-    clack.cancel(theme.muted("Cancelled."));
-    return undefined;
+  let initialIndex = 0;
+  if (options.initialValue !== undefined) {
+    const found = options.choices.findIndex((c) => c.value === options.initialValue);
+    if (found >= 0) {
+      initialIndex = found;
+    }
   }
 
-  return result as T;
+  const result = await selectFromMenu(options.choices, {
+    title: options.message,
+    initialIndex,
+  });
+
+  if (result === undefined) {
+    process.stderr.write(`${theme.muted("Cancelled.")}\n`);
+  }
+
+  return result;
 }
 
 /**
@@ -60,14 +66,19 @@ export async function promptConfirm(options: {
     return undefined;
   }
 
-  const result = await clack.confirm({
-    message: options.message,
-    initialValue: options.initialValue ?? false,
-  });
+  const result = await selectFromMenu(
+    [
+      { label: "Yes", value: true as const },
+      { label: "No", value: false as const },
+    ],
+    {
+      title: options.message,
+      initialIndex: options.initialValue === true ? 0 : 1,
+    },
+  );
 
-  if (clack.isCancel(result)) {
-    clack.cancel(theme.muted("Cancelled."));
-    return undefined;
+  if (result === undefined) {
+    process.stderr.write(`${theme.muted("Cancelled.")}\n`);
   }
 
   return result;

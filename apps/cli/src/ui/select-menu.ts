@@ -15,8 +15,9 @@ export interface SelectMenuOptions {
 }
 
 /**
- * Interactive arrow-key menu for TTY terminals.
+ * Interactive arrow-key menu for TTY terminals — Lumen palette.
  *
+ * Selected row: coral ◆ + mist label. Idle: ash. Hints: smoke.
  * Returns `undefined` when cancelled (Ctrl+C / Escape) or when stdin is not a TTY.
  */
 export async function selectFromMenu<T>(
@@ -42,6 +43,7 @@ export async function selectFromMenu<T>(
   return new Promise<T | undefined>((resolve) => {
     const render = (): void => {
       stdout.write("\x1b[?25l"); // hide cursor
+      stdout.write(`${theme.brandLine()}\n`);
       stdout.write(`${theme.heading(options.title)}\n`);
       for (let i = 0; i < choices.length; i += 1) {
         const choice = choices[i];
@@ -49,19 +51,19 @@ export async function selectFromMenu<T>(
           continue;
         }
         const selected = i === index;
-        const marker = selected ? theme.success("❯") : " ";
-        const label = selected ? theme.url(choice.label) : choice.label;
+        const marker = selected ? theme.highlight("◆") : theme.muted("·");
+        const label = selected ? theme.text(choice.label) : theme.label(choice.label);
         const hint =
           choice.hint !== undefined && choice.hint.length > 0
             ? theme.muted(`  ${choice.hint}`)
             : "";
-        stdout.write(`${marker} ${label}${hint}\n`);
+        stdout.write(`  ${marker} ${label}${hint}\n`);
       }
-      stdout.write(theme.muted("↑/↓ move · enter select · esc cancel\n"));
+      stdout.write(theme.muted("  ↑/↓ navigate · enter confirm · esc cancel\n"));
     };
 
     const clear = (): void => {
-      const lines = choices.length + 2; // title + hints
+      const lines = choices.length + 3; // brand + title + footer
       stdout.write(`\x1b[${String(lines)}A`);
       stdout.write("\x1b[0J");
     };

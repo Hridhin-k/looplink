@@ -36,8 +36,8 @@ export function formatWorkspaceTable(
   for (const row of memberships) {
     const name = workspaceDisplayName(row);
     const active = row.workspace.id === activeWorkspaceId;
-    const displayName = active ? theme.highlight(`● ${name}`) : `  ${name}`;
-    const role = active ? theme.highlight(row.role) : row.role;
+    const displayName = active ? theme.highlight(`● ${name}`) : theme.text(`  ${name}`);
+    const role = active ? theme.highlight(row.role) : theme.text(row.role);
     const kind = active ? theme.highlight(row.workspace.kind) : theme.muted(row.workspace.kind);
     table.push([displayName, role, kind]);
   }

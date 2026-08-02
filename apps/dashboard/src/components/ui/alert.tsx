@@ -4,13 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-1 rounded-[10px] border px-4 py-3 text-left text-sm shadow-panel has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+  "group/alert relative grid w-full gap-1 rounded-lg border px-4 py-3 text-left text-sm shadow-hairline has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "border-ash-stroke bg-carbon-lift text-bone",
+        default: "border-slate bg-ink text-pure-white",
         destructive:
-          "border-signal-orange/40 bg-carbon-lift text-signal-orange *:data-[slot=alert-description]:text-warm-granite *:[svg]:text-signal-orange",
+          "border-coral-pulse/40 bg-ink text-coral-pulse *:data-[slot=alert-description]:text-smoke *:[svg]:text-coral-pulse",
       },
     },
     defaultVariants: {
@@ -39,7 +39,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="alert-title"
       className={cn(
-        "font-normal text-bone group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-chalk",
+        "font-medium text-pure-white group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-mist",
         className,
       )}
       {...props}
@@ -52,7 +52,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
     <div
       data-slot="alert-description"
       className={cn(
-        "text-sm text-balance text-warm-granite md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-bone [&_p:not(:last-child)]:mb-3",
+        "text-sm text-balance text-smoke md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-pure-white [&_p:not(:last-child)]:mb-3",
         className,
       )}
       {...props}

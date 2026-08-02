@@ -22,7 +22,7 @@ export function AppSidebar() {
       animate={{ width: collapsed ? 64 : 220 }}
       transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-ash-stroke bg-obsidian-canvas text-bone lg:flex",
+        "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-slate bg-ink text-pure-white shadow-hairline lg:flex",
       )}
     >
       <div
@@ -32,13 +32,12 @@ export function AppSidebar() {
         )}
       >
         {!collapsed ? (
-          <p className="font-mono text-[12px] tracking-[0.2em] text-bone uppercase">Badger</p>
+          <p className="font-mono text-[12px] tracking-[0.2em] text-pure-white uppercase">
+            <span className="text-coral-pulse">◆</span> Badger
+          </p>
         ) : (
-          <span
-            className="font-mono text-[12px] tracking-[0.2em] text-bone uppercase"
-            aria-hidden
-          >
-            B
+          <span className="font-mono text-[12px] text-coral-pulse" aria-hidden>
+            ◆
           </span>
         )}
         {!collapsed ? (
@@ -46,7 +45,7 @@ export function AppSidebar() {
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="text-warm-granite hover:text-bone"
+            className="text-ash hover:text-pure-white"
             aria-label="Collapse sidebar"
             onClick={toggleSidebar}
           >
@@ -55,19 +54,19 @@ export function AppSidebar() {
         ) : null}
       </div>
 
-      <div className="mx-3 h-px bg-ash-stroke/80" aria-hidden />
+      <div className="mx-3 h-px bg-slate/80" aria-hidden />
 
       <div className={cn("flex-1 overflow-y-auto px-2 py-4", collapsed && "px-1.5")}>
         <SidebarNav collapsed={collapsed} />
       </div>
 
       {collapsed ? (
-        <div className="border-t border-ash-stroke p-2">
+        <div className="border-t border-slate p-2">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="w-full text-warm-granite hover:text-bone"
+            className="w-full text-ash hover:text-pure-white"
             aria-label="Expand sidebar"
             onClick={toggleSidebar}
           >

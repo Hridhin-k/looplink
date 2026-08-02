@@ -38,32 +38,32 @@ export function EmptyState({
       animate={variants.animate}
       transition={variants.transition}
       className={cn(
-        "rounded-[10px] border border-ash-stroke bg-transparent shadow-panel",
+        "rounded-lg bg-transparent shadow-hairline",
         compact ? "px-5 py-8" : "px-6 py-10 sm:px-8 sm:py-12",
         className,
       )}
     >
       <div
         className={cn(
-          "mb-5 flex size-9 items-center justify-center rounded-[3px] border border-ash-stroke bg-carbon-lift",
+          "mb-5 flex size-9 items-center justify-center rounded-md border border-slate bg-ink",
           !reduce && "animate-mc-empty-float",
         )}
         aria-hidden
       >
-        <span className="size-1.5 rounded-full bg-signal-orange/80" />
+        <span className="size-1.5 rounded-full bg-coral-pulse/80" />
       </div>
-      <p className="text-caption text-pale-stone">{eyebrow}</p>
+      <p className="text-eyebrow">{eyebrow}</p>
       <h2
         className={cn(
-          "mt-3 max-w-lg text-bone",
+          "mt-3 max-w-lg font-medium text-pure-white",
           compact
             ? "text-xl tracking-tight"
-            : "text-[28px] leading-[1.15] tracking-[-0.04em] sm:text-[36px] sm:leading-[1.1] sm:tracking-[-1.12px]",
+            : "text-[28px] leading-[1.15] tracking-[-0.02em] sm:text-[32px] sm:leading-[1.1]",
         )}
       >
         {title}
       </h2>
-      <div className="mt-3 max-w-md text-sm leading-normal text-warm-granite">{description}</div>
+      <div className="mt-3 max-w-md text-sm leading-normal text-smoke">{description}</div>
       {actions !== undefined ? (
         <div className="mt-6 flex flex-wrap gap-3">{actions}</div>
       ) : null}

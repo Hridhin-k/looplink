@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { ActivityEmptyState } from "@/components/overview/activity-empty-state";
 import { LiveActivityFeed } from "@/components/overview/live-activity-feed";
+import { OverviewQuickLinks } from "@/components/overview/quick-links";
 import { TunnelStatusCard } from "@/components/overview/tunnel-status-card";
 import { LiveMeta } from "@/components/layout/surface";
 import { PageHeader } from "@/components/layout/page-header";
@@ -113,6 +114,8 @@ export function OverviewDashboard() {
       />
 
       <TunnelStatusCard stats={stats} />
+
+      <OverviewQuickLinks />
 
       {hasTraffic ? (
         <LiveActivityFeed events={events} workspaceName={workspaceName} />

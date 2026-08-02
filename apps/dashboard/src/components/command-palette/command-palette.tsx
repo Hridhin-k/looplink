@@ -5,11 +5,13 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ActivityIcon,
   ArrowRightIcon,
+  BookOpenIcon,
   CornerDownLeftIcon,
   HistoryIcon,
   LayoutDashboardIcon,
   ListTreeIcon,
   Loader2Icon,
+  NetworkIcon,
   RotateCcwIcon,
   SearchIcon,
   SettingsIcon,
@@ -39,6 +41,14 @@ const NAV_ACTIONS = [
     href: "/overview",
     keywords: ["home", "dashboard", "live"],
     icon: LayoutDashboardIcon,
+  },
+  {
+    id: "nav-tunnels",
+    label: "Go to Tunnels",
+    hint: "Active tunnels & subdomain",
+    href: "/tunnels",
+    keywords: ["tunnel", "subdomain", "cli", "expose"],
+    icon: NetworkIcon,
   },
   {
     id: "nav-requests",
@@ -71,6 +81,14 @@ const NAV_ACTIONS = [
     href: "/account",
     keywords: ["profile", "security", "sessions", "email"],
     icon: UserIcon,
+  },
+  {
+    id: "nav-docs",
+    label: "Open Docs",
+    hint: "A–Z guides",
+    href: "/docs",
+    keywords: ["help", "guide", "tutorial", "documentation", "how to"],
+    icon: BookOpenIcon,
   },
 ] as const;
 

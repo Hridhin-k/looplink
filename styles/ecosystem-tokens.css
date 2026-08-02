@@ -1,0 +1,56 @@
+/**
+ * Lumen Ecosystem tokens — drop into Badger Dashboard (and keep in sync with Lumen).
+ * Full guide: styles/ECOSYSTEM_DESIGN.md
+ */
+:root {
+  --void-black: #040506;
+  --ink: #07080a;
+  --obsidian: #111214;
+  --graphite: #1b1c1e;
+  --smoke: #6a6b6c;
+  --ash: #9c9c9d;
+  --mist: #e6e6e6;
+  --iron: #454647;
+  --slate: #2f3031;
+  --pure-white: #ffffff;
+  --coral-pulse: #ff6363;
+  --ember-hush: #452324;
+  --electric-sky: #63a1ff;
+  --cobalt-edge: #143ca3;
+  --deep-space: #02193b;
+  --info-blue: #56c2ff;
+  --success-green: #59d499;
+
+  --canvas: var(--void-black);
+  --surface: var(--ink);
+  --recessed: var(--obsidian);
+  --accent: var(--coral-pulse);
+  --accent-tint: var(--ember-hush);
+  --text: var(--pure-white);
+  --text-muted: var(--smoke);
+  --text-subtle: var(--ash);
+  --action: var(--mist);
+  --action-fg: var(--iron);
+  --ok: var(--success-green);
+  --info: var(--info-blue);
+  --danger: var(--coral-pulse);
+
+  --shadow-key:
+    rgba(0, 0, 0, 0.4) 0px 1.5px 0.5px 2.5px,
+    rgb(0, 0, 0) 0px 0px 0.5px 1px,
+    rgba(0, 0, 0, 0.25) 0px 2px 1px 1px inset,
+    rgba(255, 255, 255, 0.2) 0px 1px 1px 1px inset;
+  --shadow-hairline:
+    rgb(27, 28, 30) 0px 0px 0px 1px,
+    rgb(7, 8, 10) 0px 0px 0px 1px inset;
+  --shadow-glass:
+    rgba(0, 0, 0, 0.4) 0px 4px 40px 8px,
+    rgba(0, 0, 0, 0.8) 0px 0px 0px 0.5px,
+    rgba(255, 255, 255, 0.3) 0px 0.5px 0px 0px inset;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+}

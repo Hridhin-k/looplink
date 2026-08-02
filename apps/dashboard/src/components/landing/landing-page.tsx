@@ -6,11 +6,11 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingTrustStrip } from "@/components/landing/landing-trust-strip";
 
 /**
- * Public marketing home — Factory canvas, Supabase-style product narrative.
+ * Public marketing home — Lumen void canvas, Badger product narrative.
  */
 export function LandingPage() {
   return (
-    <div className="min-h-svh bg-obsidian-canvas text-bone">
+    <div className="min-h-svh bg-void-black text-pure-white">
       <LandingNav />
       <main>
         <div id="product">
